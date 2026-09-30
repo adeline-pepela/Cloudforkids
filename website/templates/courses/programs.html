@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Programs{% endblock %}
+{% block content %}
+<section class="container py-5">
+  <div class="text-center mb-5">
+    <div class="section-eyebrow">The programme</div>
+    <h1 class="section-title">A three-tier cloud literacy pathway</h1>
+    <p class="text-secondary mx-auto" style="max-width:680px;">
+      From unplugged foundations in upper primary to project-based cloud computing in Senior
+      School &mdash; every tier is aligned to Kenya's CBC/CBE curriculum.
+    </p>
+  </div>
+
+  {% for tier in tiers %}
+  <div id="{{ tier.slug }}" class="mb-5">
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <span class="fs-1">{{ tier.icon }}</span>
+      <div>
+        <h2 class="mb-0">{{ tier.name }} <span class="badge-pill">{{ tier.grade_range }}</span></h2>
+        <p class="text-secondary mb-0">{{ tier.cbc_alignment }}</p>
+      </div>
+    </div>
+    <p class="text-secondary">{{ tier.description|default:tier.summary }}</p>
+    <div class="row g-4">
+      {% for course in tier.courses.all %}
+      <div class="col-md-6 col-lg-4">
+        <div class="course-card p-4">
+          <span class="course-icon">{{ course.icon }}</span>
+          <h5>{{ course.title }}</h5>
+          <p class="text-secondary small">{{ course.summary }}</p>
+          <p class="small fw-bold text-secondary">{{ course.lesson_count }} lesson{{ course.lesson_count|pluralize }}</p>
+          <a href="{{ course.get_absolute_url }}" class="btn btn-outline-cloud btn-sm">View course</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% empty %}
+  <p class="text-secondary text-center">No programme data yet &mdash; run <code>python manage.py seed_data</code>.</p>
+  {% endfor %}
+</section>
+{% endblock %}

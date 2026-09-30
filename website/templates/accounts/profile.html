@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}My profile{% endblock %}
+{% block content %}
+<section class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+      <div class="text-center mb-4">
+        <div class="section-eyebrow">Your account</div>
+        <h1 class="section-title">Learner profile</h1>
+        <p class="text-secondary">This helps us recommend the right tier and keep parents/guardians in the loop.</p>
+      </div>
+      <div class="tier-card p-4 p-md-5">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Tier</label>
+              {{ form.tier }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Grade</label>
+              {{ form.grade }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">School</label>
+              {{ form.school_name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">County</label>
+              {{ form.county }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Parent/guardian name</label>
+              {{ form.parent_guardian_name }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Parent/guardian email</label>
+              {{ form.parent_guardian_email }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Parent/guardian phone</label>
+              {{ form.parent_guardian_phone }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Date of birth</label>
+              {{ form.date_of_birth }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-bold">About me</label>
+              {{ form.bio }}
+            </div>
+          </div>
+          <button type="submit" class="btn btn-cloud btn-lg mt-4 w-100">Save profile</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

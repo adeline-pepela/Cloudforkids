@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Contact{% endblock %}
+{% block content %}
+<section class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+      <div class="text-center mb-4">
+        <div class="section-eyebrow">Get in touch</div>
+        <h1 class="section-title">Let's build Kenya's cloud-ready generation together</h1>
+        <p class="text-secondary">Whether you're a school, a parent, a facilitator, or a potential partner &mdash; we'd love to hear from you.</p>
+      </div>
+      <div class="tier-card p-4 p-md-5">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Name</label>
+              {{ form.name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Email</label>
+              {{ form.email }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Phone (optional)</label>
+              {{ form.phone_number }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">I am a...</label>
+              {{ form.role }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-bold">Message</label>
+              {{ form.message }}
+            </div>
+          </div>
+          <button type="submit" class="btn btn-cloud btn-lg mt-4 w-100">Send message</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

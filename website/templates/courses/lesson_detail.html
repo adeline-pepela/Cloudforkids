@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ lesson.title }}{% endblock %}
+{% block content %}
+<section class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="section-eyebrow">
+        <a href="{{ course.get_absolute_url }}" class="text-decoration-none">{{ course.title }}</a>
+      </div>
+      <h1 class="section-title">{{ lesson.title }}</h1>
+      <p class="text-secondary">{{ lesson.duration_minutes }} minutes {% if is_complete %}&middot; <span class="text-success fw-bold">Completed</span>{% endif %}</p>
+
+      <div class="tier-card p-4 my-4" style="white-space: pre-line;">
+        {{ lesson.content }}
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          {% if previous_lesson %}
+            <a href="{{ previous_lesson.get_absolute_url }}" class="btn btn-outline-cloud">&larr; {{ previous_lesson.title }}</a>
+          {% endif %}
+        </div>
+        <div>
+          {% if not is_complete %}
+            <form method="post" action="{% url 'courses:mark_lesson_complete' course.slug lesson.slug %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-cloud btn-lg">Mark complete &amp; continue</button>
+            </form>
+          {% elif next_lesson %}
+            <a href="{{ next_lesson.get_absolute_url }}" class="btn btn-cloud btn-lg">Next: {{ next_lesson.title }} &rarr;</a>
+          {% else %}
+            <a href="{{ course.get_absolute_url }}" class="btn btn-cloud btn-lg">Back to course</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

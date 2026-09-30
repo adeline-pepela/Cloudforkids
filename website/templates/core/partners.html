@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Partners{% endblock %}
+{% block content %}
+<section class="container py-5">
+  <div class="text-center mb-5">
+    <div class="section-eyebrow">Ecosystem</div>
+    <h1 class="section-title">Building in partnership, not in isolation</h1>
+    <p class="text-secondary mx-auto" style="max-width:680px;">
+      Cloud for Kids is designed to plug into Kenya's existing digital-skills ecosystem &mdash;
+      from global cloud providers to community hubs and government policy partners.
+    </p>
+  </div>
+  <div class="row g-4">
+    {% for partner in partners %}
+    <div class="col-md-6 col-lg-4">
+      <div class="partner-card p-4 h-100">
+        <div class="fs-2 mb-2">&#127760;</div>
+        <h5>{{ partner.name }}</h5>
+        <p class="text-secondary small mb-0">{{ partner.description }}</p>
+      </div>
+    </div>
+    {% empty %}
+    <p class="text-secondary text-center">Partner data hasn't been seeded yet &mdash; run <code>python manage.py seed_data</code>.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

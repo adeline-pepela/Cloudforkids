@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Curriculum Fit{% endblock %}
+{% block content %}
+<section class="container py-5">
+  <div class="text-center mb-5">
+    <div class="section-eyebrow">CBC / CBE alignment</div>
+    <h1 class="section-title">Mapped to Kenya's Competency-Based Curriculum</h1>
+    <p class="text-secondary mx-auto" style="max-width:680px;">
+      Kenya's CBC follows a 2-6-3-3-3 structure. Digital Literacy is one of seven core CBC
+      competencies. Cloud for Kids plugs into the recognised curricular anchors at every stage
+      rather than replacing formal curriculum delivery.
+    </p>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>Tier</th>
+          <th>Grade range</th>
+          <th>CBC / CBE anchor</th>
+          <th>Focus</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tier in tiers %}
+        <tr id="{{ tier.slug }}">
+          <td><span class="fs-4 me-2">{{ tier.icon }}</span><strong>{{ tier.name }}</strong></td>
+          <td>{{ tier.grade_range }}</td>
+          <td>{{ tier.cbc_alignment }}</td>
+          <td class="text-secondary">{{ tier.summary }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="tier-card p-4 mt-4">
+    <h5>A note on CBC &rarr; CBE</h5>
+    <p class="text-secondary mb-0">
+      In April 2025, Kenya's Ministry of Education reviewed and rebranded CBC as
+      Competency-Based Education (CBE). 2026 is the first year Grade 10 learners select
+      pathways under the new Senior School structure &mdash; making this a particularly
+      opportune moment to embed cloud computing content into the emerging STEM track. Cloud
+      for Kids is positioned as complementary enrichment, not a replacement for formal
+      curriculum delivery.
+    </p>
+  </div>
+</section>
+{% endblock %}

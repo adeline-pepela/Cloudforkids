@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Impact{% endblock %}
+{% block content %}
+<section class="container py-5">
+  <div class="text-center mb-5">
+    <div class="section-eyebrow">Theory of change</div>
+    <h1 class="section-title">From seed funding to a cloud-skilled generation</h1>
+  </div>
+
+  <div class="row g-4">
+    {% for step in "12345" %}{% endfor %}
+    <div class="col-md-4">
+      <div class="timeline-step">
+        <div class="step-num">1</div>
+        <h5>Inputs</h5>
+        <p class="text-secondary small">Curriculum, trained facilitators, partner schools and hubs, and seed funding.</p>
+      </div>
+      <div class="timeline-step">
+        <div class="step-num">2</div>
+        <h5>Activities</h5>
+        <p class="text-secondary small">In-school clubs, after-school hub sessions, holiday bootcamps, and teacher training.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="timeline-step">
+        <div class="step-num">3</div>
+        <h5>Outputs</h5>
+        <p class="text-secondary small">Learners trained per tier, facilitators &amp; teachers trained, partner schools and hubs established.</p>
+      </div>
+      <div class="timeline-step">
+        <div class="step-num">4</div>
+        <h5>Outcomes</h5>
+        <p class="text-secondary small">Improved digital &amp; cloud literacy, stronger STEM pathway readiness, increased interest in cloud careers.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="timeline-step" style="border-left-color: var(--grass);">
+        <div class="step-num" style="background: var(--grass);">5</div>
+        <h5>Impact</h5>
+        <p class="text-secondary small">A stronger, cloud-skilled Kenyan youth talent pipeline &mdash; and a narrower urban-rural digital divide.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="cta-band text-center mt-4">
+    <h2>Our north star</h2>
+    <p class="mb-0 fs-5">"Every Kenyan child, cloud-ready by 2030."</p>
+  </div>
+</section>
+{% endblock %}

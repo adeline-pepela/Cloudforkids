@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Sign up{% endblock %}
+{% block content %}
+<section class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-6">
+      <div class="text-center mb-4">
+        <div class="section-eyebrow">Join Cloud for Kids</div>
+        <h1 class="section-title">Create your free account</h1>
+        <p class="text-secondary">For learners, parents/guardians, and facilitators.</p>
+      </div>
+      <div class="tier-card p-4 p-md-5">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">First name</label>
+              {{ form.first_name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Last name</label>
+              {{ form.last_name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Username</label>
+              {{ form.username }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Email</label>
+              {{ form.email }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Phone (optional)</label>
+              {{ form.phone_number }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">I am a...</label>
+              {{ form.role }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Password</label>
+              {{ form.password1 }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Confirm password</label>
+              {{ form.password2 }}
+            </div>
+          </div>
+          {% if form.errors %}
+            <div class="alert alert-danger mt-3 rounded-4">
+              Please fix the errors below and try again.
+            </div>
+          {% endif %}
+          <button type="submit" class="btn btn-cloud btn-lg mt-4 w-100">Create account</button>
+        </form>
+        <p class="text-center small text-secondary mt-3 mb-0">
+          Already have an account? <a href="{% url 'accounts:login' %}" class="fw-bold">Log in</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ course.title }}{% endblock %}
+{% block content %}
+<section class="container py-5">
+  <div class="row">
+    <div class="col-lg-8">
+      <div class="section-eyebrow">{{ course.tier.name }} &middot; {{ course.tier.grade_range }}</div>
+      <h1 class="section-title">{{ course.icon }} {{ course.title }}</h1>
+      <p class="text-secondary lead">{{ course.summary }}</p>
+      {% if course.description %}<p class="text-secondary">{{ course.description }}</p>{% endif %}
+
+      {% if enrollment %}
+        <div class="mb-3">
+          <div class="d-flex justify-content-between small fw-bold mb-1">
+            <span>Your progress</span>
+            <span>{{ enrollment.progress_percent }}%</span>
+          </div>
+          <div class="progress-c4k"><div class="bar" style="width: {{ enrollment.progress_percent }}%;"></div></div>
+        </div>
+      {% else %}
+        <a href="{% url 'courses:enroll' course.slug %}" class="btn btn-cloud btn-lg mb-4">Enroll in this course</a>
+      {% endif %}
+
+      <h4 class="mt-4">Lessons</h4>
+      {% for lesson in lessons %}
+        <a href="{{ lesson.get_absolute_url }}" class="text-decoration-none text-dark">
+          <div class="lesson-row {% if lesson.id in completed_ids %}done{% endif %}">
+            <div>
+              <span class="fw-bold">{{ forloop.counter }}. {{ lesson.title }}</span>
+              <p class="text-secondary small mb-0">{{ lesson.summary }}</p>
+            </div>
+            <div class="text-end">
+              {% if lesson.id in completed_ids %}
+                <span class="badge-pill">&#9989; Done</span>
+              {% else %}
+                <span class="text-secondary small">{{ lesson.duration_minutes }} min</span>
+              {% endif %}
+            </div>
+          </div>
+        </a>
+      {% empty %}
+        <p class="text-secondary">Lessons for this course are coming soon.</p>
+      {% endfor %}
+    </div>
+    <div class="col-lg-4">
+      <div class="tier-card p-4 mt-4 mt-lg-0">
+        <h6>About this tier</h6>
+        <p class="text-secondary small">{{ course.tier.summary }}</p>
+        <a href="{{ course.tier.get_absolute_url }}" class="small fw-bold">See the full {{ course.tier.name }} tier &rarr;</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

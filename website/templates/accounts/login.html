@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<section class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-5">
+      <div class="text-center mb-4">
+        <div class="section-eyebrow">Welcome back</div>
+        <h1 class="section-title">Log in to Cloud for Kids</h1>
+      </div>
+      <div class="tier-card p-4 p-md-5">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-bold">Username</label>
+            <input type="text" name="username" class="form-control rounded-3" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold">Password</label>
+            <input type="password" name="password" class="form-control rounded-3" required>
+          </div>
+          {% if form.errors %}
+            <div class="alert alert-danger rounded-4">Incorrect username or password.</div>
+          {% endif %}
+          <button type="submit" class="btn btn-cloud btn-lg w-100 mt-2">Log in</button>
+        </form>
+        <p class="text-center small text-secondary mt-3 mb-0">
+          New here? <a href="{% url 'accounts:signup' %}" class="fw-bold">Create a free account</a>
+        </p>
+        <p class="text-center small text-secondary mt-2 mb-0">
+          Demo login: <code>demo_learner</code> / <code>CloudForKids2026</code>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
