@@ -6,17 +6,138 @@ from core.models import Partner
 from courses.models import Badge, Course, Lesson, Tier
 
 
-def _lesson(title, summary, objectives, big_idea, activity, vocab, quiz):
-    """Build a full, detailed lesson record: (title, summary, content)."""
-    obj_lines = "\n".join(f"- {o}" for o in objectives)
-    vocab_lines = "\n".join(f"- {term}: {definition}" for term, definition in vocab)
-    content = (
-        f"\U0001F3AF WHAT YOU'LL LEARN\n{obj_lines}\n\n"
-        f"\U0001F9E0 THE BIG IDEA\n{big_idea}\n\n"
-        f"\U0001F6E0\uFE0F TRY IT YOURSELF\n{activity}\n\n"
-        f"\U0001F4DA WORD BANK\n{vocab_lines}\n\n"
-        f"\u2705 QUICK CHECK\n{quiz}"
+# ---------------------------------------------------------------------------
+# Tiny inline-SVG building blocks used to draw lesson illustrations.
+# Colours reference the site's CSS variables so visuals stay on-brand.
+# Playful lessons (Foundational / Intermediate / AWS for Kids) lean on bright
+# colours and emoji icons. Advanced-tier lessons use a calmer, more grown-up
+# diagram style (muted greys/blues, geometric shapes, no emoji).
+# ---------------------------------------------------------------------------
+
+SKY = "var(--sky)"
+SKY_DARK = "var(--sky-dark)"
+SKY_LIGHT = "var(--sky-light)"
+SUN = "var(--sun)"
+GRASS = "var(--grass)"
+INK = "var(--ink)"
+AWS_BG = "#FFF4E6"
+AWS_ORANGE = "#FF9900"
+AWS_ORANGE_DARK = "#B35C00"
+PRO_BG = "#F1F5F9"
+PRO_BORDER = "#CBD5E1"
+PRO_BORDER_SOFT = "#E2E8F0"
+PRO_TEXT = "#475569"
+PRO_TEXT_SOFT = "#64748B"
+
+
+def _bg(fill=SKY_LIGHT):
+    return f'<rect x="1" y="1" width="298" height="138" rx="18" fill="{fill}"/>'
+
+
+def _icon(x, y, size, emoji):
+    return (
+        f'<text x="{x}" y="{y}" font-size="{size}" text-anchor="middle" '
+        f'dominant-baseline="middle">{emoji}</text>'
     )
+
+
+def _label(x, y, text, size=11, color=INK, weight="600"):
+    return (
+        f'<text x="{x}" y="{y}" font-size="{size}" font-weight="{weight}" '
+        f'fill="{color}" text-anchor="middle">{text}</text>'
+    )
+
+
+def _arrow(x, y, glyph="\u2192", size=22, color=INK):
+    return (
+        f'<text x="{x}" y="{y}" font-size="{size}" fill="{color}" '
+        f'text-anchor="middle" dominant-baseline="middle">{glyph}</text>'
+    )
+
+
+def _box(x, y, w, h, fill="#fff", stroke=SKY_DARK):
+    return f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="8" fill="{fill}" stroke="{stroke}" stroke-width="2"/>'
+
+
+def _line(x1, y1, x2, y2, color=PRO_BORDER, width=2):
+    return f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{color}" stroke-width="{width}"/>'
+
+
+def _dot(cx, cy, r=5, fill=SKY_DARK):
+    return f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{fill}"/>'
+
+
+def _svg(*parts):
+    return (
+        '<svg viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" '
+        'class="lesson-visual-svg" role="img" aria-label="lesson illustration">'
+        + "".join(parts)
+        + "</svg>"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Lesson content builder
+# ---------------------------------------------------------------------------
+
+def _lesson(title, summary, objectives, big_idea, activity, vocab, quiz, quiz_answer, visual, caption, tone="fun"):
+    """Build a full, visual, interactive lesson record: (title, summary, content)."""
+    obj_items = "".join(f"<li>{o}</li>" for o in objectives)
+    vocab_items = "".join(
+        f'<details class="vocab-card"><summary>{term}</summary><p>{definition}</p></details>'
+        for term, definition in vocab
+    )
+
+    if tone == "pro":
+        head_learn = "Objectives"
+        head_idea = "Concept Overview"
+        head_try = "Hands-On Task"
+        head_word = "Key Terms"
+        head_check = "Check Your Understanding"
+        hint = ""
+    else:
+        head_learn = "\U0001F3AF What You'll Learn"
+        head_idea = "\U0001F9E0 The Big Idea"
+        head_try = "\U0001F6E0\uFE0F Try It Yourself"
+        head_word = "\U0001F4DA Word Bank"
+        head_check = "\u2705 Quick Check"
+        hint = '<span class="hint-text">(tap a card to flip)</span>'
+
+    content = f"""<div class="lesson-content tone-{tone}">
+  <div class="lesson-visual">
+    {visual}
+    <p class="visual-caption">{caption}</p>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head">{head_learn}</h5>
+    <ul class="objective-list">{obj_items}</ul>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head">{head_idea}</h5>
+    <p>{big_idea}</p>
+  </div>
+
+  <div class="lesson-section activity-card">
+    <h5 class="section-head">{head_try}</h5>
+    <p>{activity}</p>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head">{head_word} {hint}</h5>
+    <div class="vocab-grid">{vocab_items}</div>
+  </div>
+
+  <div class="lesson-section quiz-card">
+    <h5 class="section-head">{head_check}</h5>
+    <p>{quiz}</p>
+    <details class="quiz-reveal">
+      <summary>Reveal a model answer</summary>
+      <p>{quiz_answer}</p>
+    </details>
+  </div>
+</div>"""
     return (title, summary, content)
 
 
@@ -68,6 +189,16 @@ TIERS = [
                             ("The Cloud", "A nickname for all the servers and data centres you can reach over the internet"),
                         ],
                         "If you save a photo in a cloud app, is it really floating in the sky? Where is it actually kept, and how did it get there?",
+                        "It's saved as data on a real server inside a data centre - maybe thousands of kilometres away. The internet just makes the trip feel instant.",
+                        _svg(
+                            _bg(),
+                            _icon(48, 62, 38, "\U0001F4F1"), _label(48, 100, "My Device", 10),
+                            _arrow(118, 62),
+                            _icon(150, 62, 40, "\U0001F310"), _label(150, 100, "Internet", 10),
+                            _arrow(182, 62),
+                            _icon(254, 62, 44, "\U0001F5A5\uFE0F"), _label(254, 103, "Server", 10),
+                        ),
+                        "Your photo travels from your device, through the internet, to a server far away.",
                     ),
                     _lesson(
                         "Networks & the Internet",
@@ -99,6 +230,14 @@ TIERS = [
                             ("IP Address", "A device's unique 'home address' on a network"),
                         ],
                         "Why does a message need a router instead of just being shouted to every device at once?",
+                        "If every device shouted at once, messages would get lost or jumbled. A router checks each message's address and sends it only where it needs to go.",
+                        _svg(
+                            _bg(),
+                            _icon(150, 40, 30, "\U0001F4E1"), _label(150, 68, "Router", 10),
+                            _line(150, 50, 65, 92), _line(150, 50, 150, 92), _line(150, 50, 235, 92),
+                            _icon(65, 108, 24, "\U0001F4BB"), _icon(150, 108, 24, "\U0001F4BB"), _icon(235, 108, 24, "\U0001F4BB"),
+                        ),
+                        "A router connects many devices into one network - the internet connects networks together.",
                     ),
                     _lesson(
                         "Data & Storage Basics",
@@ -129,6 +268,14 @@ TIERS = [
                             ("Folder", "A container used to group and organise related files"),
                         ],
                         "If a computer only understands 1s and 0s, how can it store something as colourful as a photo?",
+                        "Computers turn colours, letters and sounds into numbers first, then store those numbers as patterns of 1s and 0s - and turn them back into colour when you view the photo.",
+                        _svg(
+                            _bg(),
+                            _icon(60, 55, 28, "\U0001F5C2\uFE0F"), _icon(150, 55, 28, "\U0001F5C2\uFE0F"), _icon(240, 55, 28, "\U0001F5C2\uFE0F"),
+                            _label(60, 92, "Animals", 10), _label(150, 92, "Numbers", 10), _label(240, 92, "Colours", 10),
+                            _icon(150, 118, 22, "\U0001F500"),
+                        ),
+                        "Sorting cards into folders is just like how a computer organises files.",
                     ),
                     _lesson(
                         "Being Safe and Kind Online",
@@ -159,6 +306,13 @@ TIERS = [
                             ("Cyberbullying", "Using the internet to repeatedly hurt or embarrass someone"),
                         ],
                         "Why is 'PurpleMangoJumps42' a stronger password than your dog's name?",
+                        "A short, common password like a pet's name can be guessed quickly, while a long, unusual phrase takes far too long for guessing tools to crack.",
+                        _svg(
+                            _bg(),
+                            _icon(88, 58, 40, "\U0001F511"), _label(88, 100, "Strong Password", 10),
+                            _icon(212, 58, 40, "\U0001F4AC"), _label(212, 100, "Kind Words", 10),
+                        ),
+                        "A strong password and kind words both help keep the internet safer.",
                     ),
                 ],
             },
@@ -195,6 +349,14 @@ TIERS = [
                             ("File Extension", "The short tag at the end of a filename that shows its type"),
                         ],
                         "You save two files called 'homework' and 'Homework_Maths_Oct3.txt'. Which one will be easier to find in six months, and why?",
+                        "'Homework_Maths_Oct3.txt' - it tells you exactly what the file is and when it was made, even months later.",
+                        _svg(
+                            _bg(),
+                            _icon(88, 62, 38, "\u2328\uFE0F"), _label(88, 102, "Type", 10),
+                            _arrow(150, 62),
+                            _icon(212, 62, 38, "\U0001F5C3\uFE0F"), _label(212, 102, "Save & Name", 10),
+                        ),
+                        "Typing, naming, and saving are the first steps in any digital project.",
                     ),
                     _lesson(
                         "Intro to Scratch",
@@ -223,6 +385,13 @@ TIERS = [
                             ("Loop", "A block that repeats instructions automatically"),
                         ],
                         "What would happen to your sprite if you put the 'repeat' loop around the wrong blocks?",
+                        "It might repeat forever, repeat too few or too many times, or repeat an action you didn't mean to repeat - always check exactly what's inside the loop.",
+                        _svg(
+                            _bg(),
+                            _box(38, 38, 55, 22, SKY, SKY_DARK), _box(38, 66, 55, 22, GRASS, SKY_DARK), _box(38, 94, 55, 22, SUN, SKY_DARK),
+                            _icon(225, 70, 48, "\U0001F431"), _label(225, 112, "Sprite", 10),
+                        ),
+                        "Scratch blocks snap together like puzzle pieces to build a program.",
                     ),
                     _lesson(
                         "Show What You Know",
@@ -251,6 +420,13 @@ TIERS = [
                             ("Showcase", "An event or moment where work is shown off"),
                         ],
                         "What is the one sentence you would use to explain 'the cloud' to a grandparent who has never used the internet?",
+                        "There's no single right answer - a good one is short and uses an everyday example, like 'it's borrowing someone else's powerful computer to save and run things.'",
+                        _svg(
+                            _bg(),
+                            _icon(150, 55, 48, "\U0001F5BC\uFE0F"), _label(150, 98, "Present & Share", 10),
+                            _icon(68, 100, 22, "\u2B50"), _icon(232, 100, 22, "\u2B50"),
+                        ),
+                        "Explaining an idea in your own words proves you really understand it.",
                     ),
                 ],
             },
@@ -301,6 +477,14 @@ TIERS = [
                             ("Print statement", "A Python instruction that displays text or values on screen"),
                         ],
                         "What is the Python equivalent of a Scratch 'say Hello!' block?",
+                        'print("Hello!") is the Python equivalent of a Scratch "say Hello!" block.',
+                        _svg(
+                            _bg(),
+                            _box(35, 48, 70, 42, SKY, SKY_DARK), _label(70, 73, "Blocks", 11, "#fff"),
+                            _arrow(150, 68),
+                            _box(190, 48, 80, 42, "#1F2937", "#1F2937"), _label(230, 73, "print()", 11, SUN),
+                        ),
+                        "The same instruction can be a Scratch block or a line of Python code.",
                     ),
                     _lesson(
                         "Variables & Loops",
@@ -328,6 +512,13 @@ TIERS = [
                             ("While loop", "A loop that repeats until a condition is no longer true"),
                         ],
                         "Why would a while loop be a better choice than a for loop for 'keep going until the player quits'?",
+                        "A while loop keeps going until a condition changes (like the player typing 'no'), while a for loop only knows how to repeat a fixed number of times.",
+                        _svg(
+                            _bg(),
+                            _box(38, 55, 95, 30, "#fff", SKY_DARK), _label(85, 74, "score = 0", 11),
+                            _icon(205, 68, 38, "\U0001F501"), _label(205, 110, "Repeat", 10),
+                        ),
+                        "A variable stores a value, and a loop repeats an action automatically.",
                     ),
                     _lesson(
                         "Building a Simple Program",
@@ -358,6 +549,13 @@ TIERS = [
                             ("Debug", "The process of finding and fixing errors in code"),
                         ],
                         "You run your guessing game and get a red error message. What is the very first thing you should do?",
+                        "Read the error message carefully - it usually names the exact line and type of mistake, which is the fastest way to start debugging.",
+                        _svg(
+                            _bg(),
+                            _icon(88, 60, 40, "\U0001F3AE"), _label(88, 102, "Guess the Number", 10),
+                            _icon(212, 60, 40, "\u2705"), _label(212, 102, "It Works!", 10),
+                        ),
+                        "Planning input, logic, and output turns an idea into a working program.",
                     ),
                 ],
             },
@@ -394,6 +592,13 @@ TIERS = [
                             ("Console", "The web dashboard used to manage and explore cloud services"),
                         ],
                         "Roughly how much free credit does a new AWS Educate account start with, and what is the minimum age to register?",
+                        "A new AWS Educate account typically starts with about $100 in free credits, and learners can register from age 13 with just an email address.",
+                        _svg(
+                            _bg(),
+                            _icon(88, 60, 42, "\U0001F393"), _label(88, 104, "AWS Educate", 10),
+                            _icon(212, 60, 40, "\U0001F4B3"), _label(212, 104, "$100 Credits", 10),
+                        ),
+                        "AWS Educate gives students free credits and hundreds of hours of real cloud courses.",
                     ),
                     _lesson(
                         "Cloud Storage in Practice",
@@ -422,6 +627,13 @@ TIERS = [
                             ("Bucket", "A named cloud storage container (you'll meet this properly in AWS S3)"),
                         ],
                         "Why would you choose 'view only' instead of 'can edit' when sharing a link to your project file?",
+                        "'View only' stops anyone from accidentally - or deliberately - changing or deleting your original file, while still letting them see it.",
+                        _svg(
+                            _bg(),
+                            _icon(88, 60, 36, "\U0001F4C1"), _arrow(150, 60), _icon(212, 60, 42, "\u2601\uFE0F"),
+                            _label(150, 108, "Upload & Share", 10),
+                        ),
+                        "Uploading to the cloud means your files live on a server, reachable from anywhere.",
                     ),
                     _lesson(
                         "Your First Hosted Web Page",
@@ -450,6 +662,13 @@ TIERS = [
                             ("Domain", "The web address people type to reach your site"),
                         ],
                         "What's the difference between writing an HTML file on your laptop and actually 'hosting' it?",
+                        "Writing the file only shows it to you on your own computer. Hosting puts it on a server connected to the internet, so anyone with the link can view it.",
+                        _svg(
+                            _bg(),
+                            _box(65, 35, 170, 65, "#fff", SKY_DARK), _label(150, 55, "yoursite.com", 10),
+                            _icon(150, 82, 28, "\U0001F30D"),
+                        ),
+                        "Hosting puts your web page on a server that's online and reachable 24/7.",
                     ),
                     _lesson(
                         "Intro to Google Cloud Skills Boost",
@@ -478,6 +697,14 @@ TIERS = [
                             ("Multi-Cloud", "Being comfortable working across more than one cloud provider"),
                         ],
                         "Name one thing that felt the same between AWS Educate and Google Cloud Skills Boost, and one thing that felt different.",
+                        "Both use a web console with guided, hands-on labs - but the menus, service names, and visual design differ between AWS and Google Cloud.",
+                        _svg(
+                            _bg(),
+                            _box(45, 42, 90, 50, SKY, SKY_DARK), _label(90, 71, "AWS", 13, "#fff", "800"),
+                            _box(165, 42, 90, 50, SUN, SKY_DARK), _label(210, 71, "GCP", 13, INK, "800"),
+                            _icon(150, 115, 22, "\U0001F50D"),
+                        ),
+                        "Different cloud providers look different, but they solve the same big problems.",
                     ),
                 ],
             },
@@ -516,6 +743,14 @@ TIERS = [
                             ("Data Centre Region", "A geographic location where a cloud provider's data centres are grouped"),
                         ],
                         "Why might a company choose to rent computing power from AWS instead of buying and running its own servers?",
+                        "Renting from AWS avoids the huge upfront cost of hardware, comes with automatic maintenance, and lets a company scale up or down instantly as demand changes.",
+                        _svg(
+                            _bg(AWS_BG),
+                            _box(100, 32, 100, 75, AWS_ORANGE, AWS_ORANGE_DARK), _label(150, 76, "AWS", 24, "#fff", "800"),
+                            _icon(48, 52, 24, "\U0001F3E6"), _icon(252, 52, 24, "\U0001F3AC"),
+                            _icon(48, 98, 24, "\U0001F3E5"), _icon(252, 98, 24, "\U0001F3AE"),
+                        ),
+                        "AWS quietly powers banks, streaming services, games and more, behind the scenes.",
                     ),
                     _lesson(
                         "Meet the Core AWS Services",
@@ -547,6 +782,15 @@ TIERS = [
                             ("Amazon RDS", "Relational Database Service - a managed, organised cloud database"),
                         ],
                         "Which AWS service would you use to store 1,000 photos, and which would you use to run a program that reacts instantly whenever someone uploads one?",
+                        "Amazon S3 would store the 1,000 photos, and AWS Lambda would be the tiny helper that reacts instantly whenever a new photo is uploaded.",
+                        _svg(
+                            _bg(AWS_BG),
+                            _box(32, 28, 112, 42, "#fff", AWS_ORANGE), _label(88, 53, "S3", 13, AWS_ORANGE_DARK, "800"),
+                            _box(156, 28, 112, 42, "#fff", AWS_ORANGE), _label(212, 53, "EC2", 13, AWS_ORANGE_DARK, "800"),
+                            _box(32, 80, 112, 42, "#fff", AWS_ORANGE), _label(88, 105, "Lambda", 13, AWS_ORANGE_DARK, "800"),
+                            _box(156, 80, 112, 42, "#fff", AWS_ORANGE), _label(212, 105, "RDS", 13, AWS_ORANGE_DARK, "800"),
+                        ),
+                        "Four AWS services you'll meet again and again: S3, EC2, Lambda, and RDS.",
                     ),
                     _lesson(
                         "Your AWS Educate Account Tour",
@@ -575,6 +819,13 @@ TIERS = [
                             ("Credits Balance", "The amount of free AWS usage still available on your account"),
                         ],
                         "What is one way you can tell AWS Educate that you've finished learning a skill, besides just remembering it yourself?",
+                        "Completing courses and labs earns you digital badges on your AWS Educate profile - visible, shareable proof of the skills you've learned.",
+                        _svg(
+                            _bg(AWS_BG),
+                            _box(58, 32, 184, 55, "#fff", AWS_ORANGE), _label(150, 54, "Lab Catalogue", 11),
+                            _icon(150, 78, 22, "\U0001F3C6"), _label(150, 115, "Earn Your First Badge", 10),
+                        ),
+                        "Your AWS Educate dashboard tracks labs completed, badges earned, and credits remaining.",
                     ),
                     _lesson(
                         "Storing Files in the Cloud with Amazon S3",
@@ -604,6 +855,13 @@ TIERS = [
                             ("Permissions", "Rules that control who can view, upload, or change files"),
                         ],
                         "If you accidentally set your bucket to 'public' instead of 'private', who could suddenly see your files?",
+                        "Anyone on the internet with the link could view your files - which is why it's important to double-check permissions before making anything public.",
+                        _svg(
+                            _bg(AWS_BG),
+                            _icon(150, 52, 46, "\U0001FAA3"), _label(150, 96, "Your S3 Bucket", 11),
+                            _icon(78, 98, 22, "\U0001F512"), _icon(222, 98, 22, "\U0001F30D"),
+                        ),
+                        "An S3 bucket is your own named storage container in the cloud.",
                     ),
                     _lesson(
                         "Building Your First Website with AWS",
@@ -632,6 +890,13 @@ TIERS = [
                             ("Endpoint URL", "The web address AWS gives you to access your hosted content"),
                         ],
                         "What makes a website 'static', and why is that a good fit for hosting directly from an S3 bucket?",
+                        "A static site's files don't change based on who's viewing them, so S3 can simply serve the same HTML, CSS and image files to everyone, with no extra server logic needed.",
+                        _svg(
+                            _bg(AWS_BG),
+                            _box(58, 32, 184, 52, "#fff", AWS_ORANGE), _label(150, 54, "your-bucket.s3-website", 9),
+                            _icon(150, 98, 30, "\U0001F680"),
+                        ),
+                        "Flip one setting, and your S3 bucket becomes a live website address.",
                     ),
                     _lesson(
                         "AWS re/Start & Your Future in Cloud Careers",
@@ -663,6 +928,15 @@ TIERS = [
                             ("Career Pathway", "A planned sequence of learning and experience leading toward a job"),
                         ],
                         "Name one skill AWS re/Start teaches, and one way Cloud for Kids today is already building toward it.",
+                        "AWS re/Start teaches skills like Linux, Python, networking, security and databases - all things Cloud for Kids already introduces a little at a time.",
+                        _svg(
+                            _bg(AWS_BG),
+                            _icon(48, 78, 28, "\U0001F3EB"), _arrow(100, 78),
+                            _icon(150, 78, 30, "\u2601\uFE0F"), _arrow(200, 78),
+                            _icon(252, 78, 32, "\U0001F4BC"),
+                            _label(150, 120, "School \u2192 Cloud Skills \u2192 Career", 9),
+                        ),
+                        "From today's lessons to AWS Educate to AWS re/Start - a real path into a cloud career.",
                     ),
                 ],
             },
@@ -715,6 +989,16 @@ TIERS = [
                             ("SQL", "The common language used to write database queries"),
                         ],
                         "Write the plain-English version of a query that would find every library book that is NOT available.",
+                        "SELECT * FROM books WHERE available = 'no' - in plain English: 'show me every book that is not available.'",
+                        _svg(
+                            _bg(PRO_BG),
+                            _box(40, 28, 220, 26, "#fff", PRO_BORDER), _label(150, 46, "id | title | author", 9, PRO_TEXT),
+                            _box(40, 58, 220, 22, "#fff", PRO_BORDER_SOFT), _label(150, 73, "1  |  Dune  |  Herbert", 9, PRO_TEXT_SOFT),
+                            _box(40, 84, 220, 22, "#fff", PRO_BORDER_SOFT), _label(150, 99, "2  |  Emil  |  Herbert", 9, PRO_TEXT_SOFT),
+                            _label(150, 124, "QUERY \u2192 SELECT * FROM books", 9, SKY_DARK, "700"),
+                        ),
+                        "A database organises structured data into rows and columns you can query.",
+                        tone="pro",
                     ),
                     _lesson(
                         "Designing a Simple Web App",
@@ -745,6 +1029,17 @@ TIERS = [
                             ("Architecture Diagram", "A visual map of how a system's parts connect"),
                         ],
                         "In your chore tracker idea, what data would flow from the frontend to the backend when a user marks a chore 'done'?",
+                        "The chore's identifier and its new 'done' status would be sent from the frontend to the backend, which would then update that record in the database.",
+                        _svg(
+                            _bg(PRO_BG),
+                            _box(18, 50, 72, 40, "#fff", SKY_DARK), _label(54, 74, "Frontend", 10, PRO_TEXT),
+                            _arrow(112, 70, size=18, color=PRO_TEXT_SOFT),
+                            _box(130, 50, 72, 40, "#fff", SKY_DARK), _label(166, 74, "Backend", 10, PRO_TEXT),
+                            _arrow(222, 70, size=18, color=PRO_TEXT_SOFT),
+                            _box(232, 50, 52, 40, "#fff", SKY_DARK), _label(258, 70, "Data", 9, PRO_TEXT), _label(258, 82, "base", 9, PRO_TEXT),
+                        ),
+                        "A typical web app passes data between a frontend, a backend, and a database.",
+                        tone="pro",
                     ),
                     _lesson(
                         "Deploying to the Cloud",
@@ -775,6 +1070,16 @@ TIERS = [
                             ("Domain", "The address people use to reach your hosted project"),
                         ],
                         "What's the difference between an app that 'works on my laptop' and one that's actually 'deployed'?",
+                        "An app 'working on your laptop' only runs on your own machine, while a 'deployed' app runs on a server with its own address that anyone online can visit.",
+                        _svg(
+                            _bg(PRO_BG),
+                            _box(28, 45, 72, 50, "#fff", PRO_BORDER), _label(64, 73, "Your Code", 9, PRO_TEXT),
+                            _arrow(128, 70, size=20, color=PRO_TEXT_SOFT),
+                            _box(148, 35, 104, 70, "#fff", SKY_DARK), _label(200, 65, "Cloud Server", 10, PRO_TEXT),
+                            _label(200, 88, "(Production)", 8, PRO_TEXT_SOFT),
+                        ),
+                        "Deploying moves your project from your own machine onto a server everyone can reach.",
+                        tone="pro",
                     ),
                 ],
             },
@@ -812,6 +1117,15 @@ TIERS = [
                             ("Model", "The trained 'brain' behind an AI system's predictions or decisions"),
                         ],
                         "Name one ethical question worth asking before using a cloud AI tool, like a facial recognition service.",
+                        "Worth asking: is the training data biased, is personal data handled responsibly, and who is accountable if the system makes a mistake.",
+                        _svg(
+                            _bg(PRO_BG),
+                            _dot(60, 40), _dot(60, 90), _dot(150, 30), _dot(150, 70), _dot(150, 110), _dot(230, 55), _dot(230, 95),
+                            _line(60, 40, 150, 30, PRO_BORDER), _line(60, 40, 150, 70, PRO_BORDER), _line(60, 90, 150, 70, PRO_BORDER), _line(60, 90, 150, 110, PRO_BORDER),
+                            _line(150, 30, 230, 55, PRO_BORDER), _line(150, 70, 230, 55, PRO_BORDER), _line(150, 70, 230, 95, PRO_BORDER), _line(150, 110, 230, 95, PRO_BORDER),
+                        ),
+                        "Cloud AI services let you use trained models without building them yourself.",
+                        tone="pro",
                     ),
                     _lesson(
                         "Trying a Managed AI Service",
@@ -840,6 +1154,17 @@ TIERS = [
                             ("Inference", "The prediction or result an AI model produces for a given input"),
                         ],
                         "If an image recognition service returns 'cat, 60% confidence', what does that confidence number actually mean?",
+                        "It means the model estimates a 60% likelihood the image shows a cat - not certainty, so a human may want to double-check borderline results.",
+                        _svg(
+                            _bg(PRO_BG),
+                            _box(15, 55, 62, 30, "#fff", PRO_BORDER), _label(46, 74, "Input", 9, PRO_TEXT),
+                            _arrow(92, 70, size=16, color=PRO_TEXT_SOFT),
+                            _box(107, 55, 70, 30, "#fff", SKY_DARK), _label(142, 74, "API Call", 9, PRO_TEXT),
+                            _arrow(192, 70, size=16, color=PRO_TEXT_SOFT),
+                            _box(207, 55, 78, 30, "#fff", PRO_BORDER), _label(246, 74, "Result", 9, PRO_TEXT),
+                        ),
+                        "A managed AI service takes an input, runs it through a model, and returns a result.",
+                        tone="pro",
                     ),
                 ],
             },
@@ -876,6 +1201,16 @@ TIERS = [
                             ("Timeline", "A planned schedule of checkpoints leading to completion"),
                         ],
                         "What is the smallest version (MVP) of your capstone idea that would still be genuinely useful?",
+                        "There's no single right answer - a strong MVP solves the core problem with the fewest moving parts, leaving extra features for later.",
+                        _svg(
+                            _bg(PRO_BG),
+                            _box(30, 28, 240, 20, "#fff", PRO_BORDER_SOFT), _label(150, 42, "Problem", 9, PRO_TEXT),
+                            _box(30, 53, 240, 20, "#fff", PRO_BORDER_SOFT), _label(150, 67, "Tech Stack", 9, PRO_TEXT),
+                            _box(30, 78, 240, 20, "#fff", PRO_BORDER_SOFT), _label(150, 92, "MVP", 9, PRO_TEXT),
+                            _box(30, 103, 240, 20, "#fff", PRO_BORDER_SOFT), _label(150, 117, "Timeline", 9, PRO_TEXT),
+                        ),
+                        "A clear problem, tech stack, MVP, and timeline turn an idea into a plan.",
+                        tone="pro",
                     ),
                     _lesson(
                         "Building Your Capstone",
@@ -904,6 +1239,16 @@ TIERS = [
                             ("Version Control", "A tool that tracks and saves the history of changes to a project"),
                         ],
                         "Why is writing down 'what went wrong and how I fixed it' just as valuable as writing the working code?",
+                        "Documenting problems and fixes creates a record you - or a future employer - can learn from, and proves you can troubleshoot, a skill just as valuable as writing correct code the first time.",
+                        _svg(
+                            _bg(PRO_BG),
+                            _line(45, 70, 255, 70, PRO_BORDER),
+                            _dot(60, 70, 6, SKY_DARK), _dot(120, 70, 6, PRO_BORDER), _dot(180, 70, 6, PRO_BORDER), _dot(240, 70, 6, PRO_BORDER),
+                            _label(60, 95, "Sprint 1", 9, PRO_TEXT), _label(120, 95, "Sprint 2", 9, PRO_TEXT),
+                            _label(180, 95, "Sprint 3", 9, PRO_TEXT), _label(240, 95, "Sprint 4", 9, PRO_TEXT),
+                        ),
+                        "Breaking work into sprints with documentation keeps a big project manageable.",
+                        tone="pro",
                     ),
                     _lesson(
                         "Presenting Your Portfolio",
@@ -934,6 +1279,15 @@ TIERS = [
                             ("Elevator Pitch", "A pitch short enough to deliver in about a minute or two"),
                         ],
                         "In one sentence, what is your capstone project, who is it for, and what cloud skill does it prove you have?",
+                        "There's no single right answer - a strong pitch names the project, the audience it helps, and the specific cloud skill it demonstrates.",
+                        _svg(
+                            _bg(PRO_BG),
+                            _box(90, 28, 120, 82, "#fff", SKY_DARK), _label(150, 52, "PORTFOLIO", 11, SKY_DARK, "800"),
+                            _line(112, 68, 188, 68, PRO_BORDER_SOFT),
+                            _label(150, 86, "Capstone Project", 8, PRO_TEXT_SOFT), _label(150, 98, "Pitch Ready", 8, PRO_TEXT_SOFT),
+                        ),
+                        "A strong portfolio and a short, confident pitch open doors to what comes next.",
+                        tone="pro",
                     ),
                 ],
             },

@@ -241,3 +241,99 @@ footer.site-footer h6 {
   font-weight: 800;
   color: var(--sky-dark);
 }
+
+/* Lesson content: visuals + interactive cards */
+.lesson-content { font-size: 1rem; }
+
+.lesson-visual { text-align: center; margin-bottom: 1.5rem; }
+.lesson-visual-svg { max-width: 320px; width: 100%; height: auto; }
+.visual-caption {
+  font-size: .85rem;
+  color: #6B7280;
+  font-style: italic;
+  margin-top: .5rem;
+  margin-bottom: 0;
+}
+
+.lesson-section { margin-bottom: 1.75rem; }
+.lesson-section:last-child { margin-bottom: 0; }
+.section-head {
+  color: var(--sky-dark);
+  font-size: 1.05rem;
+  margin-bottom: .7rem;
+}
+.hint-text {
+  font-size: .72rem;
+  font-weight: 500;
+  color: #9CA3AF;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: .35rem;
+}
+
+.objective-list { list-style: none; padding-left: 0; margin-bottom: 0; }
+.objective-list li {
+  position: relative;
+  padding-left: 1.8rem;
+  margin-bottom: .45rem;
+}
+.objective-list li::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--grass);
+  font-weight: 800;
+}
+
+.activity-card, .quiz-card {
+  background: var(--sky-light);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+}
+.quiz-card p:first-of-type { margin-bottom: .5rem; }
+
+.vocab-grid { display: flex; flex-wrap: wrap; gap: .6rem; }
+.vocab-card {
+  background: #fff;
+  border: 2px solid var(--sky-light);
+  border-radius: var(--radius-md);
+  padding: .55rem 1rem;
+  min-width: 150px;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.vocab-card summary {
+  font-weight: 700;
+  color: var(--sky-dark);
+  list-style: none;
+}
+.vocab-card summary::-webkit-details-marker { display: none; }
+.vocab-card summary::before { content: "\1F0CF  "; font-size: .8rem; opacity: .6; }
+.vocab-card[open] { background: var(--sky-light); border-color: var(--sky); }
+.vocab-card p { margin: .5rem 0 0; font-size: .86rem; color: var(--ink); }
+
+.quiz-reveal summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--sky-dark);
+  margin-top: .4rem;
+}
+.quiz-reveal p { margin: .6rem 0 0; font-size: .92rem; }
+
+/* Advanced tier: calmer, more grown-up presentation */
+.tone-pro .section-head {
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-size: .82rem;
+  font-weight: 800;
+}
+.tone-pro .objective-list li::before { content: "\2014"; color: var(--sky-dark); font-weight: 700; }
+.tone-pro .activity-card, .tone-pro .quiz-card { background: #F1F5F9; }
+.tone-pro .vocab-card { border-color: #E2E8F0; }
+.tone-pro .vocab-card summary { color: var(--ink); }
+.tone-pro .vocab-card summary::before { content: ""; }
+.tone-pro .vocab-card[open] { background: #F1F5F9; border-color: #CBD5E1; }
+.tone-pro .quiz-reveal summary { color: var(--ink); }
+.tone-pro .visual-caption { color: #64748B; }
