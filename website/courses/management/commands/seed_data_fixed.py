@@ -146,114 +146,142 @@ LESSON_EXTRAS = {
     "Where Does Your Data Live?": {
         "fact": "Data centres already use roughly 1-2% of all the electricity on Earth - and that share keeps growing as more people save photos, videos and games to the cloud.",
         "real_world": "In Kenya, apps like M-Pesa and your favourite mobile game save their data on real servers in data centres - some of them right here in East Africa - not inside your phone.",
+        "deep_dive": "Think about everything that happens between you tapping 'save' and seeing 'Saved!' appear. Your device turns the photo into a stream of 1s and 0s, wraps it in tiny digital envelopes, and sends it zig-zagging across cables, Wi-Fi signals, and undersea internet cables until it reaches a data centre - sometimes on a different continent. The server there writes your data onto a storage drive, often making two or three backup copies on different machines, just in case one ever breaks. All of that usually takes well under a second. The next time you open the app on a totally different device and your photo is still there, that's the cloud doing its job.",
     },
     "Networks & the Internet": {
         "fact": "A message can hop through a dozen different routers in well under a second to cross from one side of the world to the other.",
         "real_world": "Kenya's National Fibre Optic Backbone links towns and cities the same way your paper network links houses to a router - smaller networks joined into one big network that connects to the rest of the world.",
+        "deep_dive": "Every network, no matter how small, follows the same basic rules as the Paper Network you built. Real routers use a kind of digital address book to decide, in a fraction of a millisecond, exactly which cable or wireless signal to send a message down next. When your message needs to leave your home network and travel across the country - or across the world - it hops between dozens of routers run by different companies and countries, each one just passing it a little further along, like a very fast game of relay. Engineers call this 'routing', and it's happening billions of times a second, all over the planet, right now.",
     },
     "Data & Storage Basics": {
         "fact": "A single byte stores only one letter, yet a modern phone holds many gigabytes - billions of bytes, enough room for thousands of photos.",
         "real_world": "When you sort school notes into labelled folders on a shared family tablet, you're organising data exactly the way a school's student records system does.",
+        "deep_dive": "Not all storage is the same. Some, like the memory inside a running app, is lightning-fast but forgets everything the moment the power goes off - that's why unsaved work disappears if your device crashes. Other storage, like a hard drive, an SD card, or cloud storage, is slower to read from but keeps your data safely even when the power is off. Computers and cloud systems mix fast 'forgetful' memory with slower 'permanent' storage, so everything feels quick to use but nothing important gets lost. The folders and labels you practised with today are the exact same idea schools, hospitals, and banks use to keep millions of records organised.",
     },
     "Being Safe and Kind Online": {
         "fact": "Security experts often say four random, unrelated words make a stronger - and easier to remember - password than a short jumble of symbols.",
         "real_world": "Kenya's Data Protection Act protects your personal information online, and schools across the country run digital-safety weeks that teach exactly these password and kindness habits.",
+        "deep_dive": "Online safety isn't just about picking a strong password - it's also about slowing down before you click, share, or reply. Scammers and bullies often rely on people reacting quickly without thinking, so a short pause to ask 'does this feel right?' stops most problems before they start. Being kind online matters just as much as being safe: words typed on a screen can hurt just as much as words said out loud, and a kind comment can turn someone's whole day around. Most schools and families agree on a few simple rules - think before you post, never share passwords, and tell a trusted adult if something feels wrong - because those three habits solve the vast majority of online problems kids run into.",
     },
     "Typing & Files 101": {
         "fact": "The humble .txt file barely changed since the 1970s - it's one of the oldest file formats still used by almost every computer today.",
         "real_world": "Teachers and Huduma Centre staff rely on clearly named, well-organised digital files every day to find forms and records in seconds instead of hours.",
+        "deep_dive": "A computer file is really just a labelled container for information, and the label - the file name and extension - tells the computer and the people using it what's inside and how to open it. Typing speed matters less than typing accuracy: a slower typist who rarely needs to backspace often finishes faster than a quick typist who keeps fixing mistakes. The same goes for file organisation - spending two extra minutes naming and sorting a file properly today can save you twenty minutes of frustrated searching next week. Professional computer users, from students to scientists, all rely on exactly these two unglamorous skills: typing cleanly and filing sensibly.",
     },
     "Intro to Scratch": {
         "fact": "Scratch was created at MIT and is now used by tens of millions of young coders worldwide, in more than 70 languages.",
         "real_world": "Kenyan coding clubs and Digital Literacy Programme classrooms use Scratch as a first step before learners move on to text-based languages like Python - exactly the path this course follows.",
+        "deep_dive": "Scratch works by snapping together blocks of instructions the same way you'd snap together building bricks, which is exactly why it's used to teach the same ideas that power 'real' programming languages like Python and JavaScript. Every block you drag - move, wait, repeat, if this then that - represents a concept professional programmers use every day, just drawn as a friendly shape instead of typed-out code. Millions of young coders start exactly where you're starting: making a sprite move, then making it react, then giving it choices to make. Those three steps - move, react, decide - are the foundation of almost every computer program ever written, including the apps and games on your own phone.",
     },
     "Show What You Know": {
         "fact": "Teachers call it the 'Feynman technique': if you can explain an idea simply enough for a five-year-old to understand, you've truly mastered it.",
         "real_world": "Kenyan science and innovation fairs ask students to do exactly this - present a technical idea clearly to judges who may know nothing about the topic yet.",
+        "deep_dive": "Explaining an idea out loud - or in a short video - forces your brain to organise it in a way that silently reading never does. That's why teachers often say the best way to check if you really understand something is to try teaching it to someone else. When you planned your mini-presentation today, you were doing the exact same thing professional software engineers do before a big project: breaking a complicated idea into a few clear, simple steps that anyone could follow. This skill - taking something complicated and making it simple - turns out to be just as valuable as any technical skill you'll learn in this course.",
     },
     "From Scratch to Python": {
         "fact": "Python is named after the British comedy group Monty Python, not the snake - its creator wanted a name that sounded fun and a little silly.",
         "real_world": "Python is one of the most in-demand programming languages for jobs in Kenya's growing tech sector, from Nairobi start-ups to global cloud providers.",
+        "deep_dive": "Python code looks different from Scratch blocks, but underneath, it's doing the exact same jobs: moving through steps in order, repeating actions, and making decisions. The biggest change is that Python expects you to type instructions using very precise spelling, punctuation, and spacing - a missing colon or extra space can stop a whole program from running, which is why programmers call these mistakes 'syntax errors'. Learning to read an error message calmly, instead of panicking, is one of the most useful skills in this entire course: almost every professional programmer, no matter how experienced, spends part of every single day fixing errors just like the ones you'll see today.",
     },
     "Variables & Loops": {
         "fact": "Some of the very first computer bugs were literally real insects - in 1947 a moth got stuck inside a Harvard computer, and the term 'debugging' stuck ever since.",
         "real_world": "Mobile money apps like M-Pesa use loops behind the scenes to check thousands of transactions every second, and variables to keep track of every account's balance.",
+        "deep_dive": "A variable is like a labelled box that can hold a value and swap it out for a new one whenever your program needs to - a 'score' variable might start at 0 and change every time a player wins a point. Loops exist because computers are extremely good at doing boring, repetitive tasks without complaining, so instead of writing the same instruction fifty times, you write it once inside a loop and tell the computer how many times - or under what condition - to repeat it. Together, variables and loops are the two ingredients behind almost everything computers do automatically, from counting steps on a fitness tracker to processing thousands of M-Pesa transactions every minute.",
     },
     "Building a Simple Program": {
         "fact": "Almost every successful app in the world started out as a small, buggy first draft - even the ones now worth billions.",
         "real_world": "Kenyan student developers at hackathons like those run by Safaricom or iHub often start with a small working program, just like your number-guessing game, before growing it into something bigger.",
+        "deep_dive": "Every program, no matter how big, starts life exactly like the one you're building today: small, a little rough around the edges, and built to do just one useful thing. Professional developers call this a 'first working version', and the golden rule is to get something running - even something simple - before trying to make it perfect. Once your number-guessing game works, you'll naturally start spotting ways to improve it: better feedback messages, a limited number of tries, maybe even a difficulty setting. That instinct to build something, test it, and then improve it in small steps is called iterative development, and it's exactly how real software - from games to banking apps - gets built.",
     },
     "Setting Up AWS Educate": {
         "fact": "AWS Educate has given free cloud credits and training to millions of students in over 200 countries and territories since it launched.",
         "real_world": "Through Konza Technopolis and local training partners, Kenyan students increasingly use AWS Educate as their very first step into real, professional-grade cloud computing.",
+        "deep_dive": "AWS Educate exists because Amazon Web Services wants students to get comfortable with real cloud tools long before they need them for a job, so almost everything in it is free for learners. The account you set up today connects to the exact same underlying systems that power huge companies, streaming services, and government platforms - you're not using a toy version, you're using a genuine on-ramp to professional cloud computing. Many of the badges and modules inside AWS Educate map directly onto skills tested in entry-level cloud certifications, so time spent exploring it now can save real effort later if you choose a cloud or IT career.",
     },
     "Cloud Storage in Practice": {
         "fact": "Most cloud storage providers automatically keep multiple copies of your files in different locations, so one hardware failure almost never means lost data.",
         "real_world": "Kenyan university students and NGOs commonly use cloud storage to share research and reports across teams working in different towns, without emailing huge attachments.",
+        "deep_dive": "Uploading a file to cloud storage does more under the hood than it looks like on screen: the service usually encrypts your file, splits big files into chunks, stores multiple copies across separate machines or even separate buildings, and keeps a record of exactly who is allowed to see or edit it. That's why cloud storage can survive a single server breaking without losing anyone's files - something a single hard drive at home could never promise. The folder and sharing structure you practised today is the same basic system used by workplaces, schools, and research teams everywhere to let many people work on the same files without emailing attachments back and forth.",
     },
     "Your First Hosted Web Page": {
         "fact": "The World Wide Web - the system of linked pages you browse every day - is only about 35 years old, invented by Tim Berners-Lee in 1989.",
         "real_world": "Many young Kenyan entrepreneurs host their very first business or portfolio website on a free hosting tier, just like the one you'll use in this lesson, before ever paying for anything.",
+        "deep_dive": "When you 'host' a web page, you're really just placing your HTML file on a server that stays switched on and connected to the internet all day, every day, so that anyone, anywhere, can request to see it at any time. Before free and cheap hosting existed, putting a page online required owning and running your own server - expensive and complicated for a beginner. Today's hosting platforms do all of that heavy lifting for you, which is why a student can publish a real, working website in minutes instead of months. The link you get today works exactly the same way as the link to any major company's website - it's just pointing at a much smaller server.",
     },
     "Intro to Google Cloud Skills Boost": {
         "fact": "AWS, Google Cloud, and Microsoft Azure together run most of the world's cloud computing - but under the hood, they're all solving the same basic problems of storage, compute and networking.",
         "real_world": "Kenyan tech hubs and universities often introduce students to more than one cloud provider, because employers value people who are comfortable moving between AWS, Google Cloud, and Azure.",
+        "deep_dive": "Google Cloud Skills Boost uses hands-on labs instead of just videos, because research on learning shows that actually doing a task - clicking the real buttons, seeing the real results - helps ideas stick far better than watching someone else do it. Each lab you complete gives you temporary access to a real Google Cloud account, so mistakes are safe to make and nothing you do can accidentally cost real money or break anything permanent. Comparing Google Cloud to AWS side by side, like you're doing in this lesson, is exactly what cloud professionals do throughout their careers, since most companies end up using more than one cloud provider.",
     },
     "What Is AWS and Why Does It Matter?": {
         "fact": "AWS was originally built to solve Amazon's own problem of needing more computing power during big shopping seasons - then Amazon realised it could rent that spare power to other companies too.",
         "real_world": "Through Konza Technopolis and AWS's own African data centre investments, AWS's presence in Kenya is growing, opening the door to local jobs supporting the same cloud that runs apps you already use.",
+        "deep_dive": "AWS grew out of a very specific business problem: Amazon's own online store needed huge amounts of extra computing power during shopping peaks like Black Friday, but that power sat mostly unused the rest of the year. Renting out that spare capacity turned an internal cost centre into one of the most profitable parts of the entire company, and it created an entirely new industry - cloud computing - almost by accident. Today AWS offers well over 200 distinct services, but nearly all of them still solve one of three original problems: where to store data, where to run code, and how to connect it all together over a network.",
     },
     "Meet the Core AWS Services": {
         "fact": "Amazon S3 was one of the very first AWS services ever launched, back in 2006, and it now stores trillions of objects worldwide.",
         "real_world": "Kenyan start-ups building delivery apps, fintech products, and e-learning platforms often rely on exactly these four services - S3, EC2, Lambda, and RDS - as their technical foundation.",
+        "deep_dive": "S3, EC2, Lambda, and RDS were chosen for this lesson because almost every cloud application, no matter how complex, is built from some combination of them: a place to store files (S3), a place to run general-purpose code (EC2), a way to run small pieces of code automatically without managing a server (Lambda), and a managed database (RDS). Learning to recognise which of these four jobs a task needs - storage, compute, automation, or structured data - is one of the most transferable skills in cloud computing, because every major provider offers a close equivalent to each of these four services under a different name.",
     },
     "Your AWS Educate Account Tour": {
         "fact": "Digital badges like the ones AWS Educate awards are built on an open standard, so they can be verified and shared on professional profiles like LinkedIn.",
         "real_world": "Kenyan students have used AWS Educate badges in university and scholarship applications as real evidence of hands-on cloud skills, not just classroom theory.",
+        "deep_dive": "The dashboard, badges, and credits inside your AWS Educate account are designed to mirror the structure of the full AWS Management Console that working cloud professionals use daily, just simplified and made safe for learners. Badges aren't just decoration - each one is tied to a specific, verifiable set of skills, which is why they can be added to profiles like LinkedIn as genuine evidence of hands-on experience. Spending ten minutes exploring every tab of your account now, rather than only the sections a task tells you to click, builds the habit of confident exploration that professional cloud engineers rely on constantly when learning any new tool.",
     },
     "Storing Files in the Cloud with Amazon S3": {
         "fact": "Amazon S3 is designed to be so reliable that if you stored 10 million files, you'd statistically expect to lose less than one over 10,000 years.",
         "real_world": "Kenyan photographers, journalists, and small businesses increasingly back up important files to S3-style cloud storage so a lost or stolen laptop doesn't mean losing everything.",
+        "deep_dive": "S3 organises everything into 'buckets', which behave like top-level folders with their own permissions, region, and settings - a structure chosen so that storage can scale from a single personal file to trillions of objects without changing how it works. Every object you store gets a unique address called a key, and S3's promise of 'eleven nines' of durability means data loss is designed to be almost statistically impossible under normal operation. Understanding buckets, keys, and permissions - the three ideas in this lesson - unlocks the ability to work with cloud storage from almost any provider, since the same basic concepts appear under different names everywhere.",
     },
     "Building Your First Website with AWS": {
         "fact": "Thousands of personal portfolios and student projects are hosted directly from S3 buckets because it's one of the cheapest ways to put a website online.",
         "real_world": "A Kenyan student who hosts a project this way can share a real, live link in university or AWS re/Start applications instead of just a screenshot.",
+        "deep_dive": "Hosting a static website directly from an S3 bucket works because a 'static' site - one built only from HTML, CSS, and images, with no server-side code - doesn't need a full application server to run, just somewhere to store the files and serve them on request. This is one of the cheapest and simplest ways to host a real website, which is why it's a common first project in cloud courses and bootcamps worldwide. The process you followed - configure the bucket, upload the files, enable static hosting, get a public URL - is the same four-step pattern used to launch countless small business, portfolio, and student project sites every day.",
     },
     "AWS re/Start & Your Future in Cloud Careers": {
         "fact": "AWS re/Start graduates around the world have gone on to roles like cloud support associate, junior developer, and IT technician - often with no prior tech degree required.",
         "real_world": "AWS re/Start already runs in African countries through partners like AmaliTech, meaning the pathway in this lesson is a real, current route for Kenyan youth into tech careers.",
+        "deep_dive": "AWS re/Start is specifically designed for people with no prior technology background, which matters because it proves a cloud career pathway doesn't require a computer science degree to get started - just consistent effort over a focused training period, usually around three months. Graduates typically move into roles like cloud support associate, junior systems administrator, or IT helpdesk technician, which then open doors to more advanced certifications and roles over time. Programmes like this already operate in several African countries through training partners, which means the path described in this lesson is a genuinely available option for learners in Kenya today.",
     },
     "Databases 101": {
         "fact": "SQL, the language used to query most databases, has existed since the 1970s and remains one of the most widely used programming languages in the world today.",
         "real_world": "Kenyan school management systems, hospital records, and mobile money platforms all rely on structured databases just like the one you designed in this lesson.",
+        "deep_dive": "Relational databases organise information into tables made of rows and columns because that structure makes it fast and reliable to search, filter, and connect related information - finding every order placed by one customer, for example, instead of scanning through unrelated data. The 'relational' part refers to how tables link to each other through shared keys, letting a database represent real-world relationships, like one customer having many orders, without duplicating data everywhere. SQL, the language used to query these databases, has barely changed in its core logic for over forty years, because the underlying problem it solves hasn't changed either.",
     },
     "Designing a Simple Web App": {
         "fact": "Big streaming and shopping apps make billions of API calls between frontend, backend and database systems every single day to keep everything running smoothly.",
         "real_world": "Kenyan fintech and e-commerce apps, from ride-hailing services to online shops, are all built on this same three-layer frontend / backend / database pattern.",
+        "deep_dive": "Splitting an application into frontend, backend, and database layers isn't just tradition - it lets each layer be built, tested, fixed, and even replaced independently, which is essential once an app grows beyond a single person's work. The frontend only needs to know how to ask the backend for data and display whatever comes back; the backend only needs to know how to process requests and talk to the database; the database only needs to store and retrieve data efficiently. This separation of concerns is one of the most important ideas in all of software engineering, and the three-layer design you sketched today scales all the way up to apps used by millions of people.",
     },
     "Deploying to the Cloud": {
         "fact": "Modern cloud deployment tools can publish a code update to a live production server in seconds - a process that used to take engineers hours or even days.",
         "real_world": "Kenyan software teams, including government digital service projects, deploy updates to the cloud several times a week, letting them fix problems and add features quickly.",
+        "deep_dive": "Deployment is the step where code that only existed on one computer becomes something real users can actually reach, and modern cloud deployment tools have shrunk that process from hours or days down to a matter of seconds. Automating deployment - rather than manually copying files onto a server - also removes a huge source of human error, which is why most professional teams set up a 'pipeline' that tests code automatically before it's ever allowed to go live. Every time you refresh a well-known app and see a new feature appear, a deployment pipeline very similar to the one described in this lesson just did its job, probably without a single human clicking anything.",
     },
     "What Is Cloud AI?": {
         "fact": "Many everyday tools you already use - spam filters, voice assistants, photo-tagging apps - are powered by managed cloud AI services working quietly in the background.",
         "real_world": "Kenyan agri-tech and health-tech start-ups use cloud AI to do things like spot crop diseases from photos or screen medical images, often raising exactly the ethical questions this lesson asks you to consider.",
+        "deep_dive": "Cloud AI services let developers use powerful, pre-trained machine learning models - for image recognition, language translation, text analysis and more - without needing to build or train those models themselves, which would normally require huge amounts of data and computing power. This democratising effect means a single student or a small start-up can use the same underlying AI technology as a large company, just by calling an API. It also raises real ethical questions this lesson asks you to sit with: who's accountable when an AI makes a mistake, what happens to the data submitted, and whether a model trained on one population's data performs fairly for everyone else.",
     },
     "Trying a Managed AI Service": {
         "fact": "A single AI image-recognition API call can compare a photo against patterns learned from millions of training images, and return a result in well under a second.",
         "real_world": "Kenyan developers building apps for agriculture or healthcare often start by testing a free-tier managed AI service, exactly like you did in this lesson, before building anything custom.",
+        "deep_dive": "The reason a managed AI API can return a result in under a second is that the heavy, slow part - training the model on millions of examples - already happened long before you ever sent a request; your call is just asking an already-trained model to make one more prediction. This is precisely why managed AI services are so useful for learning and prototyping: you get access to genuinely powerful technology without needing the specialised hardware or expertise to build it yourself. The limitation matters just as much as the capability - a managed model only performs well on the type of data it was trained on, which is why testing its results critically matters more than blindly trusting whatever it returns.",
     },
     "Choosing Your Capstone Project": {
         "fact": "Famous products like Instagram and Twitter both began life as much smaller, simpler MVPs that their creators built in just weeks before growing them.",
         "real_world": "Kenyan hackathon teams at events like Pitch Night or Safaricom's competitions are judged heavily on exactly this skill - scoping a clear, achievable MVP rather than promising to build everything at once.",
+        "deep_dive": "The discipline of scoping a Minimum Viable Product - deciding what's truly essential versus what would just be nice to have - is arguably a more valuable long-term skill than any single technical tool, because it applies to every future project, job, or business idea you ever attempt. Most ambitious projects fail not because the idea was bad, but because the plan tried to do too much at once; a tightly scoped MVP that actually ships beats a sprawling vision that never gets finished. The project-scoping exercise in this lesson mirrors exactly what professional product teams and successful start-up founders do before writing a single line of code.",
     },
     "Building Your Capstone": {
         "fact": "Professional software teams almost never build a whole product in one go - they work in sprints usually lasting one to four weeks, then review and adjust.",
         "real_world": "Kenyan tech companies and government digital projects use the same sprint-and-documentation approach you're practising here to manage real, large-scale software projects.",
+        "deep_dive": "Working in short, fixed-length periods called sprints - typically one to four weeks - gives teams regular checkpoints to review progress, adjust plans, and catch problems early, rather than discovering at the very end that something went badly wrong. Documenting your decisions as you build, even briefly, matters just as much as the code itself: a project with no record of why choices were made becomes difficult for anyone, including your future self, to maintain or extend. These two habits - working in sprints and documenting as you go - are what separate a capstone project built like real software from a rushed, undocumented final assignment.",
     },
     "Presenting Your Portfolio": {
         "fact": "Recruiters often spend less than a minute on a first look at a portfolio - exactly why a clear, confident pitch matters as much as the work itself.",
         "real_world": "AWS re/Start and university Computer Science admissions in Kenya increasingly ask applicants to present a portfolio and pitch just like the one you're building in this capstone.",
+        "deep_dive": "A technical portfolio is judged on clarity far more often than on complexity: a reviewer or recruiter with limited time needs to immediately understand what you built, why it matters, and what role you played, before they'll dig into any technical detail. Structuring a pitch around problem, solution, and impact - in that order - consistently outperforms a pitch that leads with technical implementation details the audience may not yet have context for. Practising this kind of clear, confident presentation is exactly what AWS re/Start interviews, university admissions panels, and hackathon judges in Kenya are already evaluating candidates on today.",
     },
 }
 
@@ -270,6 +298,11 @@ def _lesson(title, summary, objectives, big_idea, activity, vocab, quiz, quiz_an
         "real_world",
         "Learners across Kenya are building exactly these skills right now, as part of the push to grow a cloud-ready generation.",
     )
+    deep_dive = extras.get(
+        "deep_dive",
+        "There's always more beneath the surface of a topic like this. As you keep learning, you'll meet these ideas again in bigger "
+        "projects, and each time they'll make a little more sense - that's how real understanding builds, one layer at a time.",
+    )
 
     obj_items = "".join(f"<li>{o}</li>" for o in objectives)
     vocab_items = "".join(
@@ -277,10 +310,11 @@ def _lesson(title, summary, objectives, big_idea, activity, vocab, quiz, quiz_an
         for term, definition in vocab
     )
     concept_chips = _concept_chips(vocab, tone)
-    practice_mcqs = _vocab_mcqs(vocab, 2 if len(vocab) >= 4 else 1)
+    practice_mcqs = _vocab_mcqs(vocab, min(3, len(vocab)))
 
     box_emoji_fact = "" if tone == "pro" else "\U0001F4A1"
     box_emoji_real = "" if tone == "pro" else "\U0001F30D"
+    box_emoji_dig = "" if tone == "pro" else "\U0001F50D"
 
     if tone == "pro":
         head_learn = "Objectives"
@@ -288,6 +322,7 @@ def _lesson(title, summary, objectives, big_idea, activity, vocab, quiz, quiz_an
         head_fact = "Worth Knowing:"
         head_try = "Hands-On Task"
         head_real = "Where This Shows Up:"
+        head_dig = "Going Further:"
         head_word = "Key Terms"
         head_picture = "Concept Map"
         head_check = "Check Your Understanding"
@@ -299,6 +334,7 @@ def _lesson(title, summary, objectives, big_idea, activity, vocab, quiz, quiz_an
         head_fact = "Did You Know?"
         head_try = "\U0001F6E0\uFE0F Try It Yourself"
         head_real = "Real-World Connection:"
+        head_dig = "Dig Deeper:"
         head_word = "\U0001F4DA Word Bank"
         head_picture = "\U0001F5BC\uFE0F Picture the Ideas"
         head_check = "\u2705 Quick Check"
@@ -334,6 +370,11 @@ def _lesson(title, summary, objectives, big_idea, activity, vocab, quiz, quiz_an
   <div class="lesson-section realworld-box">
     <span class="box-emoji">{box_emoji_real}</span>
     <p><strong>{head_real}</strong> {real_world}</p>
+  </div>
+
+  <div class="lesson-section deepdive-box">
+    <span class="box-emoji">{box_emoji_dig}</span>
+    <p><strong>{head_dig}</strong> {deep_dive}</p>
   </div>
 
   <div class="lesson-section">

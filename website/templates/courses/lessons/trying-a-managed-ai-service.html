@@ -1,0 +1,60 @@
+<div class="lesson-content tone-pro">
+  <div class="lesson-visual">
+    <svg viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" class="lesson-visual-svg" role="img" aria-label="lesson illustration"><rect x="1" y="1" width="298" height="138" rx="18" fill="#F1F5F9"/><rect x="15" y="55" width="62" height="30" rx="8" fill="#fff" stroke="#CBD5E1" stroke-width="2"/><text x="46" y="74" font-size="9" font-weight="600" fill="#475569" text-anchor="middle">Input</text><text x="92" y="70" font-size="16" fill="#64748B" text-anchor="middle" dominant-baseline="middle">→</text><rect x="107" y="55" width="70" height="30" rx="8" fill="#fff" stroke="var(--sky-dark)" stroke-width="2"/><text x="142" y="74" font-size="9" font-weight="600" fill="#475569" text-anchor="middle">API Call</text><text x="192" y="70" font-size="16" fill="#64748B" text-anchor="middle" dominant-baseline="middle">→</text><rect x="207" y="55" width="78" height="30" rx="8" fill="#fff" stroke="#CBD5E1" stroke-width="2"/><text x="246" y="74" font-size="9" font-weight="600" fill="#475569" text-anchor="middle">Result</text></svg>
+    <p class="visual-caption">A managed AI service takes an input, runs it through a model, and returns a result.</p>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head">Objectives</h5>
+    <ul class="objective-list"><li>Use a free-tier managed AI service to process a real input</li><li>Describe what happens inside an API call to an AI service</li></ul>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head">Concept Overview</h5>
+    <p>Trying a managed AI service usually means sending it an input - a photo, a sentence, a sound clip - through an API call, and receiving back a result called inference: the AI's prediction or analysis. For example, sending a photo to an image-recognition service might return 'dog, 94% confidence'. Seeing this process firsthand demystifies AI - it's a service like any other, following clear rules, just trained on huge amounts of data.</p>
+  </div>
+
+  <div class="lesson-section fact-box">
+    <span class="box-emoji"></span>
+    <p><strong>Worth Knowing:</strong> A single AI image-recognition API call can compare a photo against patterns learned from millions of training images, and return a result in well under a second.</p>
+  </div>
+
+  <div class="lesson-section activity-card">
+    <h5 class="section-head">Hands-On Task</h5>
+    <p>Using a free-tier AI/ML guided lab (such as an AWS Educate lab for image or text recognition), submit one sample input and record the result. Write a short summary of what input you gave, what output came back, and how confident or uncertain the result seemed.</p>
+  </div>
+
+  <div class="lesson-section realworld-box">
+    <span class="box-emoji"></span>
+    <p><strong>Where This Shows Up:</strong> Kenyan developers building apps for agriculture or healthcare often start by testing a free-tier managed AI service, exactly like you did in this lesson, before building anything custom.</p>
+  </div>
+
+  <div class="lesson-section deepdive-box">
+    <span class="box-emoji"></span>
+    <p><strong>Going Further:</strong> The reason a managed AI API can return a result in under a second is that the heavy, slow part - training the model on millions of examples - already happened long before you ever sent a request; your call is just asking an already-trained model to make one more prediction. This is precisely why managed AI services are so useful for learning and prototyping: you get access to genuinely powerful technology without needing the specialised hardware or expertise to build it yourself. The limitation matters just as much as the capability - a managed model only performs well on the type of data it was trained on, which is why testing its results critically matters more than blindly trusting whatever it returns.</p>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head">Key Terms </h5>
+    <div class="vocab-grid"><details class="vocab-card"><summary>Managed AI Service</summary><p>A ready-to-use AI tool provided by a cloud platform</p></details><details class="vocab-card"><summary>API Call</summary><p>A request sent to a service asking it to do something and return a result</p></details><details class="vocab-card"><summary>Inference</summary><p>The prediction or result an AI model produces for a given input</p></details></div>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head">Concept Map</h5>
+    <div class="illustration-grid"><div class="concept-chip"><span class="chip-emoji">▪</span><span class="chip-label">Managed AI Service</span></div><div class="concept-chip"><span class="chip-emoji">▪</span><span class="chip-label">API Call</span></div><div class="concept-chip"><span class="chip-emoji">▪</span><span class="chip-label">Inference</span></div></div>
+  </div>
+
+  <div class="lesson-section quiz-card">
+    <h5 class="section-head">Check Your Understanding</h5>
+    <p>If an image recognition service returns 'cat, 60% confidence', what does that confidence number actually mean?</p>
+    <details class="quiz-reveal">
+      <summary>Reveal a model answer</summary>
+      <p>It means the model estimates a 60% likelihood the image shows a cat - not certainty, so a human may want to double-check borderline results.</p>
+    </details>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head">Quiz Time</h5>
+    <div class="mcq-block"><div class="mcq-question" data-correct="0"><p class="mcq-prompt">Which word matches this definition? <em>“A ready-to-use AI tool provided by a cloud platform”</em></p><div class="mcq-options"><button type="button" class="mcq-option" data-index="0">Managed AI Service</button><button type="button" class="mcq-option" data-index="1">API Call</button><button type="button" class="mcq-option" data-index="2">Inference</button></div><div class="mcq-explain"><strong>Managed AI Service</strong> - A ready-to-use AI tool provided by a cloud platform</div></div><div class="mcq-question" data-correct="0"><p class="mcq-prompt">Which word matches this definition? <em>“A request sent to a service asking it to do something and return a result”</em></p><div class="mcq-options"><button type="button" class="mcq-option" data-index="0">API Call</button><button type="button" class="mcq-option" data-index="1">Inference</button><button type="button" class="mcq-option" data-index="2">Managed AI Service</button></div><div class="mcq-explain"><strong>API Call</strong> - A request sent to a service asking it to do something and return a result</div></div><div class="mcq-question" data-correct="0"><p class="mcq-prompt">Which word matches this definition? <em>“The prediction or result an AI model produces for a given input”</em></p><div class="mcq-options"><button type="button" class="mcq-option" data-index="0">Inference</button><button type="button" class="mcq-option" data-index="1">Managed AI Service</button><button type="button" class="mcq-option" data-index="2">API Call</button></div><div class="mcq-explain"><strong>Inference</strong> - The prediction or result an AI model produces for a given input</div></div></div>
+  </div>
+</div>

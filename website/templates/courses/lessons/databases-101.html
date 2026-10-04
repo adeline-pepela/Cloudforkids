@@ -1,0 +1,60 @@
+<div class="lesson-content tone-pro">
+  <div class="lesson-visual">
+    <svg viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" class="lesson-visual-svg" role="img" aria-label="lesson illustration"><rect x="1" y="1" width="298" height="138" rx="18" fill="#F1F5F9"/><rect x="40" y="28" width="220" height="26" rx="8" fill="#fff" stroke="#CBD5E1" stroke-width="2"/><text x="150" y="46" font-size="9" font-weight="600" fill="#475569" text-anchor="middle">id | title | author</text><rect x="40" y="58" width="220" height="22" rx="8" fill="#fff" stroke="#E2E8F0" stroke-width="2"/><text x="150" y="73" font-size="9" font-weight="600" fill="#64748B" text-anchor="middle">1  |  Dune  |  Herbert</text><rect x="40" y="84" width="220" height="22" rx="8" fill="#fff" stroke="#E2E8F0" stroke-width="2"/><text x="150" y="99" font-size="9" font-weight="600" fill="#64748B" text-anchor="middle">2  |  Emil  |  Herbert</text><text x="150" y="124" font-size="9" font-weight="700" fill="var(--sky-dark)" text-anchor="middle">QUERY → SELECT * FROM books</text></svg>
+    <p class="visual-caption">A database organises structured data into rows and columns you can query.</p>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head">Objectives</h5>
+    <ul class="objective-list"><li>Design a simple database table structure</li><li>Write a basic query to retrieve specific data</li></ul>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head">Concept Overview</h5>
+    <p>A database organises structured data into tables made of rows and columns, much like a well-designed spreadsheet - for example a 'Students' table with columns for name, grade, and favourite subject. A query is a request you write (often in a language called SQL) asking the database a specific question, like 'show me every student in Grade 10'. Cloud databases such as Amazon RDS also add automatic backups and security controls so data stays safe even if something goes wrong.</p>
+  </div>
+
+  <div class="lesson-section fact-box">
+    <span class="box-emoji"></span>
+    <p><strong>Worth Knowing:</strong> SQL, the language used to query most databases, has existed since the 1970s and remains one of the most widely used programming languages in the world today.</p>
+  </div>
+
+  <div class="lesson-section activity-card">
+    <h5 class="section-head">Hands-On Task</h5>
+    <p>Design a table for a school library: columns for Book Title, Author, and Available (yes/no). Fill in five sample rows by hand or in a spreadsheet. Then write a plain-English 'query' such as 'show me every book that is available', and if you have access to a SQL tool, write the real SELECT statement for it.</p>
+  </div>
+
+  <div class="lesson-section realworld-box">
+    <span class="box-emoji"></span>
+    <p><strong>Where This Shows Up:</strong> Kenyan school management systems, hospital records, and mobile money platforms all rely on structured databases just like the one you designed in this lesson.</p>
+  </div>
+
+  <div class="lesson-section deepdive-box">
+    <span class="box-emoji"></span>
+    <p><strong>Going Further:</strong> Relational databases organise information into tables made of rows and columns because that structure makes it fast and reliable to search, filter, and connect related information - finding every order placed by one customer, for example, instead of scanning through unrelated data. The 'relational' part refers to how tables link to each other through shared keys, letting a database represent real-world relationships, like one customer having many orders, without duplicating data everywhere. SQL, the language used to query these databases, has barely changed in its core logic for over forty years, because the underlying problem it solves hasn't changed either.</p>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head">Key Terms </h5>
+    <div class="vocab-grid"><details class="vocab-card"><summary>Database</summary><p>An organised system for storing structured data</p></details><details class="vocab-card"><summary>Table</summary><p>A database structure organised into rows and columns</p></details><details class="vocab-card"><summary>Query</summary><p>A request asking a database a specific question</p></details><details class="vocab-card"><summary>SQL</summary><p>The common language used to write database queries</p></details></div>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head">Concept Map</h5>
+    <div class="illustration-grid"><div class="concept-chip"><span class="chip-emoji">▪</span><span class="chip-label">Database</span></div><div class="concept-chip"><span class="chip-emoji">▪</span><span class="chip-label">Table</span></div><div class="concept-chip"><span class="chip-emoji">▪</span><span class="chip-label">Query</span></div><div class="concept-chip"><span class="chip-emoji">▪</span><span class="chip-label">SQL</span></div></div>
+  </div>
+
+  <div class="lesson-section quiz-card">
+    <h5 class="section-head">Check Your Understanding</h5>
+    <p>Write the plain-English version of a query that would find every library book that is NOT available.</p>
+    <details class="quiz-reveal">
+      <summary>Reveal a model answer</summary>
+      <p>SELECT * FROM books WHERE available = 'no' - in plain English: 'show me every book that is not available.'</p>
+    </details>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head">Quiz Time</h5>
+    <div class="mcq-block"><div class="mcq-question" data-correct="0"><p class="mcq-prompt">Which word matches this definition? <em>“An organised system for storing structured data”</em></p><div class="mcq-options"><button type="button" class="mcq-option" data-index="0">Database</button><button type="button" class="mcq-option" data-index="1">Table</button><button type="button" class="mcq-option" data-index="2">Query</button><button type="button" class="mcq-option" data-index="3">SQL</button></div><div class="mcq-explain"><strong>Database</strong> - An organised system for storing structured data</div></div><div class="mcq-question" data-correct="0"><p class="mcq-prompt">Which word matches this definition? <em>“A database structure organised into rows and columns”</em></p><div class="mcq-options"><button type="button" class="mcq-option" data-index="0">Table</button><button type="button" class="mcq-option" data-index="1">Query</button><button type="button" class="mcq-option" data-index="2">SQL</button><button type="button" class="mcq-option" data-index="3">Database</button></div><div class="mcq-explain"><strong>Table</strong> - A database structure organised into rows and columns</div></div><div class="mcq-question" data-correct="0"><p class="mcq-prompt">Which word matches this definition? <em>“A request asking a database a specific question”</em></p><div class="mcq-options"><button type="button" class="mcq-option" data-index="0">Query</button><button type="button" class="mcq-option" data-index="1">SQL</button><button type="button" class="mcq-option" data-index="2">Database</button><button type="button" class="mcq-option" data-index="3">Table</button></div><div class="mcq-explain"><strong>Query</strong> - A request asking a database a specific question</div></div></div>
+  </div>
+</div>

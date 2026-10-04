@@ -47,6 +47,24 @@ class Course(models.Model):
     def lesson_count(self):
         return self.lessons.count()
 
+    @property
+    def teaching_lessons(self):
+        """Regular lessons only (excludes the module exam)."""
+        return [l for l in self.lessons.all() if l.lesson_type == Lesson.LessonType.LESSON]
+
+    @property
+    def exam(self):
+        """The course's full module exam, if one has been seeded."""
+        for lesson in self.lessons.all():
+            if lesson.lesson_type == Lesson.LessonType.EXAM:
+                return lesson
+        return None
+
+    @property
+    def total_duration_minutes(self):
+        """Total minutes of regular lesson content (excludes the exam)."""
+        return sum(l.duration_minutes for l in self.teaching_lessons)
+
 
 class Lesson(models.Model):
     class LessonType(models.TextChoices):

@@ -1,0 +1,60 @@
+<div class="lesson-content tone-pro">
+  <div class="lesson-visual">
+    <svg viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" class="lesson-visual-svg" role="img" aria-label="lesson illustration"><rect x="1" y="1" width="298" height="138" rx="18" fill="#F1F5F9"/><rect x="18" y="50" width="72" height="40" rx="8" fill="#fff" stroke="var(--sky-dark)" stroke-width="2"/><text x="54" y="74" font-size="10" font-weight="600" fill="#475569" text-anchor="middle">Frontend</text><text x="112" y="70" font-size="18" fill="#64748B" text-anchor="middle" dominant-baseline="middle">→</text><rect x="130" y="50" width="72" height="40" rx="8" fill="#fff" stroke="var(--sky-dark)" stroke-width="2"/><text x="166" y="74" font-size="10" font-weight="600" fill="#475569" text-anchor="middle">Backend</text><text x="222" y="70" font-size="18" fill="#64748B" text-anchor="middle" dominant-baseline="middle">→</text><rect x="232" y="50" width="52" height="40" rx="8" fill="#fff" stroke="var(--sky-dark)" stroke-width="2"/><text x="258" y="70" font-size="9" font-weight="600" fill="#475569" text-anchor="middle">Data</text><text x="258" y="82" font-size="9" font-weight="600" fill="#475569" text-anchor="middle">base</text></svg>
+    <p class="visual-caption">A typical web app passes data between a frontend, a backend, and a database.</p>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head">Objectives</h5>
+    <ul class="objective-list"><li>Sketch a basic architecture diagram for a web app</li><li>Explain the difference between frontend, backend, and database</li></ul>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head">Concept Overview</h5>
+    <p>Most web apps have three layers: the frontend (what users see and click, built with HTML/CSS/JavaScript), the backend (the server-side logic that processes requests and enforces rules), and the database (where information is stored long-term). They talk to each other through an API, a defined set of rules for requesting and sending data. Drawing an architecture diagram before writing any code helps you spot problems early and explain your idea to others.</p>
+  </div>
+
+  <div class="lesson-section fact-box">
+    <span class="box-emoji"></span>
+    <p><strong>Worth Knowing:</strong> Big streaming and shopping apps make billions of API calls between frontend, backend and database systems every single day to keep everything running smoothly.</p>
+  </div>
+
+  <div class="lesson-section activity-card">
+    <h5 class="section-head">Hands-On Task</h5>
+    <p>Pick a simple app idea (a chore tracker, a class attendance app, a reading log). Sketch a one-page architecture diagram with three boxes - frontend, backend, database - and arrows labelled with what data flows between them (for example, 'save new chore' or 'get today's list'). Present your diagram to a partner and defend your choices.</p>
+  </div>
+
+  <div class="lesson-section realworld-box">
+    <span class="box-emoji"></span>
+    <p><strong>Where This Shows Up:</strong> Kenyan fintech and e-commerce apps, from ride-hailing services to online shops, are all built on this same three-layer frontend / backend / database pattern.</p>
+  </div>
+
+  <div class="lesson-section deepdive-box">
+    <span class="box-emoji"></span>
+    <p><strong>Going Further:</strong> Splitting an application into frontend, backend, and database layers isn't just tradition - it lets each layer be built, tested, fixed, and even replaced independently, which is essential once an app grows beyond a single person's work. The frontend only needs to know how to ask the backend for data and display whatever comes back; the backend only needs to know how to process requests and talk to the database; the database only needs to store and retrieve data efficiently. This separation of concerns is one of the most important ideas in all of software engineering, and the three-layer design you sketched today scales all the way up to apps used by millions of people.</p>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head">Key Terms </h5>
+    <div class="vocab-grid"><details class="vocab-card"><summary>Frontend</summary><p>The part of an app users directly see and interact with</p></details><details class="vocab-card"><summary>Backend</summary><p>The server-side logic that processes requests and rules</p></details><details class="vocab-card"><summary>API</summary><p>A defined set of rules for two systems to exchange data</p></details><details class="vocab-card"><summary>Architecture Diagram</summary><p>A visual map of how a system's parts connect</p></details></div>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head">Concept Map</h5>
+    <div class="illustration-grid"><div class="concept-chip"><span class="chip-emoji">▪</span><span class="chip-label">Frontend</span></div><div class="concept-chip"><span class="chip-emoji">▪</span><span class="chip-label">Backend</span></div><div class="concept-chip"><span class="chip-emoji">▪</span><span class="chip-label">API</span></div><div class="concept-chip"><span class="chip-emoji">▪</span><span class="chip-label">Architecture Diagram</span></div></div>
+  </div>
+
+  <div class="lesson-section quiz-card">
+    <h5 class="section-head">Check Your Understanding</h5>
+    <p>In your chore tracker idea, what data would flow from the frontend to the backend when a user marks a chore 'done'?</p>
+    <details class="quiz-reveal">
+      <summary>Reveal a model answer</summary>
+      <p>The chore's identifier and its new 'done' status would be sent from the frontend to the backend, which would then update that record in the database.</p>
+    </details>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head">Quiz Time</h5>
+    <div class="mcq-block"><div class="mcq-question" data-correct="0"><p class="mcq-prompt">Which word matches this definition? <em>“The part of an app users directly see and interact with”</em></p><div class="mcq-options"><button type="button" class="mcq-option" data-index="0">Frontend</button><button type="button" class="mcq-option" data-index="1">Backend</button><button type="button" class="mcq-option" data-index="2">API</button><button type="button" class="mcq-option" data-index="3">Architecture Diagram</button></div><div class="mcq-explain"><strong>Frontend</strong> - The part of an app users directly see and interact with</div></div><div class="mcq-question" data-correct="0"><p class="mcq-prompt">Which word matches this definition? <em>“The server-side logic that processes requests and rules”</em></p><div class="mcq-options"><button type="button" class="mcq-option" data-index="0">Backend</button><button type="button" class="mcq-option" data-index="1">API</button><button type="button" class="mcq-option" data-index="2">Architecture Diagram</button><button type="button" class="mcq-option" data-index="3">Frontend</button></div><div class="mcq-explain"><strong>Backend</strong> - The server-side logic that processes requests and rules</div></div><div class="mcq-question" data-correct="0"><p class="mcq-prompt">Which word matches this definition? <em>“A defined set of rules for two systems to exchange data”</em></p><div class="mcq-options"><button type="button" class="mcq-option" data-index="0">API</button><button type="button" class="mcq-option" data-index="1">Architecture Diagram</button><button type="button" class="mcq-option" data-index="2">Frontend</button><button type="button" class="mcq-option" data-index="3">Backend</button></div><div class="mcq-explain"><strong>API</strong> - A defined set of rules for two systems to exchange data</div></div></div>
+  </div>
+</div>

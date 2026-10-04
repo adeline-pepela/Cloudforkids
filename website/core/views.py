@@ -23,7 +23,7 @@ def about(request):
 
 
 def curriculum(request):
-    tiers = Tier.objects.prefetch_related("courses")
+    tiers = Tier.objects.prefetch_related("courses__lessons")
     return render(request, "core/curriculum.html", {"tiers": tiers})
 
 
