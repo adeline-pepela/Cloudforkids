@@ -31,8 +31,8 @@ class CourseAdmin(admin.ModelAdmin):
 
 @admin.register(Lesson)
 class LessonAdmin(admin.ModelAdmin):
-    list_display = ("title", "course", "duration_minutes", "order")
-    list_filter = ("course__tier", "course")
+    list_display = ("title", "course", "lesson_type", "duration_minutes", "pass_score_percent", "order")
+    list_filter = ("course__tier", "course", "lesson_type")
     prepopulated_fields = {"slug": ("title",)}
 
 

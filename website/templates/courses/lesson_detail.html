@@ -8,7 +8,14 @@
         <a href="{{ course.get_absolute_url }}" class="text-decoration-none">{{ course.title }}</a>
       </div>
       <h1 class="section-title">{{ lesson.title }}</h1>
-      <p class="text-secondary">{{ lesson.duration_minutes }} minutes {% if is_complete %}&middot; <span class="text-success fw-bold">Completed</span>{% endif %}</p>
+      <p class="text-secondary">
+        {% if lesson.is_exam %}
+          &#127891; Full module exam &middot; approx. {{ lesson.duration_minutes }} minutes &middot; {{ lesson.pass_score_percent }}% to pass
+        {% else %}
+          {{ lesson.duration_minutes }} minutes
+        {% endif %}
+        {% if is_complete %}&middot; <span class="text-success fw-bold">Completed</span>{% endif %}
+      </p>
 
       <div class="tier-card p-4 my-4">
         {{ lesson.content|safe }}
@@ -24,7 +31,9 @@
           {% if not is_complete %}
             <form method="post" action="{% url 'courses:mark_lesson_complete' course.slug lesson.slug %}">
               {% csrf_token %}
-              <button type="submit" class="btn btn-cloud btn-lg">Mark complete &amp; continue</button>
+              <button type="submit" class="btn btn-cloud btn-lg">
+                {% if lesson.is_exam %}I've finished the exam &amp; reviewed my score{% else %}Mark complete &amp; continue{% endif %}
+              </button>
             </form>
           {% elif next_lesson %}
             <a href="{{ next_lesson.get_absolute_url }}" class="btn btn-cloud btn-lg">Next: {{ next_lesson.title }} &rarr;</a>

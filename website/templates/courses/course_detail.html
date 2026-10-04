@@ -41,6 +41,28 @@
       {% empty %}
         <p class="text-secondary">Lessons for this course are coming soon.</p>
       {% endfor %}
+
+      {% if exam %}
+        <h4 class="mt-4">Module Exam</h4>
+        <a href="{{ exam.get_absolute_url }}" class="text-decoration-none text-dark">
+          <div class="lesson-row exam-row {% if exam.id in completed_ids %}done{% endif %}">
+            <div>
+              <span class="fw-bold">&#127891; {{ exam.title }}</span>
+              <p class="text-secondary small mb-0">{{ exam.summary }}</p>
+              {% if not lessons_unlocked %}
+                <p class="text-secondary small mb-0 fst-italic">Finish every lesson above first for the best shot at passing.</p>
+              {% endif %}
+            </div>
+            <div class="text-end">
+              {% if exam.id in completed_ids %}
+                <span class="badge-pill">&#9989; Passed</span>
+              {% else %}
+                <span class="text-secondary small">{{ exam.duration_minutes }} min &middot; {{ exam.pass_score_percent }}% to pass</span>
+              {% endif %}
+            </div>
+          </div>
+        </a>
+      {% endif %}
     </div>
     <div class="col-lg-4">
       <div class="tier-card p-4 mt-4 mt-lg-0">

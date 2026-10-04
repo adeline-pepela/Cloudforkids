@@ -49,6 +49,10 @@ class Course(models.Model):
 
 
 class Lesson(models.Model):
+    class LessonType(models.TextChoices):
+        LESSON = "lesson", "Lesson"
+        EXAM = "exam", "Module Exam"
+
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="lessons")
     title = models.CharField(max_length=150)
     slug = models.SlugField()
@@ -56,6 +60,13 @@ class Lesson(models.Model):
     content = models.TextField(help_text="Lesson content (supports plain text / simple markup)")
     duration_minutes = models.PositiveIntegerField(default=30)
     order = models.PositiveIntegerField(default=0)
+    lesson_type = models.CharField(
+        max_length=10, choices=LessonType.choices, default=LessonType.LESSON,
+        help_text="Regular lesson, or the full module exam for the course",
+    )
+    pass_score_percent = models.PositiveIntegerField(
+        default=70, help_text="Score (%) needed to pass this item's quiz/exam, if it has one"
+    )
 
     class Meta:
         ordering = ["course__tier__order", "course__order", "order"]
@@ -66,6 +77,10 @@ class Lesson(models.Model):
 
     def get_absolute_url(self):
         return reverse("courses:lesson_detail", args=[self.course.slug, self.slug])
+
+    @property
+    def is_exam(self):
+        return self.lesson_type == self.LessonType.EXAM
 
     def next_lesson(self):
         return Lesson.objects.filter(course=self.course, order__gt=self.order).order_by("order").first()

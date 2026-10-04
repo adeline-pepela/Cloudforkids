@@ -13,21 +13,25 @@ def programs(request):
 
 def course_detail(request, slug):
     course = get_object_or_404(Course, slug=slug)
-    lessons = course.lessons.all()
+    lessons = course.lessons.filter(lesson_type=Lesson.LessonType.LESSON)
+    exam = course.lessons.filter(lesson_type=Lesson.LessonType.EXAM).first()
     enrollment = None
     completed_ids = set()
     if request.user.is_authenticated:
         enrollment = Enrollment.objects.filter(learner=request.user, course=course).first()
         if enrollment:
             completed_ids = enrollment.completed_lesson_ids
+    lessons_unlocked = not lessons.exists() or all(lesson.id in completed_ids for lesson in lessons)
     return render(
         request,
         "courses/course_detail.html",
         {
             "course": course,
             "lessons": lessons,
+            "exam": exam,
             "enrollment": enrollment,
             "completed_ids": completed_ids,
+            "lessons_unlocked": lessons_unlocked,
         },
     )
 

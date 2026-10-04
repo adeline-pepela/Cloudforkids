@@ -445,7 +445,7 @@ TIERS = [
         "name": "Foundational",
         "grade_range": "Grade 4-6",
         "cbc_alignment": "Digital Literacy (Core Competency) & Pre-Technical Studies",
-        "summary": "Unplugged, hands-on intro to how data, devices, and the cloud actually work.",
+        "summary": "Unplugged, hands-on intro to how data, storage, and the cloud actually work.",
         "description": (
             "Designed to need little to no hardware or connectivity, the Foundational tier "
             "introduces core ideas of data, storage, networks, and the internet as groundwork "

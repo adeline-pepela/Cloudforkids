@@ -337,3 +337,116 @@ footer.site-footer h6 {
 .tone-pro .vocab-card[open] { background: #F1F5F9; border-color: #CBD5E1; }
 .tone-pro .quiz-reveal summary { color: var(--ink); }
 .tone-pro .visual-caption { color: #64748B; }
+
+/* "Did You Know" fact box + Real-World Connection callout */
+.fact-box, .realworld-box {
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  display: flex;
+  gap: .8rem;
+  align-items: flex-start;
+}
+.fact-box {
+  background: #FFF8E1;
+  border: 2px dashed var(--sun);
+}
+.realworld-box {
+  background: #EDFBF3;
+  border: 2px dashed var(--grass);
+}
+.fact-box .box-emoji, .realworld-box .box-emoji { font-size: 1.6rem; line-height: 1; flex-shrink: 0; }
+.fact-box p, .realworld-box p { margin: 0; }
+.fact-box strong, .realworld-box strong { display: block; margin-bottom: .2rem; }
+.tone-pro .fact-box, .tone-pro .realworld-box { background: #F1F5F9; border-style: solid; border-color: #CBD5E1; }
+
+/* Second illustration: concept chip grid built from the lesson's vocabulary */
+.illustration-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+  justify-content: center;
+  margin: .75rem 0 0;
+}
+.concept-chip {
+  background: #fff;
+  border: 2px solid var(--sky-light);
+  border-radius: var(--radius-md);
+  padding: .6rem .9rem;
+  text-align: center;
+  min-width: 92px;
+}
+.concept-chip .chip-emoji { font-size: 1.7rem; display: block; margin-bottom: .25rem; }
+.concept-chip .chip-label { font-size: .74rem; font-weight: 700; color: var(--sky-dark); }
+.tone-pro .concept-chip { border-color: #E2E8F0; }
+.tone-pro .concept-chip .chip-label { color: var(--ink); text-transform: uppercase; letter-spacing: .04em; font-size: .68rem; }
+
+/* Multiple-choice quiz questions (lesson "Quiz Time" + full module exams) */
+.mcq-block { display: flex; flex-direction: column; gap: 1.1rem; }
+.mcq-question {
+  background: #fff;
+  border: 1px solid rgba(28,167,236,0.18);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.1rem;
+}
+.mcq-question .mcq-prompt { font-weight: 700; margin-bottom: .7rem; }
+.mcq-options { display: flex; flex-direction: column; gap: .5rem; }
+.mcq-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: #F8FBFF;
+  border: 2px solid var(--sky-light);
+  border-radius: 10px;
+  padding: .55rem .85rem;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+.mcq-option:hover { border-color: var(--sky); }
+.mcq-option.is-selected { border-color: var(--sky-dark); background: var(--sky-light); }
+.mcq-option.is-correct { border-color: var(--grass); background: #E7F9EF; }
+.mcq-option.is-incorrect { border-color: var(--coral); background: #FFEDED; }
+.mcq-option:disabled { cursor: default; opacity: .9; }
+.mcq-explain {
+  display: none;
+  margin: .7rem 0 0;
+  padding: .6rem .8rem;
+  border-radius: 8px;
+  background: var(--sky-light);
+  font-size: .88rem;
+}
+.mcq-question.is-answered .mcq-explain { display: block; }
+.tone-pro .mcq-question { border-color: #E2E8F0; }
+.tone-pro .mcq-option { background: #F8FAFC; border-color: #E2E8F0; }
+.tone-pro .mcq-option.is-selected { border-color: #475569; background: #F1F5F9; }
+.tone-pro .mcq-explain { background: #F1F5F9; }
+
+/* Full module exam */
+.exam-wrap { display: flex; flex-direction: column; gap: 1.1rem; }
+.exam-progress-wrap { display: flex; align-items: center; gap: .7rem; margin-bottom: .25rem; }
+.exam-progress-track {
+  flex: 1;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--sky-light);
+  overflow: hidden;
+}
+.exam-progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--sky), var(--grass)); border-radius: 999px; transition: width .2s ease; }
+.exam-progress-label { font-size: .8rem; font-weight: 700; color: var(--sky-dark); white-space: nowrap; }
+.exam-submit-row { text-align: center; margin-top: .5rem; }
+.exam-result {
+  display: none;
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.4rem;
+  margin-top: .5rem;
+}
+.exam-result.show { display: block; }
+.exam-result.pass { background: #E7F9EF; border: 2px solid var(--grass); }
+.exam-result.fail { background: #FFF4E6; border: 2px solid var(--sun); }
+.exam-result .exam-score { font-family: "Baloo 2", sans-serif; font-size: 2.1rem; font-weight: 800; }
+.exam-result-list { margin-top: .9rem; padding-left: 0; list-style: none; }
+.exam-result-list li { padding: .35rem 0; border-top: 1px solid rgba(0,0,0,0.08); font-size: .88rem; }
+.exam-result-list li:first-child { border-top: none; }
+.exam-result-list .tag-correct { color: var(--grass); font-weight: 800; }
+.exam-result-list .tag-incorrect { color: var(--coral); font-weight: 800; }
