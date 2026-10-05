@@ -8,7 +8,7 @@
   <div class="flex-grow-1">
     <h1 class="l-title mb-1">{{ c.name }}</h1>
     <div class="fm-meta">
-      <span><i class="bi bi-signpost-split-fill" aria-hidden="true"></i> {{ c.tier.name|default:"All tiers" }}</span>
+      <span><i class="bi bi-signpost-split-fill" aria-hidden="true"></i> {{ c.tier.display_name|default:"All tiers" }}</span>
       {% if c.school_name %}<span><i class="bi bi-building-fill" aria-hidden="true"></i> {{ c.school_name }}</span>{% endif %}
       {% if c.description %}<span><i class="bi bi-info-circle-fill" aria-hidden="true"></i> {{ c.description }}</span>{% endif %}
       {% if c.archived %}<span class="text-danger fw-bold">Archived</span>{% endif %}
@@ -17,6 +17,7 @@
   <div class="d-flex flex-wrap gap-2 no-print">
     <a href="{% url 'teach:class_export' c.pk %}" class="btn btn-outline-cloud"><i class="bi bi-file-earmark-spreadsheet-fill" aria-hidden="true"></i> Export CSV</a>
     <button type="button" class="btn btn-outline-cloud" onclick="window.print()"><i class="bi bi-printer-fill" aria-hidden="true"></i> Print</button>
+    <a href="{% url 'messaging:compose' %}?class={{ c.pk }}" class="btn btn-outline-cloud"><i class="bi bi-envelope-fill" aria-hidden="true"></i> Message</a>
     <a href="{% url 'teach:class_edit' c.pk %}" class="btn btn-outline-cloud"><i class="bi bi-pencil-fill" aria-hidden="true"></i> Edit</a>
   </div>
 </div>
@@ -81,7 +82,7 @@
       {% for item in r.assignments %}
       <div class="fm-row {% if item.overdue and item.finished < r.count %}warn{% else %}ok{% endif %}">
         <div>
-          <strong>{{ item.a.course.title }}</strong>
+          <strong>{{ item.a.course.display_title }}</strong>
           <small>{% if item.a.due_date %}Due {{ item.a.due_date|date:"j M" }}{% if item.overdue %} (overdue){% elif item.days_left == 0 %} (today){% else %} ({{ item.days_left }} day{{ item.days_left|pluralize }} left){% endif %}{% else %}No due date{% endif %} &middot; {{ item.finished }} of {{ r.count }} finished &middot; average {{ item.avg }}%{% if item.a.note %} &middot; {{ item.a.note }}{% endif %}</small>
         </div>
         <form method="post" action="{% url 'teach:assignment_delete' c.pk item.a.pk %}" class="no-print">{% csrf_token %}<button class="btn btn-link btn-sm text-secondary p-0" aria-label="Remove assignment"><i class="bi bi-trash3" aria-hidden="true"></i></button></form>
@@ -139,7 +140,7 @@
       <h3><i class="bi bi-exclamation-diamond-fill text-danger" aria-hidden="true"></i> Hardest topics</h3>
       <p class="small text-secondary">Lessons where learners scored lowest or failed the quiz.</p>
       {% for f in r.hard %}
-      <div class="fm-row warn"><div><strong>{{ f.lesson.title }}</strong><small>{{ f.course.title }} &middot; {{ f.failed }} of {{ f.attempts }} did not pass</small></div><span class="fm-score warn">{{ f.avg }}%</span></div>
+      <div class="fm-row warn"><div><strong>{{ f.lesson.display_title }}</strong><small>{{ f.course.display_title }} &middot; {{ f.failed }} of {{ f.attempts }} did not pass</small></div><span class="fm-score warn">{{ f.avg }}%</span></div>
       {% empty %}
       <p class="fm-empty"><i class="bi bi-hourglass-split" aria-hidden="true"></i> Not enough quiz results yet.</p>
       {% endfor %}
@@ -157,7 +158,7 @@
       <tbody>
         {% for f in r.funnel %}
         <tr>
-          <td><strong>{{ f.lesson.title }}</strong><small>{{ f.course.title }}</small></td>
+          <td><strong>{{ f.lesson.display_title }}</strong><small>{{ f.course.display_title }}</small></td>
           <td style="min-width:180px;"><div class="d-flex align-items-center gap-2"><span class="fm-bar flex-grow-1"><span style="width: {{ f.percent }}%"></span></span><b>{{ f.done }}/{{ r.count }}</b></div></td>
           <td>{% if f.avg is not None %}<b class="{% if f.avg >= 70 %}text-success{% else %}text-danger{% endif %}">{{ f.avg }}%</b>{% else %}-{% endif %}</td>
         </tr>

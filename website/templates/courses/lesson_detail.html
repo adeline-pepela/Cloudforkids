@@ -1,13 +1,13 @@
 {% extends "learner/base.html" %}
-{% block title %}{{ lesson.title }}{% endblock %}
+{% block title %}{{ lesson.display_title }}{% endblock %}
 {% block content %}
 <section class="container py-4">
   <div class="row g-4">
     <div class="{% if side_quiz %}col-xl-8{% else %}col-12{% endif %}">
       <div class="section-eyebrow">
-        <a href="{{ course.get_absolute_url }}" class="text-decoration-none">{{ course.title }}</a>
+        <a href="{{ course.get_absolute_url }}" class="text-decoration-none">{{ course.display_title }}</a>
       </div>
-      <h1 class="section-title">{{ lesson.title }}</h1>
+      <h1 class="section-title">{{ lesson.display_title }}</h1>
       <p class="text-secondary">
         {% if lesson.is_exam %}
           <i class="bi bi-mortarboard-fill" aria-hidden="true"></i> Full module exam &middot; approx. {{ lesson.duration_minutes }} minutes &middot; {{ lesson.pass_score_percent }}% to pass
@@ -18,7 +18,7 @@
       </p>
 
       <div class="tier-card p-4 my-4" style="height:auto;">
-        {{ lesson.content|safe }}
+        {{ content_html|safe }}
       </div>
 
       <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -62,101 +62,11 @@
 
 {% if quiz_total %}
 <div id="quiz-cfg" hidden
-     data-url="{% url 'courses:quiz_result' course.slug lesson.slug %}"
+     data-check-url="{% url 'courses:quiz_check' course.slug lesson.slug %}"
+     data-finish-url="{% url 'courses:quiz_finish' course.slug lesson.slug %}"
+     data-grade-url="{% url 'courses:quiz_grade' course.slug lesson.slug %}"
+     data-reset-url="{% url 'courses:quiz_reset' course.slug lesson.slug %}"
      data-total="{{ quiz_total }}" data-passed="{{ quiz_passed|yesno:'1,0' }}" data-exam="{{ lesson.is_exam|yesno:'1,0' }}"
      data-needed="{{ lesson.pass_score_percent }}" data-score="{{ quiz_score|default_if_none:'' }}"></div>
-{% endif %}
-{% endblock %}
-
-{% block extra_js %}
-{% if quiz_total %}
-<script>
-(function () {
-  var cfg = document.getElementById('quiz-cfg');
-  if (!cfg) return;
-  var url = cfg.dataset.url, needed = +cfg.dataset.needed, isExam = cfg.dataset.exam === '1';
-  var btn = document.getElementById('complete-btn'), hint = document.getElementById('quiz-hint');
-  var statusEl = document.getElementById('quiz-status'), retryWrap = document.getElementById('quiz-retry-wrap');
-  function csrf() { var el = document.querySelector('input[name=csrfmiddlewaretoken]'); return el ? el.value : ''; }
-
-  function unlock() {
-    if (btn) btn.disabled = false;
-    if (hint) hint.remove();
-  }
-  function show(ok, text) {
-    if (!statusEl) return;
-    statusEl.className = 'quiz-status show ' + (ok ? 'pass' : 'fail');
-    statusEl.innerHTML = '<i class="bi ' + (ok ? 'bi-check-circle-fill' : 'bi-x-circle-fill') + '"></i> ' + text;
-  }
-
-  /* Move the lesson's own quiz into the right-hand panel (regular lessons only). */
-  var slot = document.getElementById('quiz-slot');
-  if (slot) {
-    var block = document.querySelector('.lesson-content .mcq-block');
-    var section = block && block.closest('.lesson-section');
-    if (section) slot.appendChild(section);
-  }
-
-  function send(correct, total) {
-    return fetch(url, {
-      method: 'POST', credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
-      body: JSON.stringify({ correct: correct, total: total })
-    }).then(function (r) { return r.json(); }).then(function (d) {
-      if (d.error) { show(false, 'We could not save your score. Please try again.'); return d; }
-      if (d.unlocked) unlock();
-      return d;
-    }).catch(function () { show(false, 'We could not save your score. Check your internet and try again.'); });
-  }
-  /* quiz.js calls this when a module exam is submitted. */
-  window.c4kQuizResult = function (correct, total) { send(correct, total); };
-
-  if (cfg.dataset.passed === '1') {
-    unlock();
-    show(true, 'You passed this quiz' + (cfg.dataset.score ? ' (' + cfg.dataset.score + '%)' : '') + '. You can finish the lesson.');
-  }
-
-  var questions = slot ? Array.prototype.slice.call(slot.querySelectorAll('.mcq-question')) : [];
-  if (!questions.length) return;
-
-  function tally() {
-    var answered = 0, right = 0;
-    questions.forEach(function (q) {
-      if (q.classList.contains('is-answered')) {
-        answered++;
-        if (q.getAttribute('data-chosen') === q.getAttribute('data-correct')) right++;
-      }
-    });
-    if (answered < questions.length) {
-      if (cfg.dataset.passed !== '1') show(true, 'Answered ' + answered + ' of ' + questions.length);
-      statusEl.className = 'quiz-status show info';
-      return;
-    }
-    send(questions.length ? right : 0, questions.length).then(function (d) {
-      if (!d || d.error) return;
-      var pct = d.score_percent;
-      if (d.passed) {
-        show(true, 'You got ' + right + ' of ' + questions.length + ' (' + pct + '%). Quiz passed!');
-        if (window.c4kConfetti) window.c4kConfetti();
-        retryWrap.classList.add('d-none');
-      } else {
-        show(false, 'You got ' + right + ' of ' + questions.length + ' (' + pct + '%). You need ' + needed + '%. Have another go!');
-        retryWrap.classList.remove('d-none');
-      }
-    });
-  }
-  questions.forEach(function (q) { q.addEventListener('click', function () { setTimeout(tally, 0); }); });
-
-  document.getElementById('quiz-retry').addEventListener('click', function () {
-    questions.forEach(function (q) {
-      q.classList.remove('is-answered'); q.removeAttribute('data-chosen');
-      q.querySelectorAll('.mcq-option').forEach(function (o) {
-        o.disabled = false; o.classList.remove('is-correct', 'is-incorrect', 'is-selected');
-      });
-    });
-    retryWrap.classList.add('d-none'); statusEl.className = 'quiz-status';
-  });
-})();
-</script>
 {% endif %}
 {% endblock %}

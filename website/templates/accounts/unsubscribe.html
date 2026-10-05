@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Email settings{% endblock %}
+{% block content %}
+<section class="container py-5 text-center" style="max-width:560px;">
+  {% if done %}
+    <h1 class="section-title">You are unsubscribed</h1>
+    <p class="text-secondary">We will no longer send progress summaries or reminders to {{ target.email }}. You will still get important account emails, such as password resets.</p>
+  {% else %}
+    <h1 class="section-title">Stop reminder emails?</h1>
+    <p class="text-secondary">This turns off progress summaries and reminders for {{ target.email }}. Password resets and account approvals will still be sent.</p>
+    <form method="post">{% csrf_token %}<button class="btn btn-cloud btn-lg">Yes, stop these emails</button></form>
+  {% endif %}
+  <p class="mt-4"><a href="{% url 'core:home' %}" class="fw-bold text-decoration-none">Back to Cloud for Kids</a></p>
+</section>
+{% endblock %}

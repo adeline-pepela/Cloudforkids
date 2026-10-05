@@ -3,7 +3,10 @@ Django settings for cloudforkids project.
 """
 
 import os
+import sys
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
 
 import dj_database_url
 
@@ -20,11 +23,56 @@ def _load_env_file(path):
 BASE_DIR = Path(__file__).resolve().parent.parent
 _load_env_file(BASE_DIR / '.env')
 
-SECRET_KEY = 'django-insecure-85(pchmsa6_durq_a(z&kj*63$a)4+qh&9*t#08xou7t6lq8d-'
 
-DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+def _env_bool(name, default=False):
+    value = os.environ.get(name)
+    return default if value is None or value == "" else value.strip().lower() in ("1", "true", "yes", "on")
+
+
+def _env_list(name, default=""):
+    return [item.strip() for item in os.environ.get(name, default).split(",") if item.strip()]
+
+
+# DEBUG is OFF unless you turn it on (put DEBUG=True in your local .env only).
+DEBUG = _env_bool("DEBUG", False)
+TESTING = "test" in sys.argv
+
+SECRET_KEY = os.environ.get("SECRET_KEY", "")
+if not SECRET_KEY:
+    if DEBUG or TESTING:
+        SECRET_KEY = "dev-only-insecure-key-do-not-use-in-production"
+    else:
+        raise ImproperlyConfigured("Set the SECRET_KEY environment variable (see .env.example).")
+
+ALLOWED_HOSTS = _env_list("ALLOWED_HOSTS", "localhost,127.0.0.1,[::1]" if (DEBUG or TESTING) else "")
+_render_host = os.environ.get("RENDER_EXTERNAL_HOSTNAME")  # set automatically on Render
+if _render_host:
+    ALLOWED_HOSTS.append(_render_host)
+if not ALLOWED_HOSTS and not (DEBUG or TESTING):
+    raise ImproperlyConfigured("Set ALLOWED_HOSTS (comma separated domain names), e.g. cloudforkids.co.ke,www.cloudforkids.co.ke")
+CSRF_TRUSTED_ORIGINS = _env_list("CSRF_TRUSTED_ORIGINS")
+if _render_host:
+    CSRF_TRUSTED_ORIGINS.append(f"https://{_render_host}")
+# A site behind HTTPS needs its own address in the trusted origins, or every login and form fails with "CSRF verification
+# failed. Origin checking failed". Trust https://<host> for each real domain in ALLOWED_HOSTS unless set explicitly.
+for _host in ALLOWED_HOSTS:
+    _origin = f"https://{_host.lstrip('.')}"
+    if _host not in ("*", "localhost", "127.0.0.1", "[::1]") and _origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_origin)
+
+# HTTPS hardening (only when DEBUG is off)
+if not DEBUG and not TESTING:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")  # the host's load balancer terminates TLS
+    SECURE_SSL_REDIRECT = _env_bool("SECURE_SSL_REDIRECT", True)
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "3600"))  # raise to 31536000 once HTTPS is confirmed
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", False)
+    SECURE_REFERRER_POLICY = "same-origin"
+X_FRAME_OPTIONS = "SAMEORIGIN"
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
 
 
 INSTALLED_APPS = [
@@ -45,7 +93,10 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
+    'core.middleware.UITranslationMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -67,6 +118,9 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'dashboard.context_processors.learner_chips',
                 'core.context_processors.site_settings',
+                'core.context_processors.language',
+                'core.context_processors.site_photos',
+                'dashboard.context_processors.unread_messages',
             ],
         },
     },
@@ -103,7 +157,9 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'en'
+LANGUAGES = [('en', 'English'), ('sw', 'Kiswahili')]
+LANGUAGE_COOKIE_AGE = 60 * 60 * 24 * 365
 
 TIME_ZONE = 'UTC'
 
@@ -115,6 +171,11 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+WHITENOISE_USE_FINDERS = DEBUG  # in production the files come from `collectstatic`
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage'},
+}
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -123,9 +184,34 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Cloud for Kids custom settings
 AUTH_USER_MODEL = 'accounts.User'
+# Email: sent through Resend when RESEND_API_KEY is set (in .env); otherwise printed to the console for local testing.
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '').strip()
+EMAIL_BACKEND = (
+    'core.resend_backend.ResendEmailBackend' if RESEND_API_KEY
+    else 'django.core.mail.backends.console.EmailBackend'
+)
+DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_FROM', 'Cloud for Kids <onboarding@resend.dev>')
+SITE_URL = os.environ.get('SITE_URL', 'http://127.0.0.1:8000')  # used for links in emails sent outside a web request
+PASSWORD_RESET_TIMEOUT = 60 * 60 * 2  # reset links work for 2 hours
+
 LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'dashboard:home'
 LOGOUT_REDIRECT_URL = 'core:home'
 
 SITE_NAME = 'Cloud for Kids'
 SITE_TAGLINE = "Building Kenya's Cloud-Ready Generation"
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {'console': {'class': 'logging.StreamHandler'}},
+    'root': {'handlers': ['console'], 'level': os.environ.get('LOG_LEVEL', 'INFO')},
+}
+
+if TESTING:
+    # Fast, isolated tests: in-memory SQLite, in-memory email, cheap password hashing.
+    DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}}
+    EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+    PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
+    SECURE_SSL_REDIRECT = False

@@ -1,57 +1,49 @@
-{% extends "base.html" %}
-{% load static %}
+{% extends "accounts/auth_base.html" %}
+{% load c4k %}
 {% block title %}Log in{% endblock %}
-{% block content %}
-<section class="container py-5">
-  <div class="row justify-content-center g-4">
-    <div class="col-lg-5 order-lg-2">
-      <div class="auth-aside">
-        {% include "partials/slot.html" with name="login" icon="bi-laptop-fill" tone="sky" alt="A learner logging in to continue their lessons" cls="" %}
-        <h3 class="mt-3 mb-0">Pick up where you left off</h3>
-        <ul>
-          <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Continue your lessons and quizzes</li>
-          <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Track your progress on every course</li>
-          <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Collect badges as you learn</li>
-        </ul>
-      </div>
-    </div>
-    <div class="col-lg-5 order-lg-1">
-      <div class="mb-4">
-        <div class="section-eyebrow">Welcome back</div>
-        <h1 class="section-title">Log in to Cloud for Kids</h1>
-        <p class="text-secondary mb-0">Enter your username and password to get back to learning.</p>
-      </div>
-      <div class="tier-card p-4 p-md-5" style="height:auto;">
-        <form method="post" novalidate>
-          {% csrf_token %}
-          {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
-          <div class="mb-3">
-            <label class="form-label fw-bold" for="id_username">Username</label>
-            <div class="input-group">
-              <span class="input-group-text bg-white"><i class="bi bi-person-fill" aria-hidden="true"></i></span>
-              <input type="text" name="username" id="id_username" class="form-control" autocomplete="username" required autofocus>
-            </div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-bold" for="id_password">Password</label>
-            <div class="input-group">
-              <span class="input-group-text bg-white"><i class="bi bi-lock-fill" aria-hidden="true"></i></span>
-              <input type="password" name="password" id="id_password" class="form-control" autocomplete="current-password" required>
-            </div>
-          </div>
-          {% if form.errors %}
-            <div class="alert alert-danger rounded-4"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> Incorrect username or password.</div>
-          {% endif %}
-          <button type="submit" class="btn btn-cloud btn-lg w-100 mt-2"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Log in</button>
-        </form>
-        <p class="text-center small text-secondary mt-3 mb-0">
-          New here? <a href="{% url 'accounts:signup' %}" class="fw-bold">Create a free account</a>
-        </p>
-        <p class="text-center small text-secondary mt-2 mb-0">
-          Parent or teacher? <a href="{% url 'core:contact' %}" class="fw-bold">Contact us</a> for help getting set up.
-        </p>
-      </div>
+{% block photo_url %}{% with p=photos|get_item:"auth-login" %}{% if p %}{{ p.src }}{% else %}https://images.unsplash.com/photo-1632215861513-130b66fe97f4?auto=format&fit=crop&w=1400&q=75{% endif %}{% endwith %}{% endblock %}
+{% block credit_name %}{% with p=photos|get_item:"auth-login" %}{% if p %}{{ p.credit_name }}{% else %}Emmanuel Ikwuegbu{% endif %}{% endwith %}{% endblock %}
+{% block credit_url %}{% with p=photos|get_item:"auth-login" %}{% if p %}{{ p.credit_url }}{% else %}https://unsplash.com/photos/VC6MGt9ZoBA{% endif %}{% endwith %}{% endblock %}
+{% block photo_title %}Pick up right where you left off{% endblock %}
+{% block photo_points %}
+<li><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Continue your lessons and quizzes</li>
+<li><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Keep your streak and earn badges</li>
+<li><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Parents and teachers can follow progress</li>
+{% endblock %}
+
+{% block auth_form %}
+<div class="section-eyebrow">Welcome back</div>
+<h1>Log in to Cloud for Kids</h1>
+<p class="lead-sm">Enter your username and password to get back to learning.</p>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
+  {% if form.errors %}
+    <div class="alert alert-danger rounded-4 py-2"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> {% if form.non_field_errors %}{{ form.non_field_errors.0 }}{% else %}That username or password is not right. Please try again.{% endif %}</div>
+  {% endif %}
+  <div class="mb-3">
+    <label class="form-label fw-bold" for="id_username">Username</label>
+    <div class="input-group">
+      <span class="input-group-text"><i class="bi bi-person-fill" aria-hidden="true"></i></span>
+      <input type="text" name="username" id="id_username" class="form-control" autocomplete="username" required autofocus placeholder="Your username">
     </div>
   </div>
-</section>
+  <div class="mb-2">
+    <div class="d-flex justify-content-between align-items-baseline">
+      <label class="form-label fw-bold" for="id_password">Password</label>
+      <a href="{% url 'accounts:password_reset' %}" class="small fw-bold text-decoration-none">Forgot password?</a>
+    </div>
+    <div class="input-group">
+      <span class="input-group-text"><i class="bi bi-lock-fill" aria-hidden="true"></i></span>
+      <input type="password" name="password" id="id_password" class="form-control" autocomplete="current-password" required placeholder="Your password">
+      <button type="button" class="input-group-text input-pw-toggle" data-toggle-password="id_password" aria-label="Show password"><i class="bi bi-eye-fill" aria-hidden="true"></i></button>
+    </div>
+  </div>
+  <button type="submit" class="btn btn-cloud btn-lg w-100 mt-3"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Log in</button>
+</form>
+
+<div class="auth-or">New here?</div>
+<a href="{% url 'accounts:signup' %}" class="btn btn-outline-cloud btn-lg w-100"><i class="bi bi-rocket-takeoff-fill" aria-hidden="true"></i> Create a free account</a>
+<p class="text-center small text-secondary mt-3 mb-0">Parents and teachers log in here too, or <a href="{% url 'core:contact' %}" class="fw-bold">contact us</a> for help.</p>
 {% endblock %}

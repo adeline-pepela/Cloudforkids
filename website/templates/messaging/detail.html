@@ -1,0 +1,28 @@
+{% extends base_tpl %}
+{% block title %}{{ message.subject }}{% endblock %}
+{% block content %}
+<a href="{% url 'messaging:inbox' %}" class="text-decoration-none fw-bold small"><i class="bi bi-arrow-left" aria-hidden="true"></i> All messages</a>
+<div class="l-card mt-2 mb-3" style="height:auto;">
+  <h1 class="l-title mb-1" style="font-size:1.5rem;">{{ message.subject }}</h1>
+  <p class="small text-secondary">From <strong>{{ message.sender.get_full_name|default:message.sender.username }}</strong> to <strong>{{ message.recipient.get_full_name|default:message.recipient.username }}</strong>{% if message.classroom %} &middot; {{ message.classroom.name }}{% endif %} &middot; {{ message.created_at|date:"j M Y, H:i" }}</p>
+  <div class="msg-body">{{ message.body }}</div>
+</div>
+
+{% for r in thread %}
+<div class="l-card mb-3" style="height:auto;border-left:6px solid #7C5CFF;">
+  <p class="small text-secondary mb-2">{{ r.sender.get_full_name|default:r.sender.username }} replied &middot; {{ r.created_at|date:"j M, H:i" }}</p>
+  <div class="msg-body">{{ r.body }}</div>
+</div>
+{% endfor %}
+
+{% if can_reply %}
+<div class="l-card" style="height:auto;">
+  <h3><i class="bi bi-reply-fill text-primary" aria-hidden="true"></i> Reply</h3>
+  <form method="post" action="{% url 'messaging:reply' message.pk %}">
+    {% csrf_token %}
+    <div class="mb-3">{{ form.body }}</div>
+    <button type="submit" class="btn btn-cloud btn-big"><i class="bi bi-send-fill" aria-hidden="true"></i> Send reply</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

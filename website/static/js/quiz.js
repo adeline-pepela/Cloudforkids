@@ -1,161 +1,253 @@
 /**
- * Cloud for Kids — lesson quiz + module exam interactivity.
+ * Cloud for Kids: lesson quizzes and module exams.
  *
- * Markup contract:
- *   Practice quiz (instant feedback), used inside a lesson's "Quiz Time" section:
- *     <div class="mcq-question" data-correct="1">
- *       <p class="mcq-prompt">...</p>
- *       <div class="mcq-options">
- *         <button type="button" class="mcq-option" data-index="0">...</button>
- *         ...
- *       </div>
- *       <div class="mcq-explain">...</div>
- *     </div>
+ * The page never contains the answers. Each answer (or the whole exam) is sent to the server, which checks it,
+ * keeps the score, and replies with the right answer and an explanation. Lesson pages describe their URLs in
+ * <div id="quiz-cfg" data-check-url data-finish-url data-grade-url data-reset-url data-needed data-exam data-passed data-score>.
  *
- *   Full module exam (graded only once "Submit" is pressed), wraps the same
- *   .mcq-question markup inside:
- *     <div class="exam-form" data-pass="70">
- *       <div class="exam-progress-wrap">...</div>
- *       ...mcq-question blocks...
- *       <div class="exam-submit-row"><button class="exam-submit-btn">...</button></div>
- *       <div class="exam-result"></div>
- *     </div>
+ * Markup in the lesson HTML:
+ *   <div class="mcq-question"><p class="mcq-prompt">..</p><div class="mcq-options"><button class="mcq-option" data-index="0">..</button>..</div></div>
+ *   (module exam) <div class="exam-form" data-pass="70"> .. questions .. <button class="exam-submit-btn"> <div class="exam-result"></div></div>
  */
 (function () {
   "use strict";
+
+  var cfg = null;
+
+  /* Messages: English here, Kiswahili comes from window.C4K_T (set by the page). {0}, {1}... are filled in. */
+  var EN = {
+    checkFailed: "We could not check that answer. Please try again.",
+    offline: "No internet? Check your connection and try again.",
+    answered: "Answered {0} of {1}",
+    saveFailed: "We could not save your score. Please try again.",
+    gradeFailed: "We could not grade your exam. Please try again.",
+    passedQuiz: "You passed this quiz{0}. You can finish the lesson.",
+    gotQuiz: "You got {0} of {1} ({2}%). Quiz passed!",
+    gotExam: "You got {0} of {1} ({2}%). Exam passed!",
+    retry: "You got {0} of {1} ({2}%). You need {3}%. Have another go!",
+    correct: "Correct",
+    review: "Review",
+    outOf: "{0} out of {1} correct",
+    examPass: "Great job, you passed this module exam! Scroll down and mark it complete.",
+    examFail: "You need {0}% to pass. Review the questions below, revisit the lessons you are unsure about, then try again.",
+    answeredExam: "Answered {0} of {1}"
+  };
+  function T(key) {
+    var text = (window.C4K_T && window.C4K_T[key]) || EN[key] || key;
+    for (var i = 1; i < arguments.length; i++) text = text.replace("{" + (i - 1) + "}", arguments[i]);
+    return text;
+  }
 
   function onReady(fn) {
     if (document.readyState !== "loading") fn();
     else document.addEventListener("DOMContentLoaded", fn);
   }
+  function csrf() {
+    var el = document.querySelector("input[name=csrfmiddlewaretoken]");
+    return el ? el.value : "";
+  }
+  function post(url, body) {
+    return fetch(url, {
+      method: "POST", credentials: "same-origin",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrf() },
+      body: JSON.stringify(body || {})
+    }).then(function (r) { return r.json().then(function (d) { d.__status = r.status; return d; }); });
+  }
+  function idx(btn) { return parseInt(btn.getAttribute("data-index"), 10); }
 
-  function gradeQuestion(question, optionBtn) {
-    var correctIndex = parseInt(question.getAttribute("data-correct"), 10);
-    var chosenIndex = parseInt(optionBtn.getAttribute("data-index"), 10);
-    var options = question.querySelectorAll(".mcq-option");
-
-    options.forEach(function (btn) {
-      btn.disabled = true;
-      var idx = parseInt(btn.getAttribute("data-index"), 10);
-      if (idx === correctIndex) btn.classList.add("is-correct");
-    });
-
-    optionBtn.classList.add("is-selected");
-    if (chosenIndex !== correctIndex) optionBtn.classList.add("is-incorrect");
-
-    question.classList.add("is-answered");
-    question.setAttribute("data-chosen", String(chosenIndex));
-    return chosenIndex === correctIndex;
+  /* ---------- status panel + unlock button (lesson page) ---------- */
+  var statusEl, retryWrap, completeBtn, hintEl;
+  function showStatus(ok, text) {
+    if (!statusEl) return;
+    statusEl.className = "quiz-status show " + (ok ? "pass" : "fail");
+    statusEl.innerHTML = '<i class="bi ' + (ok ? "bi-check-circle-fill" : "bi-x-circle-fill") + '"></i> ' + text;
+  }
+  function info(text) {
+    if (!statusEl) return;
+    statusEl.className = "quiz-status show info";
+    statusEl.textContent = text;
+  }
+  function unlock() {
+    if (completeBtn) completeBtn.disabled = false;
+    if (hintEl) { hintEl.remove(); hintEl = null; }
+  }
+  function onFinished(d, isExam) {
+    if (d.unlocked) unlock();
+    if (d.passed) {
+      showStatus(true, T(isExam ? "gotExam" : "gotQuiz", d.correct, d.total, d.score_percent));
+      if (window.c4kConfetti) window.c4kConfetti();
+      if (retryWrap) retryWrap.classList.add("d-none");
+    } else {
+      showStatus(false, T("retry", d.correct, d.total, d.score_percent, d.needed));
+      if (retryWrap) retryWrap.classList.remove("d-none");
+    }
   }
 
-  function setupPracticeQuizzes() {
-    var practiceQuestions = document.querySelectorAll(".mcq-question");
-    practiceQuestions.forEach(function (question) {
-      if (question.closest(".exam-form")) return; // handled separately
+  /* ---------- practice quiz: instant feedback, checked by the server ---------- */
+  function markAnswered(question, d) {
+    var options = question.querySelectorAll(".mcq-option");
+    options.forEach(function (b) {
+      b.disabled = true;
+      if (idx(b) === d.correct_index) b.classList.add("is-correct");
+      if (idx(b) === d.chosen && !d.correct) b.classList.add("is-incorrect");
+      if (idx(b) === d.chosen) b.classList.add("is-selected");
+    });
+    question.classList.add("is-answered");
+    question.setAttribute("data-chosen", String(d.chosen));
+    question.setAttribute("data-right", d.correct ? "1" : "0");
+    if (d.explain && !question.querySelector(".mcq-explain")) {
+      var ex = document.createElement("div");
+      ex.className = "mcq-explain";
+      ex.innerHTML = d.explain;
+      question.appendChild(ex);
+    }
+  }
+
+  function setupPractice(questions) {
+    var queue = Promise.resolve();  // answers go to the server one at a time, so none is lost if a child taps quickly
+    var finishing = false;
+    questions.forEach(function (question, qi) {
+      question.querySelectorAll(".mcq-option").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          if (question.classList.contains("is-answered") || question.getAttribute("data-pending")) return;
+          question.setAttribute("data-pending", "1");
+          question.querySelectorAll(".mcq-option").forEach(function (b) { b.disabled = true; });
+          var choice = idx(btn);
+          queue = queue.then(function () {
+            return post(cfg.dataset.checkUrl, { q: qi, choice: choice }).then(function (d) {
+              question.removeAttribute("data-pending");
+              if (d.error) {
+                question.querySelectorAll(".mcq-option").forEach(function (b) { b.disabled = false; });
+                showStatus(false, T("checkFailed"));
+                return;
+              }
+              markAnswered(question, d);
+              var answered = document.querySelectorAll(".mcq-question.is-answered").length;
+              if (answered < questions.length) { info(T("answered", answered, questions.length)); return; }
+              if (finishing) return;
+              finishing = true;
+              return post(cfg.dataset.finishUrl).then(function (f) {
+                finishing = false;
+                if (f.error) { showStatus(false, T("saveFailed")); return; }
+                onFinished(f, false);
+              });
+            });
+          }).catch(function () {
+            question.removeAttribute("data-pending");
+            finishing = false;
+            question.querySelectorAll(".mcq-option").forEach(function (b) { b.disabled = false; });
+            showStatus(false, T("offline"));
+          });
+        });
+      });
+    });
+
+    var retry = document.getElementById("quiz-retry");
+    if (retry) retry.addEventListener("click", function () {
+      post(cfg.dataset.resetUrl).then(function () {
+        questions.forEach(function (q) {
+          q.classList.remove("is-answered"); q.removeAttribute("data-chosen"); q.removeAttribute("data-right");
+          var ex = q.querySelector(".mcq-explain"); if (ex) ex.remove();
+          q.querySelectorAll(".mcq-option").forEach(function (o) { o.disabled = false; o.classList.remove("is-correct", "is-incorrect", "is-selected"); });
+        });
+        if (retryWrap) retryWrap.classList.add("d-none");
+        if (statusEl) statusEl.className = "quiz-status";
+      });
+    });
+  }
+
+  /* ---------- module exam: pick answers, then the server grades them all ---------- */
+  function updateExamProgress(form) {
+    var qs = form.querySelectorAll(".mcq-question");
+    var answered = form.querySelectorAll(".mcq-question[data-chosen-pending]").length;
+    var bar = form.querySelector(".exam-progress-bar"), label = form.querySelector(".exam-progress-label");
+    if (bar) bar.style.width = (qs.length ? Math.round(answered / qs.length * 100) : 0) + "%";
+    if (label) label.textContent = T("answeredExam", answered, qs.length);
+  }
+
+  function setupExam(form) {
+    var questions = form.querySelectorAll(".mcq-question");
+    questions.forEach(function (question) {
       var options = question.querySelectorAll(".mcq-option");
       options.forEach(function (btn) {
         btn.addEventListener("click", function () {
           if (question.classList.contains("is-answered")) return;
-          gradeQuestion(question, btn);
+          options.forEach(function (b) { b.classList.remove("is-selected"); });
+          btn.classList.add("is-selected");
+          question.setAttribute("data-chosen-pending", String(idx(btn)));
+          updateExamProgress(form);
         });
       });
     });
-  }
 
-  function updateExamProgress(examForm) {
-    var questions = examForm.querySelectorAll(".mcq-question");
-    var answered = examForm.querySelectorAll(".mcq-question[data-chosen-pending]").length;
-    var bar = examForm.querySelector(".exam-progress-bar");
-    var label = examForm.querySelector(".exam-progress-label");
-    var total = questions.length;
-    var pct = total ? Math.round((answered / total) * 100) : 0;
-    if (bar) bar.style.width = pct + "%";
-    if (label) label.textContent = "Answered " + answered + " of " + total;
-  }
-
-  function setupExams() {
-    var exams = document.querySelectorAll(".exam-form");
-    exams.forEach(function (examForm) {
-      var questions = examForm.querySelectorAll(".mcq-question");
-
-      questions.forEach(function (question) {
-        var options = question.querySelectorAll(".mcq-option");
-        options.forEach(function (btn) {
-          btn.addEventListener("click", function () {
-            // Single-select: just mark the chosen option, no grading yet.
-            options.forEach(function (b) { b.classList.remove("is-selected"); });
-            btn.classList.add("is-selected");
-            question.setAttribute("data-chosen-pending", btn.getAttribute("data-index"));
-            updateExamProgress(examForm);
-          });
-        });
+    var submit = form.querySelector(".exam-submit-btn");
+    if (!submit) return;
+    submit.addEventListener("click", function () {
+      var answers = [];
+      questions.forEach(function (q) {
+        var v = q.getAttribute("data-chosen-pending");
+        answers.push(v === null ? -1 : parseInt(v, 10));
       });
-
-      var submitBtn = examForm.querySelector(".exam-submit-btn");
-      if (!submitBtn) return;
-
-      submitBtn.addEventListener("click", function () {
-        var total = questions.length;
-        var correctCount = 0;
-        var resultItems = [];
-
-        questions.forEach(function (question, i) {
-          var correctIndex = parseInt(question.getAttribute("data-correct"), 10);
-          var chosenAttr = question.getAttribute("data-chosen-pending");
-          var chosenIndex = chosenAttr === null ? -1 : parseInt(chosenAttr, 10);
-          var options = question.querySelectorAll(".mcq-option");
-          var isCorrect = chosenIndex === correctIndex;
-          if (isCorrect) correctCount++;
-
-          options.forEach(function (btn) {
-            btn.disabled = true;
-            var idx = parseInt(btn.getAttribute("data-index"), 10);
-            if (idx === correctIndex) btn.classList.add("is-correct");
-            if (idx === chosenIndex && !isCorrect) btn.classList.add("is-incorrect");
+      submit.disabled = true;
+      post(cfg.dataset.gradeUrl, { answers: answers }).then(function (d) {
+        if (d.error) { submit.disabled = false; showStatus(false, T("gradeFailed")); return; }
+        var items = [];
+        questions.forEach(function (q, i) {
+          var r = d.results[i], chosen = answers[i];
+          q.querySelectorAll(".mcq-option").forEach(function (b) {
+            b.disabled = true;
+            if (idx(b) === r.correct_index) b.classList.add("is-correct");
+            if (idx(b) === chosen && !r.correct) b.classList.add("is-incorrect");
           });
-          question.classList.add("is-answered");
-
-          var promptEl = question.querySelector(".mcq-prompt");
-          var promptText = promptEl ? promptEl.textContent : "Question " + (i + 1);
-          resultItems.push(
-            "<li>" +
-              "<span class=\"" + (isCorrect ? "tag-correct" : "tag-incorrect") + "\">" +
-              (isCorrect ? "<i class=\"bi bi-check-circle-fill\"></i> Correct" : "<i class=\"bi bi-x-circle-fill\"></i> Review") +
-              "</span> &mdash; " + promptText +
-              "</li>"
-          );
+          q.classList.add("is-answered");
+          var p = q.querySelector(".mcq-prompt");
+          items.push("<li><span class=\"" + (r.correct ? "tag-correct" : "tag-incorrect") + "\">" +
+            (r.correct ? "<i class=\"bi bi-check-circle-fill\"></i> " + T("correct") : "<i class=\"bi bi-x-circle-fill\"></i> " + T("review")) +
+            "</span> &mdash; " + (p ? p.textContent : "Question " + (i + 1)) + "</li>");
         });
-
-        var pct = total ? Math.round((correctCount / total) * 100) : 0;
-        var passMark = parseInt(examForm.getAttribute("data-pass"), 10) || 70;
-        var passed = pct >= passMark;
-        if (window.c4kQuizResult) window.c4kQuizResult(correctCount, total);
-
-        var resultBox = examForm.querySelector(".exam-result");
-        if (resultBox) {
-          resultBox.classList.add("show", passed ? "pass" : "fail");
-          resultBox.classList.remove(passed ? "fail" : "pass");
-          resultBox.innerHTML =
-            "<div class=\"exam-score\">" + pct + "%</div>" +
-            "<p class=\"fw-bold mb-1\">" + correctCount + " out of " + total + " correct</p>" +
-            "<p class=\"mb-0\">" +
-              (passed
-                ? "<i class=\"bi bi-trophy-fill\"></i> Great job \u2014 you passed this module exam! Scroll down and mark it complete."
-                : "You need " + passMark + "% to pass. Review the questions below, revisit the lessons you're unsure about, then try again.") +
-            "</p>" +
-            "<ul class=\"exam-result-list\">" + resultItems.join("") + "</ul>";
-          resultBox.scrollIntoView({ behavior: "smooth", block: "center" });
-          if (passed && window.c4kConfetti) window.c4kConfetti();
+        var box = form.querySelector(".exam-result");
+        if (box) {
+          box.classList.add("show", d.passed ? "pass" : "fail");
+          box.classList.remove(d.passed ? "fail" : "pass");
+          box.innerHTML = "<div class=\"exam-score\">" + d.score_percent + "%</div>" +
+            "<p class=\"fw-bold mb-1\">" + T("outOf", d.correct, d.total) + "</p>" +
+            "<p class=\"mb-0\">" + (d.passed
+              ? "<i class=\"bi bi-trophy-fill\"></i> " + T("examPass")
+              : T("examFail", d.needed)) + "</p>" +
+            "<ul class=\"exam-result-list\">" + items.join("") + "</ul>";
+          box.scrollIntoView({ behavior: "smooth", block: "center" });
         }
-
-        submitBtn.disabled = true;
-        updateExamProgress(examForm);
-      });
+        if (d.unlocked) unlock();
+        if (d.passed && window.c4kConfetti) window.c4kConfetti();
+        updateExamProgress(form);
+      }).catch(function () { submit.disabled = false; showStatus(false, T("offline")); });
     });
   }
 
   onReady(function () {
-    setupPracticeQuizzes();
-    setupExams();
+    cfg = document.getElementById("quiz-cfg");
+    if (!cfg) return;
+    statusEl = document.getElementById("quiz-status");
+    retryWrap = document.getElementById("quiz-retry-wrap");
+    completeBtn = document.getElementById("complete-btn");
+    hintEl = document.getElementById("quiz-hint");
+
+    if (cfg.dataset.passed === "1") {
+      unlock();
+      showStatus(true, T("passedQuiz", cfg.dataset.score ? " (" + cfg.dataset.score + "%)" : ""));
+    }
+
+    var exam = document.querySelector(".exam-form");
+    if (exam) { setupExam(exam); return; }
+
+    /* Lesson quiz: move it into the side panel, then wire it up */
+    var slot = document.getElementById("quiz-slot");
+    if (slot) {
+      var block = document.querySelector(".lesson-content .mcq-block");
+      var section = block && block.closest(".lesson-section");
+      if (section) slot.appendChild(section);
+    }
+    var questions = Array.prototype.slice.call(document.querySelectorAll(".mcq-question"));
+    if (questions.length) setupPractice(questions);
   });
 })();

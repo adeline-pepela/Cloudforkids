@@ -12,7 +12,7 @@
     <div class="fm-meta">
       {% if r.profile.grade %}<span><i class="bi bi-backpack2-fill" aria-hidden="true"></i> {{ r.profile.grade }}</span>{% endif %}
       {% if r.profile.school_name %}<span><i class="bi bi-building-fill" aria-hidden="true"></i> {{ r.profile.school_name }}</span>{% endif %}
-      {% if r.tier %}<span><i class="bi bi-{{ r.tier.icon }}" aria-hidden="true"></i> {{ r.tier.name }} ({{ r.tier.grade_range }})</span>{% endif %}
+      {% if r.tier %}<span><i class="bi bi-{{ r.tier.icon }}" aria-hidden="true"></i> {{ r.tier.display_name }} ({{ r.tier.grade_range }})</span>{% endif %}
       <span><i class="bi bi-clock-history" aria-hidden="true"></i> Last active {{ r.last_active_text }}</span>
     </div>
   </div>
@@ -36,7 +36,7 @@
   </div>
   <div class="fm-scale"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
   <p class="mb-0 mt-2 text-secondary">
-    {{ r.name }} has finished <strong>{{ r.lessons_done }} of {{ r.lessons_total }}</strong> lessons on the {{ r.tier.name|default:"learning" }} path{% if r.percent < 100 and r.lessons_total %}. <strong>{{ r.lessons_remaining }}</strong> to go.{% else %}.{% endif %}
+    {{ r.name }} has finished <strong>{{ r.lessons_done }} of {{ r.lessons_total }}</strong> lessons on the {{ r.tier.display_name|default:"learning" }} path{% if r.percent < 100 and r.lessons_total %}. <strong>{{ r.lessons_remaining }}</strong> to go.{% else %}.{% endif %}
   </p>
 </div>
 
@@ -70,7 +70,7 @@
       <p class="small text-secondary">Quizzes passed with {{ r.strong_score }}% or more.</p>
       {% for q in r.strengths %}
       <div class="fm-row ok">
-        <div><strong>{{ q.lesson.title }}</strong><small>{{ q.lesson.course.title }}</small></div>
+        <div><strong>{{ q.lesson.display_title }}</strong><small>{{ q.lesson.course.display_title }}</small></div>
         <span class="fm-score ok">{{ q.score_percent }}%</span>
       </div>
       {% empty %}
@@ -84,7 +84,7 @@
       <p class="small text-secondary">Quizzes not passed yet, and Practice Labs not tried.</p>
       {% for q in r.weak %}
       <div class="fm-row warn">
-        <div><strong>{{ q.lesson.title }}</strong><small>{{ q.lesson.course.title }} &middot; needs {{ q.lesson.pass_score_percent }}%</small></div>
+        <div><strong>{{ q.lesson.display_title }}</strong><small>{{ q.lesson.course.display_title }} &middot; needs {{ q.lesson.pass_score_percent }}%</small></div>
         <span class="fm-score warn">{{ q.score_percent }}%</span>
       </div>
       {% endfor %}
@@ -111,7 +111,7 @@
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#fm-c{{ forloop.counter }}" aria-expanded="false">
           <span class="fm-step {{ row.status }}"><i class="bi {% if row.status == 'done' %}bi-check-lg{% else %}bi-{{ row.course.icon }}{% endif %}" aria-hidden="true"></i></span>
           <span class="flex-grow-1">
-            <strong>{{ row.course.title }}</strong>
+            <strong>{{ row.course.display_title }}</strong>
             <span class="fm-bar"><span style="width: {{ row.percent }}%"></span></span>
           </span>
           <span class="fm-acc-meta">{{ row.percent }}%{% if row.avg_score is not None %} &middot; avg {{ row.avg_score }}%{% endif %}</span>
@@ -187,11 +187,11 @@
       {% if viewer == "teacher" %}
       <h3><i class="bi bi-easel-fill text-success" aria-hidden="true"></i> Teaching notes</h3>
       <ul class="fm-tips">
-        {% for q in r.weak|slice:":2" %}<li><i class="bi bi-check2-circle" aria-hidden="true"></i><span>Revisit &ldquo;{{ q.lesson.title }}&rdquo; with {{ r.name }} (scored {{ q.score_percent }}%).</span></li>{% endfor %}
+        {% for q in r.weak|slice:":2" %}<li><i class="bi bi-check2-circle" aria-hidden="true"></i><span>Revisit &ldquo;{{ q.lesson.display_title }}&rdquo; with {{ r.name }} (scored {{ q.score_percent }}%).</span></li>{% endfor %}
         {% if r.health.0 == "nudge" %}<li><i class="bi bi-check2-circle" aria-hidden="true"></i><span>{{ r.name }} has been inactive. Check in and ask what is getting in the way.</span></li>{% endif %}
         {% if r.health.0 == "new" %}<li><i class="bi bi-check2-circle" aria-hidden="true"></i><span>{{ r.name }} hasn't started. Help them finish the first lesson in class.</span></li>{% endif %}
         {% for lab in r.labs_todo|slice:":1" %}<li><i class="bi bi-check2-circle" aria-hidden="true"></i><span>Suggest the &ldquo;{{ lab.title }}&rdquo; Practice Lab ({{ lab.minutes }} min).</span></li>{% endfor %}
-        {% if r.strengths %}<li><i class="bi bi-check2-circle" aria-hidden="true"></i><span>Strong in &ldquo;{{ r.strengths.0.lesson.title }}&rdquo;. Ask {{ r.name }} to help a classmate.</span></li>{% endif %}
+        {% if r.strengths %}<li><i class="bi bi-check2-circle" aria-hidden="true"></i><span>Strong in &ldquo;{{ r.strengths.0.lesson.display_title }}&rdquo;. Ask {{ r.name }} to help a classmate.</span></li>{% endif %}
       </ul>
       {% else %}
       <h3><i class="bi bi-house-heart-fill text-success" aria-hidden="true"></i> How you can help at home</h3>

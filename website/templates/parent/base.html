@@ -9,6 +9,7 @@
   <a class="l-link{% if nav == c.pk %} active{% endif %}" href="{% url 'family:child' c.pk %}"><i class="bi bi-person-heart" aria-hidden="true"></i> {{ c.first_name|default:c.username }}</a>
   {% endfor %}
   <a class="l-link{% if nav == 'add' %} active{% endif %}" href="{% url 'family:add' %}"><i class="bi bi-person-plus-fill" aria-hidden="true"></i> Add a child</a>
+  <a class="l-link{% if nav == 'messages' %} active{% endif %}" href="{% url 'messaging:inbox' %}"><i class="bi bi-envelope-fill" aria-hidden="true"></i> Messages{% if unread_messages %} <span class="l-badge">{{ unread_messages }}</span>{% endif %}</a>
   <a class="l-link" href="{% url 'core:contact' %}"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i> Contact us</a>
 </nav>
 {% endblock %}

@@ -179,3 +179,56 @@ class TeamMember(models.Model):
     @property
     def initials(self):
         return "".join(part[0] for part in self.name.split()[:2]).upper()
+
+
+class LegalPage(models.Model):
+    """Terms, Privacy Policy and other legal text, editable in the admin."""
+
+    slug = models.SlugField(unique=True)
+    title = models.CharField(max_length=150)
+    body = models.TextField(help_text="HTML. Use <h2>, <p>, <ul> and <li>.")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title
+
+
+class UITranslation(models.Model):
+    """One piece of website wording in Kiswahili. Applied when a visitor reads the site in Kiswahili.
+    The English text must match the page exactly. Use {n} for a number (for example "{n} day streak")."""
+
+    english = models.TextField(unique=True)
+    swahili = models.TextField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "UI translation"
+        ordering = ["english"]
+
+    def __str__(self):
+        return self.english[:80]
+
+
+class SitePhoto(models.Model):
+    """A photo shown on a page, chosen by slot name (for example about-hero). Upload a file or paste an image address."""
+
+    slot = models.SlugField(unique=True, help_text="Where it is used, for example about-hero, contact, tier-explorer")
+    image = models.ImageField(upload_to="site/", blank=True, null=True, help_text="Upload a photo, or paste an address below")
+    url = models.URLField(blank=True, max_length=400, help_text="Address of an image, for example from Unsplash")
+    alt = models.CharField(max_length=200, blank=True, help_text="Describe the photo for screen readers")
+    credit_name = models.CharField(max_length=100, blank=True, help_text="Photographer, shown as a small credit")
+    credit_url = models.URLField(blank=True, max_length=400)
+
+    class Meta:
+        ordering = ["slot"]
+
+    def __str__(self):
+        return self.slot
+
+    @property
+    def src(self):
+        if self.image:
+            return self.image.url
+        if "images.unsplash.com" in self.url and "?" not in self.url:
+            return self.url + "?auto=format&fit=crop&w=1400&q=75"
+        return self.url

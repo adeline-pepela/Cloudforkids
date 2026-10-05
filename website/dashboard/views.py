@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from courses.badges import check_and_award_badges
+from courses.tiers import suggested_tier
 from courses.models import Badge, Course, Enrollment, Lesson, Tier
 
 from .labs import XP_PER_LAB, get_lab, get_labs, lab_template_exists
@@ -53,7 +54,7 @@ def _labs_with_status(user):
 def _path_for(user, enrollments):
     """The learner's tier as a step-by-step path of courses."""
     profile = getattr(user, "learner_profile", None)
-    tier = profile.tier if profile and profile.tier_id else Tier.objects.first()
+    tier = profile.tier if profile and profile.tier_id else suggested_tier(profile)
     if tier is None:
         return None, []
     progress = {e.course_id: e.progress_percent for e in enrollments}

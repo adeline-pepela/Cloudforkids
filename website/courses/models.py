@@ -1,6 +1,11 @@
 from django.conf import settings
 from django.db import models
 from django.urls import reverse
+from django.utils.translation import get_language
+
+
+def in_swahili():
+    return (get_language() or "en").startswith("sw")
 
 
 class Tier(models.Model):
@@ -14,12 +19,22 @@ class Tier(models.Model):
     description = models.TextField(blank=True)
     icon = models.CharField(max_length=40, default="cloud-fill", help_text="Bootstrap Icons name, e.g. cloud-fill")
     order = models.PositiveIntegerField(default=0)
+    name_sw = models.CharField("Name (Kiswahili)", max_length=100, blank=True)
+    summary_sw = models.CharField("Summary (Kiswahili)", max_length=300, blank=True)
 
     class Meta:
         ordering = ["order"]
 
     def __str__(self):
         return self.name
+
+    @property
+    def display_name(self):
+        return (self.name_sw if in_swahili() else "") or self.name
+
+    @property
+    def display_summary(self):
+        return (self.summary_sw if in_swahili() else "") or self.summary
 
     def get_absolute_url(self):
         return reverse("courses:programs") + f"#{self.slug}"
@@ -33,12 +48,22 @@ class Course(models.Model):
     description = models.TextField(blank=True)
     icon = models.CharField(max_length=40, default="box-seam-fill", help_text="Bootstrap Icons name")
     order = models.PositiveIntegerField(default=0)
+    title_sw = models.CharField("Title (Kiswahili)", max_length=150, blank=True)
+    summary_sw = models.CharField("Summary (Kiswahili)", max_length=300, blank=True)
 
     class Meta:
         ordering = ["tier__order", "order"]
 
     def __str__(self):
         return self.title
+
+    @property
+    def display_title(self):
+        return (self.title_sw if in_swahili() else "") or self.title
+
+    @property
+    def display_summary(self):
+        return (self.summary_sw if in_swahili() else "") or self.summary
 
     def get_absolute_url(self):
         return reverse("courses:course_detail", args=[self.slug])
@@ -85,6 +110,12 @@ class Lesson(models.Model):
     pass_score_percent = models.PositiveIntegerField(
         default=70, help_text="Score (%) needed to pass this item's quiz/exam, if it has one"
     )
+    title_sw = models.CharField("Title (Kiswahili)", max_length=150, blank=True)
+    summary_sw = models.CharField("Summary (Kiswahili)", max_length=300, blank=True)
+    content_sw = models.TextField(
+        "Content (Kiswahili)", blank=True,
+        help_text="Optional Swahili version of the HTML. Keep the same quiz questions in the same order, with the same data-correct numbers.",
+    )
 
     class Meta:
         ordering = ["course__tier__order", "course__order", "order"]
@@ -104,6 +135,29 @@ class Lesson(models.Model):
     @property
     def is_exam(self):
         return self.lesson_type == self.LessonType.EXAM
+
+    @property
+    def display_title(self):
+        return (self.title_sw if in_swahili() else "") or self.title
+
+    @property
+    def display_summary(self):
+        return (self.summary_sw if in_swahili() else "") or self.summary
+
+    @property
+    def display_content(self):
+        """The Swahili page when the visitor reads Kiswahili and one exists, otherwise the English page."""
+        return (self.content_sw if in_swahili() else "") or self.content
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        from .quiz import parse_questions
+
+        if self.content_sw:
+            english, swahili = parse_questions(self.content), parse_questions(self.content_sw)
+            if [q["correct"] for q in english] != [q["correct"] for q in swahili]:
+                raise ValidationError({"content_sw": "The Swahili page must have the same quiz questions in the same order, with the same data-correct numbers as the English page."})
 
     def next_lesson(self):
         return Lesson.objects.filter(course=self.course, order__gt=self.order).order_by("order").first()

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }}{% endblock %}
+{% block content %}
+<section class="container py-5" style="max-width:820px;">
+  <div class="section-eyebrow">Cloud for Kids</div>
+  <h1 class="section-title">{{ page.title }}</h1>
+  <p class="text-secondary small">Last updated {{ page.updated_at|date:"j F Y" }}</p>
+  <div class="legal-body">{{ page.body|safe }}</div>
+  <p class="mt-4 text-secondary small">Questions? <a href="{% url 'core:contact' %}" class="fw-bold">Contact us</a>.</p>
+</section>
+<style>
+  .legal-body h2 { font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: 1.35rem; margin-top: 1.8rem; }
+  .legal-body li { margin-bottom: .35rem; }
+</style>
+{% endblock %}

@@ -1,0 +1,65 @@
+# Render blueprint for Cloud for Kids (https://render.com). In Render choose New > Blueprint and point it at this repository.
+# Values marked "sync: false" are asked for once in the Render dashboard and are never stored in git.
+
+envVarGroups:
+  - name: cloudforkids-shared      # used by the website and by the scheduled email jobs
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false                # your Neon connection string
+      - key: ALLOWED_HOSTS
+        sync: false                # e.g. cloudforkids.co.ke,www.cloudforkids.co.ke (the onrender.com address is added automatically)
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false                # e.g. https://cloudforkids.co.ke,https://www.cloudforkids.co.ke
+      - key: SITE_URL
+        sync: false                # e.g. https://cloudforkids.co.ke (used for links in emails)
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false                # e.g. Cloud for Kids <no-reply@cloudforkids.co.ke> (a domain verified in Resend)
+
+services:
+  - type: web
+    name: cloudforkids
+    runtime: python
+    plan: starter
+    rootDir: website
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    preDeployCommand: python manage.py migrate --noinput
+    startCommand: gunicorn cloudforkids.wsgi:application --workers 3 --timeout 60 --access-logfile -
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - fromGroup: cloudforkids-shared
+
+  # Daily reminders for learners who have gone quiet
+  - type: cron
+    name: cloudforkids-nudges
+    runtime: python
+    plan: starter
+    rootDir: website
+    schedule: "0 6 * * *"          # 06:00 UTC = 09:00 in Nairobi
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py send_notifications --nudges
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - fromGroup: cloudforkids-shared
+
+  # Weekly progress summary for parents (Sunday evening)
+  - type: cron
+    name: cloudforkids-weekly
+    runtime: python
+    plan: starter
+    rootDir: website
+    schedule: "0 15 * * 0"         # Sunday 15:00 UTC = 18:00 in Nairobi
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py send_notifications --weekly
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - fromGroup: cloudforkids-shared

@@ -6,4 +6,9 @@ class CoursesConfig(AppConfig):
     name = "courses"
 
     def ready(self):
+        from django.db.models.signals import post_migrate
+
         from . import signals  # noqa: F401
+        from .seeding import seed_if_empty
+
+        post_migrate.connect(seed_if_empty, sender=self, dispatch_uid="courses-first-run-seed")

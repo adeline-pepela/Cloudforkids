@@ -1,7 +1,8 @@
-{% load static %}{% comment %}
-Photo slot. Shows static/img/photos/<name>.jpg when that file exists, otherwise a coloured
-placeholder with an icon. Params: name, icon, tone (sun|sky|grass|coral|purple), alt, cls (extra classes).
-{% endcomment %}<div class="photo-slot tone-{{ tone|default:'sky' }} {{ cls }}" role="img" aria-label="{{ alt }}">
+{% load static c4k %}{% comment %}
+Photo slot. Uses the photo chosen for this slot in the admin (Site photos), else static/img/photos/<name>.jpg when that file
+exists, otherwise a coloured placeholder with an icon. Params: name, icon, tone (sun|sky|grass|coral|purple), alt, cls.
+{% endcomment %}{% with photo=photos|get_item:name %}<div class="photo-slot tone-{{ tone|default:'sky' }} {{ cls }}" role="img" aria-label="{{ photo.alt|default:alt }}">
   <i class="bi {{ icon|default:'bi-people-fill' }}" aria-hidden="true"></i>
-  <img src="{% static 'img/photos/' %}{{ name }}.jpg" alt="" loading="lazy" onerror="this.remove()">
-</div>
+  {% if photo %}<img src="{{ photo.src }}" alt="" loading="lazy" onerror="this.remove()">{% if photo.credit_name %}<a class="photo-credit" href="{{ photo.credit_url|default:'https://unsplash.com' }}" target="_blank" rel="noopener">Photo: {{ photo.credit_name }} / Unsplash</a>{% endif %}
+  {% else %}<img src="{% static 'img/photos/' %}{{ name }}.jpg" alt="" loading="lazy" onerror="this.remove()">{% endif %}
+</div>{% endwith %}

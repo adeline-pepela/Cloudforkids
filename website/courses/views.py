@@ -7,8 +7,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from .badges import check_and_award_badges
-from .models import Course, Enrollment, Lesson, LessonCompletion, QuizResult, Tier
-from .quiz import quiz_question_count, quiz_status
+from .models import Course, Enrollment, Lesson, LessonCompletion, Tier
+from .quiz import attempt, parse_questions, public_html, quiz_status, record_result, reset_attempt
 
 
 def programs(request):
@@ -56,6 +56,7 @@ def lesson_detail(request, course_slug, lesson_slug):
     enrollment, _ = Enrollment.objects.get_or_create(learner=request.user, course=course)
     is_complete = lesson.id in enrollment.completed_lesson_ids
     quiz_total, quiz_passed, quiz_score = quiz_status(request.user, lesson)
+    reset_attempt(request, lesson)  # every page load starts a fresh quiz attempt
     return render(
         request,
         "courses/lesson_detail.html",
@@ -67,6 +68,7 @@ def lesson_detail(request, course_slug, lesson_slug):
             "quiz_total": quiz_total,
             "quiz_passed": quiz_passed,
             "quiz_score": quiz_score,
+            "content_html": public_html(lesson.display_content),
             "side_quiz": bool(quiz_total) and not lesson.is_exam,
             "next_lesson": lesson.next_lesson(),
             "previous_lesson": lesson.previous_lesson(),
@@ -101,30 +103,86 @@ def mark_lesson_complete(request, course_slug, lesson_slug):
     return redirect("courses:course_detail", slug=course.slug)
 
 
-@login_required
-@require_POST
-def quiz_result(request, course_slug, lesson_slug):
-    """Record the learner's quiz score (sent by the lesson page) and say whether it passed."""
+def _quiz_lesson(request, course_slug, lesson_slug):
     course = get_object_or_404(Course, slug=course_slug)
     lesson = get_object_or_404(Lesson, course=course, slug=lesson_slug)
+    return lesson, parse_questions(lesson.display_content)
+
+
+def _json_body(request):
     try:
-        data = json.loads(request.body or b"{}")
-        correct, total = int(data["correct"]), int(data["total"])
-    except (ValueError, KeyError, TypeError):
-        return JsonResponse({"error": "Bad quiz result"}, status=400)
+        return json.loads(request.body or b"{}")
+    except ValueError:
+        return {}
 
-    expected = quiz_question_count(lesson)
-    if not expected or total != expected or not 0 <= correct <= total:
-        return JsonResponse({"error": "Quiz does not match this lesson"}, status=400)
 
-    percent = round(correct / total * 100)
-    passed = percent >= lesson.pass_score_percent
-    result, _ = QuizResult.objects.get_or_create(learner=request.user, lesson=lesson)
-    # Keep the best attempt, and never un-pass a lesson the learner already passed.
-    if percent >= result.score_percent:
-        result.score_percent = percent
-    result.passed = result.passed or passed
-    result.save()
+def _int(value, default=None):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+@login_required
+@require_POST
+def quiz_check(request, course_slug, lesson_slug):
+    """Check one answer. The answer key stays on the server; the first answer to each question in an attempt counts."""
+    lesson, questions = _quiz_lesson(request, course_slug, lesson_slug)
+    data = _json_body(request)
+    q, choice = _int(data.get("q")), _int(data.get("choice"))
+    if q is None or choice is None or not 0 <= q < len(questions) or choice < 0 or lesson.is_exam:
+        return JsonResponse({"error": "Bad answer"}, status=400)
+    answers = attempt(request, lesson)
+    if str(q) not in answers:
+        answers[str(q)] = choice
+        request.session.modified = True
+    chosen = answers[str(q)]
+    right = questions[q]["correct"]
     return JsonResponse(
-        {"score_percent": percent, "passed": passed, "unlocked": result.passed, "needed": lesson.pass_score_percent}
+        {"correct": chosen == right, "chosen": chosen, "correct_index": right, "explain": questions[q]["explain"],
+         "answered": len(answers), "total": len(questions)}
     )
+
+
+@login_required
+@require_POST
+def quiz_finish(request, course_slug, lesson_slug):
+    """Score a finished lesson quiz from the answers the server recorded (not from anything the browser claims)."""
+    lesson, questions = _quiz_lesson(request, course_slug, lesson_slug)
+    answers = attempt(request, lesson)
+    if not questions or len(answers) < len(questions):
+        return JsonResponse({"error": "Answer every question first"}, status=400)
+    correct = sum(1 for i, item in enumerate(questions) if answers.get(str(i)) == item["correct"])
+    percent, passed, unlocked = record_result(request.user, lesson, correct, len(questions))
+    return JsonResponse(
+        {"correct": correct, "total": len(questions), "score_percent": percent, "passed": passed,
+         "unlocked": unlocked, "needed": lesson.pass_score_percent}
+    )
+
+
+@login_required
+@require_POST
+def quiz_grade(request, course_slug, lesson_slug):
+    """Grade a whole module exam: the browser sends the chosen option for every question."""
+    lesson, questions = _quiz_lesson(request, course_slug, lesson_slug)
+    chosen = _json_body(request).get("answers")
+    if not questions or not isinstance(chosen, list) or len(chosen) != len(questions):
+        return JsonResponse({"error": "Exam does not match this lesson"}, status=400)
+    chosen = [_int(c, -1) for c in chosen]
+    results = [{"correct": chosen[i] == item["correct"], "correct_index": item["correct"], "explain": item["explain"]}
+               for i, item in enumerate(questions)]
+    correct = sum(1 for r in results if r["correct"])
+    percent, passed, unlocked = record_result(request.user, lesson, correct, len(questions))
+    return JsonResponse(
+        {"correct": correct, "total": len(questions), "score_percent": percent, "passed": passed,
+         "unlocked": unlocked, "needed": lesson.pass_score_percent, "results": results}
+    )
+
+
+@login_required
+@require_POST
+def quiz_reset(request, course_slug, lesson_slug):
+    """Start the quiz again (the best score is kept)."""
+    lesson, _ = _quiz_lesson(request, course_slug, lesson_slug)
+    reset_attempt(request, lesson)
+    return JsonResponse({"ok": True})

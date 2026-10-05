@@ -10,6 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from accounts.models import Assignment, ClassMembership, Classroom, User
+from core import notify
 from core.forms import BootstrapFormMixin
 from courses.models import Tier
 from courses.quiz import quiz_question_count
@@ -23,6 +24,8 @@ def teacher_only(view):
     def wrapper(request, *args, **kwargs):
         if request.user.role != User.Role.FACILITATOR:
             return redirect("dashboard:home")
+        if request.user.awaiting_approval:
+            return render(request, "teach/pending.html")
         return view(request, *args, **kwargs)
 
     wrapper.__name__ = view.__name__
@@ -131,6 +134,7 @@ def assignment_add(request, class_id):
         assignment = form.save(commit=False)
         assignment.classroom = classroom
         assignment.save()
+        notify.notify_assignment(assignment)
         messages.success(request, f"Assigned {assignment.course.title} to {classroom.name}.")
     else:
         messages.error(request, "Please choose a course for the assignment.")

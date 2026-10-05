@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="{% static 'css/learner.css' %}">
   <link rel="stylesheet" href="{% static 'css/family.css' %}">
   <script src="{% static 'js/site.js' %}"></script>
+  <script>window.C4K_T = {{ js_i18n|safe }};</script>
   {% block extra_head %}{% endblock %}
 </head>
 <body class="learner-app">
@@ -30,7 +31,8 @@
       <a class="l-link{% if nav == 'courses' or request.resolver_match.namespace == 'courses' %} active{% endif %}" href="{% url 'dashboard:courses' %}"><i class="bi bi-journal-check" aria-hidden="true"></i> My Courses</a>
       <a class="l-link{% if nav == 'labs' %} active{% endif %}" href="{% url 'dashboard:labs' %}"><i class="bi bi-joystick" aria-hidden="true"></i> Practice Lab</a>
       <a class="l-link{% if nav == 'achievements' %} active{% endif %}" href="{% url 'dashboard:achievements' %}"><i class="bi bi-trophy-fill" aria-hidden="true"></i> Achievements</a>
-      <a class="l-link{% if request.resolver_match.url_name == 'profile' %} active{% endif %}" href="{% url 'accounts:profile' %}"><i class="bi bi-person-circle" aria-hidden="true"></i> My Profile</a>
+      <a class="l-link{% if nav == 'messages' %} active{% endif %}" href="{% url 'messaging:inbox' %}"><i class="bi bi-envelope-fill" aria-hidden="true"></i> Messages{% if unread_messages %} <span class="l-badge">{{ unread_messages }}</span>{% endif %}</a>
+  <a class="l-link{% if request.resolver_match.url_name == 'profile' %} active{% endif %}" href="{% url 'accounts:profile' %}"><i class="bi bi-person-circle" aria-hidden="true"></i> My Profile</a>
     </nav>
     {% endblock %}
 
@@ -51,6 +53,7 @@
     <header class="l-top">
       <button type="button" class="l-burger" id="l-burger" aria-label="Open menu"><i class="bi bi-list" aria-hidden="true"></i></button>
       <div class="l-hello">Hi, <strong>{{ user.first_name|default:user.username }}</strong></div>
+      {% include "partials/lang_switch.html" %}
       {% if stats %}
       <div class="l-chips">
         <span class="l-chip fire" title="Learning streak"><i class="bi bi-fire" aria-hidden="true"></i> {{ stats.streak }} day{{ stats.streak|pluralize }}</span>

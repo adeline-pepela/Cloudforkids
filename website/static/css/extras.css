@@ -181,3 +181,16 @@ html.easy-read h5, html.easy-read h6, html.easy-read .section-title, html.easy-r
 .live-band strong { display: block; font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: 1.7rem; line-height: 1.1; color: var(--sky-dark, #0D7FBF); }
 .live-band span { font-size: .82rem; color: #6B7280; }
 [data-bs-theme="dark"] .live-band { background: #12304a; }
+
+
+/* language switch (EN | SW) */
+.lang-switch { display: inline-flex; border-radius: 999px; background: rgba(28,167,236,.12); padding: 3px; gap: 2px; margin: 0; }
+.lang-switch button { border: 0; background: transparent; font-weight: 800; font-size: .74rem; padding: 4px 10px; border-radius: 999px; color: var(--sky-dark, #0D7FBF); cursor: pointer; }
+.lang-switch button.on { background: var(--sky-dark, #0D7FBF); color: #fff; }
+[data-bs-theme="dark"] .lang-switch { background: rgba(255,255,255,.1); }
+
+
+/* photo credit chip on slot photos */
+.photo-slot { position: relative; }
+.photo-credit { position: absolute; right: 8px; bottom: 6px; z-index: 2; font-size: .62rem; color: rgba(255,255,255,.9); background: rgba(0,0,0,.35); padding: 2px 8px; border-radius: 999px; text-decoration: none; }
+.photo-credit:hover { background: rgba(0,0,0,.6); color: #fff; }

@@ -26,9 +26,18 @@ class User(AbstractUser):
 
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.LEARNER)
     phone_number = models.CharField(max_length=20, blank=True)
+    terms_accepted_at = models.DateTimeField(null=True, blank=True, help_text="When they accepted the Terms and Privacy Policy")
+    email_notifications = models.BooleanField(default=True, help_text="Progress summaries and reminders by email")
+    is_approved = models.BooleanField(
+        default=True, help_text="Facilitators need an admin's approval before they can use classes"
+    )
 
     def __str__(self):
         return self.get_full_name() or self.username
+
+    @property
+    def awaiting_approval(self):
+        return self.role == self.Role.FACILITATOR and not self.is_approved
 
     @property
     def is_learner(self):
@@ -139,3 +148,73 @@ class Assignment(models.Model):
 
     def __str__(self):
         return f"{self.course} for {self.classroom}"
+
+
+def new_consent_token():
+    return secrets.token_urlsafe(32)
+
+
+class ParentalConsent(models.Model):
+    """A parent or guardian's permission for a child under 13 to use the platform (Kenya Data Protection Act, 2019)."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Waiting for parent"
+        APPROVED = "approved", "Approved"
+        DECLINED = "declined", "Declined"
+
+    class Method(models.TextChoices):
+        EMAIL = "email", "Parent approved by email link"
+        SCHOOL = "school", "Added by a school or facilitator"
+        ADMIN = "admin", "Recorded by an admin"
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="consent")
+    parent_name = models.CharField(max_length=150, blank=True)
+    parent_email = models.EmailField()
+    token = models.CharField(max_length=64, unique=True, default=new_consent_token, editable=False)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    method = models.CharField(max_length=10, choices=Method.choices, default=Method.EMAIL)
+    created_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user} - {self.get_status_display()}"
+
+
+class NotificationLog(models.Model):
+    """Remembers which scheduled emails were sent, so nobody gets the same reminder twice."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notification_log")
+    kind = models.CharField(max_length=30)
+    key = models.CharField(max_length=80)
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "kind", "key")
+
+    def __str__(self):
+        return f"{self.kind} {self.key} -> {self.user}"
+
+
+class Message(models.Model):
+    """A message from a facilitator to a parent or learner (or a parent's reply). Learners cannot send messages."""
+
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="sent_messages")
+    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="received_messages")
+    classroom = models.ForeignKey(Classroom, null=True, blank=True, on_delete=models.SET_NULL, related_name="messages")
+    about_learner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="messages_about"
+    )
+    reply_to = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="replies")
+    subject = models.CharField(max_length=150)
+    body = models.TextField(max_length=3000)
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.sender} -> {self.recipient}: {self.subject}"

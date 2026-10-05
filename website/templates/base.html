@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <link rel="stylesheet" href="{% static 'css/extras.css' %}">
   <script src="{% static 'js/site.js' %}"></script>
+  <script>window.C4K_T = {{ js_i18n|safe }};</script>
   {% block extra_head %}{% endblock %}
 </head>
 <body class="{% if not user.is_authenticated %}has-mobile-cta{% endif %}">
@@ -33,6 +34,7 @@
           <li class="nav-item"><a class="nav-link" href="{% url 'core:impact' %}">Impact</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'core:about' %}">About</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'core:contact' %}">Contact</a></li>
+          <li class="nav-item ms-lg-2">{% include "partials/lang_switch.html" %}</li>
           {% if user.is_authenticated %}
             <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
             <li class="nav-item ms-lg-2">
@@ -86,6 +88,8 @@
             <li><a href="{% url 'core:about' %}">About</a></li>
             <li><a href="{% url 'core:partners' %}">Partners</a></li>
             <li><a href="{% url 'core:contact' %}">Contact</a></li>
+            <li><a href="{% url 'core:terms' %}">Terms of Use</a></li>
+            <li><a href="{% url 'core:privacy' %}">Privacy Policy</a></li>
           </ul>
         </div>
         <div class="col-lg-4">

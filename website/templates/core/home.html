@@ -62,17 +62,17 @@
 <section class="container py-5">
   <div class="text-center mb-4 reveal">
     <div class="section-eyebrow">The programme</div>
-    <h2 class="section-title">A {{ tiers|length }}-tier pathway{% if tiers %}, from {{ tiers.first.grade_range }} to {{ tiers.last.grade_range }}{% endif %}</h2>
+    <h2 class="section-title">A {{ tiers|length }}-tier pathway{% if grade_span %}, from {{ grade_span }}{% endif %}</h2>
     <p class="text-secondary">Every tier grows in technical depth and maps directly onto Kenya's CBC/CBE curriculum.</p>
   </div>
   <div class="row g-4">
     {% for tier in tiers %}
     <div class="col-md-4 reveal d{{ forloop.counter0 }}">
       <div class="tier-card has-img">
-        {% if forloop.counter == 1 %}{% include "partials/slot.html" with name="tier-1" icon="bi-emoji-smile-fill" tone="sun" alt="Foundational tier, Grade 4 to 6: learners mapping the cloud with paper and data packets" cls="round-top portrait" %}{% elif forloop.counter == 2 %}{% include "partials/slot.html" with name="tier-2" icon="bi-code-slash" tone="sky" alt="Intermediate tier, Grade 7 to 9: learners coding hello world on a laptop" cls="round-top portrait" %}{% else %}{% include "partials/slot.html" with name="tier-3" icon="bi-cloud-fill" tone="purple" alt="Advanced tier, Grade 10 to 12: students designing cloud architecture and monitoring dashboards" cls="round-top portrait" %}{% endif %}
+        {% include "partials/slot.html" with name="tier-"|add:tier.slug icon="bi-stars" tone="sky" alt=tier.display_name cls="round-top portrait" %}
         <div class="tier-body">
-          <h4 class="visually-hidden">{{ tier.name }} ({{ tier.grade_range }})</h4>
-          <p class="text-secondary">{{ tier.summary }}</p>
+          <h4 class="visually-hidden">{{ tier.display_name }} ({{ tier.grade_range }})</h4>
+          <p class="text-secondary">{{ tier.display_summary }}</p>
           <a href="{{ tier.get_absolute_url }}" class="fw-bold text-decoration-none">Explore tier &rarr;</a>
         </div>
       </div>

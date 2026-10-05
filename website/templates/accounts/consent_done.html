@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Thank you{% endblock %}
+{% block content %}
+<section class="container py-5 text-center" style="max-width:640px;">
+  {% if declined %}
+    <div class="auth-success-ico auth-warn-ico mx-auto mb-3" style="width:84px;height:84px;border-radius:50%;display:grid;place-items:center;font-size:2.4rem;background:#FFF1CC;color:#B87900;"><i class="bi bi-trash3-fill" aria-hidden="true"></i></div>
+    <h1 class="section-title">The request has been deleted</h1>
+    <p class="text-secondary">We removed the account request and the details that came with it. Nothing else is kept. Thank you for letting us know.</p>
+  {% elif already %}
+    <h1 class="section-title">This request was already answered</h1>
+    <p class="text-secondary">{% if consent.status == "approved" %}{{ child.first_name }}'s account is active. They can log in with the username <strong>{{ child.username }}</strong>.{% else %}This request is no longer open.{% endif %}</p>
+  {% else %}
+    <div class="mx-auto mb-3" style="width:84px;height:84px;border-radius:50%;display:grid;place-items:center;font-size:2.4rem;background:#DDF7E5;color:#1C9D5A;"><i class="bi bi-patch-check-fill" aria-hidden="true"></i></div>
+    <h1 class="section-title">Thank you!</h1>
+    <p class="text-secondary">{{ child.first_name }}'s account is now active. They can log in with the username <strong>{{ child.username }}</strong> and the password they chose.</p>
+    <div class="tier-card p-4 text-start mt-4" style="height:auto;">
+      <h5><i class="bi bi-people-fill text-primary" aria-hidden="true"></i> Want to follow their progress?</h5>
+      <p class="text-secondary small mb-3">Create a free parent account, then use <strong>Add a child</strong> with {{ child.first_name }}'s username and the family code on their profile page.</p>
+      <a href="{% url 'accounts:signup' %}" class="btn btn-cloud">Create a parent account</a>
+    </div>
+  {% endif %}
+  <p class="mt-4"><a href="{% url 'core:home' %}" class="fw-bold text-decoration-none">Back to the Cloud for Kids home page</a></p>
+</section>
+{% endblock %}

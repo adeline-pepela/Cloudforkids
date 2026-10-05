@@ -31,7 +31,7 @@
   <a class="tc-task" href="{{ t.a.course.get_absolute_url }}">
     <i class="bi bi-{{ t.a.course.icon }} big" aria-hidden="true"></i>
     <div class="flex-grow-1">
-      <strong>{{ t.a.course.title }}</strong>
+      <strong>{{ t.a.course.display_title }}</strong>
       <small>{{ t.classroom.name }}{% if t.a.due_date %} &middot; {% if t.overdue %}<span class="text-danger fw-bold">was due {{ t.a.due_date|date:"j M" }}</span>{% elif t.days_left == 0 %}<strong>due today</strong>{% else %}due {{ t.a.due_date|date:"j M" }} ({{ t.days_left }} day{{ t.days_left|pluralize }} left){% endif %}{% endif %}{% if t.a.note %} &middot; {{ t.a.note }}{% endif %}</small>
       <span class="fm-bar mt-1"><span style="width: {{ t.percent }}%"></span></span>
     </div>
@@ -66,12 +66,12 @@
   <div class="col-lg-7">
     <div class="l-card">
       <h3><i class="bi bi-signpost-split-fill text-primary" aria-hidden="true"></i> My learning path <a class="more" href="{% url 'dashboard:path' %}">See all</a></h3>
-      {% if tier %}<p class="text-secondary small mb-2">{{ tier.name }} &middot; {{ tier.grade_range }}</p>{% endif %}
+      {% if tier %}<p class="text-secondary small mb-2">{{ tier.display_name }} &middot; {{ tier.grade_range }}</p>{% endif %}
       {% for s in path_preview %}
       <a href="{{ s.course.get_absolute_url }}" class="d-flex align-items-center gap-3 mb-2 text-decoration-none" style="color:inherit;">
         <span class="ico {% if s.status == 'current' %}tone-sky{% else %}tone-purple{% endif %}" style="width:44px;height:44px;border-radius:14px;display:grid;place-items:center;color:#fff;font-size:1.3rem;"><i class="bi bi-{{ s.course.icon }}" aria-hidden="true"></i></span>
         <div class="flex-grow-1">
-          <div class="fw-bold">{{ s.course.title }} {% if s.status == 'current' %}<span class="badge-pill">Next up</span>{% endif %}</div>
+          <div class="fw-bold">{{ s.course.display_title }} {% if s.status == 'current' %}<span class="badge-pill">Next up</span>{% endif %}</div>
           <div class="mini-bar"><span style="width: {{ s.percent }}%"></span></div>
         </div>
       </a>

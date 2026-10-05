@@ -1,0 +1,15 @@
+{% autoescape off %}{{ heading }}
+
+{% for p in paragraphs %}{{ p }}
+
+{% endfor %}{% if stats %}{% for s in stats %}- {{ s.label }}: {{ s.value }}
+{% endfor %}
+{% endif %}{% if bullets %}{% for b in bullets %}- {{ b }}
+{% endfor %}
+{% endif %}{% if cta_url %}{{ cta_text }}: {{ cta_url }}
+
+{% endif %}{% if note %}{{ note }}
+
+{% endif %}Cloud for Kids - Every Kenyan child, cloud-ready by 2030.
+{% if unsubscribe_url %}Stop these emails: {{ unsubscribe_url }}
+{% endif %}{% endautoescape %}

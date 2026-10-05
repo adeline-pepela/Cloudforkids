@@ -1757,19 +1757,6 @@ class Command(BaseCommand):
         for name, description in PARTNERS:
             Partner.objects.get_or_create(name=name, defaults={"description": description})
 
-        if not User.objects.filter(username="demo_learner").exists():
-            demo = User.objects.create_user(
-                username="demo_learner",
-                password="CloudForKids2026",
-                first_name="Demo",
-                last_name="Learner",
-                email="demo@cloudforkids.example",
-                role=User.Role.LEARNER,
-            )
-            self.stdout.write(self.style.SUCCESS("Created demo learner: demo_learner / CloudForKids2026"))
-        else:
-            demo = User.objects.get(username="demo_learner")
-
         self.stdout.write(self.style.SUCCESS(
             f"Seeded {Tier.objects.count()} tiers, {Course.objects.count()} courses, "
             f"{Lesson.objects.count()} lessons, {Badge.objects.count()} badges, "

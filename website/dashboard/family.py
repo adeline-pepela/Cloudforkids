@@ -5,6 +5,7 @@ from datetime import timedelta
 
 from django.utils import timezone
 
+from courses.tiers import suggested_tier
 from courses.models import Badge, Enrollment, LessonCompletion, QuizResult, Tier
 
 from .labs import get_labs
@@ -46,7 +47,7 @@ def child_report(child):
     now = timezone.now()
     today = now.date()
     profile = getattr(child, "learner_profile", None)
-    tier = profile.tier if profile and profile.tier_id else Tier.objects.first()
+    tier = profile.tier if profile and profile.tier_id else suggested_tier(profile)
     courses = list(tier.courses.prefetch_related("lessons")) if tier else []
 
     enrollments = {e.course_id: e for e in Enrollment.objects.filter(learner=child)}

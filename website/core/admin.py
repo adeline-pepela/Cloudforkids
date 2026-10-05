@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import reverse
 
-from .models import ContactMessage, ImpactStat, InfoCard, NewsletterSubscriber, Partner, SiteSetting, TeamMember, Testimonial
+from .models import ContactMessage, SitePhoto, UITranslation, LegalPage, ImpactStat, InfoCard, NewsletterSubscriber, Partner, SiteSetting, TeamMember, Testimonial
 
 admin.site.site_header = "Cloud for Kids Admin"
 admin.site.site_title = "Cloud for Kids Admin"
@@ -37,6 +37,57 @@ class NewsletterSubscriberAdmin(admin.ModelAdmin):
     list_display = ("email", "subscribed_at")
     search_fields = ("email",)
     date_hierarchy = "subscribed_at"
+
+
+@admin.register(UITranslation)
+class UITranslationAdmin(admin.ModelAdmin):
+    list_display = ("english_short", "swahili", "updated_at")
+    search_fields = ("english", "swahili")
+    list_per_page = 50
+
+    @admin.display(description="English")
+    def english_short(self, obj):
+        return obj.english[:90]
+
+    def save_model(self, request, obj, form, change):
+        from .translation import clear_cache
+
+        super().save_model(request, obj, form, change)
+        clear_cache()
+
+    def delete_model(self, request, obj):
+        from .translation import clear_cache
+
+        super().delete_model(request, obj)
+        clear_cache()
+
+
+@admin.register(SitePhoto)
+class SitePhotoAdmin(admin.ModelAdmin):
+    list_display = ("slot", "has_image", "credit_name", "url")
+    search_fields = ("slot", "credit_name")
+
+    @admin.display(boolean=True, description="Photo")
+    def has_image(self, obj):
+        return bool(obj.src)
+
+    def save_model(self, request, obj, form, change):
+        from django.core.cache import cache
+
+        super().save_model(request, obj, form, change)
+        cache.delete("site-photos-v1")
+
+    def delete_model(self, request, obj):
+        from django.core.cache import cache
+
+        super().delete_model(request, obj)
+        cache.delete("site-photos-v1")
+
+
+@admin.register(LegalPage)
+class LegalPageAdmin(admin.ModelAdmin):
+    list_display = ("title", "slug", "updated_at")
+    readonly_fields = ("updated_at",)
 
 
 @admin.register(Testimonial)
@@ -177,6 +228,14 @@ def _dashboard_data():
     }
 
     attention = []
+    waiting_teachers = User.objects.filter(role=User.Role.FACILITATOR, is_approved=False).count()
+    if waiting_teachers:
+        attention.append({"icon": "bi-person-check-fill", "text": f"{waiting_teachers} facilitator{'s' if waiting_teachers != 1 else ''} waiting for approval", "url": url("accounts_user") + "?role__exact=facilitator&is_approved__exact=0"})
+    from accounts.models import ParentalConsent
+
+    waiting_consents = ParentalConsent.objects.filter(status="pending").count()
+    if waiting_consents:
+        attention.append({"icon": "bi-shield-check", "text": f"{waiting_consents} child account{'s' if waiting_consents != 1 else ''} waiting for parent consent", "url": url("accounts_parentalconsent") + "?status__exact=pending"})
     if unread:
         attention.append({"icon": "bi-envelope-exclamation-fill", "text": f"{unread} unread contact message{'s' if unread != 1 else ''}", "url": url("core_contactmessage") + "?handled__exact=0"})
     if pending_testimonials:

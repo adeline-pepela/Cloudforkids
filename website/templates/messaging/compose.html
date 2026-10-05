@@ -1,0 +1,49 @@
+{% extends base_tpl %}
+{% block title %}New message{% endblock %}
+{% block content %}
+<h1 class="l-title">New message</h1>
+<p class="l-sub">Write to a whole class (learners and their parents) or to the parents of one learner.</p>
+{% if not classes %}
+<div class="l-card text-center py-5" style="height:auto;"><p class="text-secondary">Create a class first, then you can message it.</p><a href="{% url 'teach:class_new' %}" class="btn btn-cloud">Create a class</a></div>
+{% else %}
+<div class="row"><div class="col-lg-8">
+  <div class="l-card" style="height:auto;">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label fw-bold" for="msg-class">Class</label>
+          <select name="classroom" id="msg-class" class="form-select form-select-lg">
+            {% for c in classes %}<option value="{{ c.pk }}" {% if initial_class == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-bold" for="msg-to">Send to</label>
+          <select name="to" id="msg-to" class="form-select form-select-lg">
+            <option value="class">Everyone in the class (learners and parents)</option>
+            {% for m in members %}<option value="{{ m.learner_id }}" data-class="{{ m.classroom_id }}">Parents of {{ m.learner.get_full_name|default:m.learner.username }} ({{ m.classroom.name }})</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="mb-3"><label class="form-label fw-bold" for="{{ form.subject.id_for_label }}">Subject</label>{{ form.subject }}{{ form.subject.errors }}</div>
+      <div class="mb-3"><label class="form-label fw-bold" for="{{ form.body.id_for_label }}">Message</label>{{ form.body }}{{ form.body.errors }}</div>
+      <p class="small text-secondary"><i class="bi bi-shield-check" aria-hidden="true"></i> Learners can read messages but cannot reply. Parents can reply to you. An email copy is sent to anyone who has email notifications on.</p>
+      <button type="submit" class="btn btn-cloud btn-big"><i class="bi bi-send-fill" aria-hidden="true"></i> Send</button>
+      <a href="{% url 'messaging:inbox' %}" class="btn btn-outline-cloud btn-big">Cancel</a>
+    </form>
+  </div>
+</div></div>
+<script>
+(function () {
+  var cls = document.getElementById('msg-class'), to = document.getElementById('msg-to');
+  function filter() {
+    Array.prototype.forEach.call(to.options, function (o) {
+      var c = o.getAttribute('data-class'); o.hidden = !!c && c !== cls.value; o.disabled = o.hidden;
+    });
+    if (to.selectedOptions[0] && to.selectedOptions[0].disabled) to.value = 'class';
+  }
+  cls.addEventListener('change', filter); filter();
+})();
+</script>
+{% endif %}
+{% endblock %}

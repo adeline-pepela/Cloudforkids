@@ -1,0 +1,6 @@
+<form action="{% url 'set_language' %}" method="post" class="lang-switch" aria-label="Language">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+  <button type="submit" name="language" value="en" class="{% if not is_swahili %}on{% endif %}" aria-label="English">EN</button>
+  <button type="submit" name="language" value="sw" class="{% if is_swahili %}on{% endif %}" aria-label="Kiswahili">SW</button>
+</form>

@@ -5,7 +5,7 @@ aged 7 to 17, aligned to Kenya's CBC/CBE curriculum. It is a working product, no
 learners study and practise, parents follow progress, and facilitators run classes.
 
 > Branch `Pre-production`: feature-complete build ready for final testing before launch.
-> See [Before going live](#before-going-live) for what is still open.
+> See [Deploying](#deploying-render-or-any-python-host) and [Still open before launch](#still-open-before-launch).
 
 ## Who uses it
 
@@ -119,6 +119,22 @@ python manage.py runserver
 database is empty, and never overwrites existing content. It also creates a demo account
 `demo_learner` (see `seed_data_fixed.py`); **delete or change its password before launch**.
 
+## Forgot password and email (Resend)
+
+`/accounts/password-reset/` emails a one-time link (valid 2 hours) through [Resend](https://resend.com).
+Put the key in `website/.env`:
+
+```
+RESEND_API_KEY=re_xxxxxxxx
+EMAIL_FROM=Cloud for Kids <no-reply@your-verified-domain>
+```
+
+- Without `RESEND_API_KEY` emails are printed in the server console (handy for local testing).
+- Until a domain is verified in Resend, `onboarding@resend.dev` only delivers to your own Resend account email.
+- The page always says "check your email" whether or not the address exists, a mail failure never shows an error,
+  and each IP can request 5 resets per hour. Accounts need an email on file to reset.
+- The login, sign-up and reset pages use Unsplash photos (hotlinked, credited on the page).
+
 ## Moving data between databases
 
 ```bash
@@ -127,14 +143,68 @@ python manage.py dumpdata --natural-foreign --natural-primary -e contenttypes -e
 python manage.py migrate && python manage.py flush --no-input && python manage.py loaddata dump.json
 ```
 
-## Before going live
+## Safety, consent and accounts
 
-- Set `DEBUG = False`, a real `SECRET_KEY` and `ALLOWED_HOSTS` from environment variables (`manage.py check --deploy` lists the rest).
-- Set secure cookies and HTTPS redirect, and serve static files (WhiteNoise or a CDN).
-- Remove or change the demo account.
-- Add the real photos in `static/img/photos/` (missing ones show a coloured icon placeholder).
-- Decide whether facilitator sign-up needs admin approval (today anyone can choose that role at sign-up;
-  they only see learners who join their class with the code).
-- Quiz scoring is done in the browser and reported to the server, so a determined user could bypass it.
-  Moving the answer key server-side is the next hardening step.
-- Foundational starts at Grade 4, so ages 7 and 8 are not covered yet.
+- **Terms and Privacy pages** (`/terms/`, `/privacy/`) are editable in Admin > Legal pages. The text is a draft: have a lawyer review it
+  against Kenya's Data Protection Act, 2019 before launch.
+- **Learners aged 7 to 17 only.** Sign-up asks for a date of birth. A learner **under 13** is created locked, and their parent or guardian gets an
+  email with an Approve / Decline page. Decline deletes the account. Admins can record consent another way (Admin > Parental consents).
+- **Facilitators are approved by an admin** before class tools work (Admin > Users > Approve selected facilitators). They are emailed when approved.
+- **Learners cannot send messages.** Facilitators write to a class (learners and linked parents) or to one child's parents; parents can reply.
+- **Quizzes are graded on the server.** The lesson page never contains the answers; the browser asks the server to check each answer, and options
+  appear in a random order. Scores come from the server's own record.
+
+## Languages
+
+English and Kiswahili (EN | SW switch). Fixed wording is translated from the **UI translations** table (Admin > UI translations, about 670 entries,
+`python manage.py load_translations` adds new ones). Tier, course and lesson names and the whole **Explorer** tier have Kiswahili versions
+(the `*_sw` fields). Other lesson bodies fall back to English until a Kiswahili page is added in the lesson's admin form. Have a native speaker review the translations.
+
+## Explorer tier (Grade 1 to 3)
+
+A fourth, first tier for ages 7 and 8: *My Digital World* (computers, tapping and typing, where pictures live, staying safe) and *Little Coders*
+(instructions, patterns), each with a module exam, in English and Kiswahili. New learners get a starting tier from their age (`courses/tiers.py`).
+
+## Emails (Resend)
+
+Account emails (consent, approval, assignments, messages) and scheduled emails: a **weekly progress summary** for parents and **reminders** after a few quiet days.
+Every optional email has a one-click unsubscribe. Run from a scheduler (the Render blueprint does this):
+
+```
+python manage.py send_notifications --weekly    # Sunday evening
+python manage.py send_notifications --nudges    # every morning
+```
+
+## Admin tools
+
+- **Import learners** (Admin > Tools): upload a CSV (template provided), logins are generated and shown once, optional class and tier.
+- **Monthly report** (Admin > Tools): learners, activity, quiz results, courses completed, by tier, course, county and school. Download CSV or print.
+- **Site photos**: choose or upload the photo for each page slot, with a credit.
+
+## Tests
+
+`python manage.py test` runs about 110 tests on an in-memory database (roles, consent, quiz rules, parent link, class codes, messaging, emails, languages, imports, reports).
+
+## Deploying (Render or any Python host)
+
+`render.yaml` is a ready blueprint (web service plus the two email jobs). Whatever host you use, set these **environment variables** before the first deploy;
+the app refuses to start without the first three:
+
+| Variable | Example |
+|---|---|
+| `SECRET_KEY` | a long random string (never reuse the dev one) |
+| `ALLOWED_HOSTS` | `cloudforkids.co.ke,www.cloudforkids.co.ke` |
+| `DATABASE_URL` | your Neon connection string |
+| `SITE_URL` | `https://cloudforkids.co.ke` (links inside emails) |
+| `RESEND_API_KEY`, `EMAIL_FROM` | from Resend, with a verified sending domain |
+| `CSRF_TRUSTED_ORIGINS` | optional, derived from `ALLOWED_HOSTS` as `https://<host>` when not set |
+
+`DEBUG` is off unless you set `DEBUG=True` (local `.env` only). Build with `pip install -r requirements.txt && python manage.py collectstatic --noinput`,
+run `python manage.py migrate`, start with `gunicorn cloudforkids.wsgi`. Static files are served by WhiteNoise.
+If a login or form shows "CSRF verification failed. Origin checking failed", the site's `https://` address is missing from the trusted origins: check `ALLOWED_HOSTS` / `CSRF_TRUSTED_ORIGINS`.
+
+## Still open before launch
+
+- Legal review of the Terms and Privacy text, and a native-speaker review of the Kiswahili.
+- Uploaded files (team and testimonial photos) are stored on the server disk; use object storage (S3, Cloudinary) if your host wipes disks on deploy.
+- Moving the lesson-page images and the remaining lesson bodies to Kiswahili.

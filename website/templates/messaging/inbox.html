@@ -1,0 +1,33 @@
+{% extends base_tpl %}
+{% block title %}Messages{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div>
+    <h1 class="l-title mb-0">Messages</h1>
+    <p class="l-sub mb-0">{% if user.role == "learner" %}Messages from your teacher appear here.{% else %}Messages between teachers and families.{% endif %}</p>
+  </div>
+  {% if user.role == "facilitator" %}<a href="{% url 'messaging:compose' %}" class="btn btn-cloud btn-big"><i class="bi bi-pencil-square" aria-hidden="true"></i> New message</a>{% endif %}
+</div>
+
+{% if can_write %}
+<div class="btn-group mb-3" role="group" aria-label="Mailbox">
+  <a href="?box=in" class="btn btn-sm {% if box == 'in' %}btn-cloud{% else %}btn-outline-cloud{% endif %}">Inbox</a>
+  <a href="?box=sent" class="btn btn-sm {% if box == 'sent' %}btn-cloud{% else %}btn-outline-cloud{% endif %}">Sent</a>
+</div>
+{% endif %}
+
+<div class="l-card" style="height:auto;">
+  {% for m in items %}
+  <a class="msg-row{% if box == 'in' and not m.read_at %} unread{% endif %}" href="{% url 'messaging:detail' m.pk %}">
+    <i class="bi bi-{% if box == 'in' and not m.read_at %}envelope-fill{% else %}envelope-open{% endif %} fs-4 text-primary" aria-hidden="true"></i>
+    <div class="flex-grow-1">
+      <strong>{{ m.subject }}</strong>
+      <small>{% if box == "in" %}From {{ m.sender.get_full_name|default:m.sender.username }}{% else %}To {{ m.recipient.get_full_name|default:m.recipient.username }}{% endif %}{% if m.classroom %} &middot; {{ m.classroom.name }}{% endif %}</small>
+    </div>
+    <small class="text-secondary">{{ m.created_at|date:"j M, H:i" }}</small>
+  </a>
+  {% empty %}
+  <p class="fm-empty"><i class="bi bi-inbox" aria-hidden="true"></i> No messages yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

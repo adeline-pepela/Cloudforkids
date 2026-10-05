@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load static %}
+{% comment %}
+Split layout for login, sign up and password reset: a photo panel (Unsplash) beside the form.
+Blocks: photo_url, photo_title, photo_points, credit_name, credit_url, auth_form.
+If the photo cannot load, the panel falls back to the sky-blue gradient.
+{% endcomment %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/auth.css' %}">{% endblock %}
+{% block content %}
+<section class="auth-split">
+  <aside class="auth-photo" style="--photo: url('{% block photo_url %}{% endblock %}');">
+    <div class="auth-photo-inner">
+      <span class="auth-badge"><i class="bi bi-cloud-fill" aria-hidden="true"></i> Cloud for Kids</span>
+      <h2>{% block photo_title %}{% endblock %}</h2>
+      <ul class="auth-points">{% block photo_points %}{% endblock %}</ul>
+    </div>
+    <a class="auth-credit" href="{% block credit_url %}https://unsplash.com{% endblock %}" target="_blank" rel="noopener">Photo by {% block credit_name %}Unsplash{% endblock %} on Unsplash</a>
+  </aside>
+  <div class="auth-panel">
+    <div class="auth-card">
+      {% block auth_form %}{% endblock %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  document.querySelectorAll('[data-toggle-password]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var input = document.getElementById(btn.getAttribute('data-toggle-password'));
+      if (!input) return;
+      var show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+      btn.innerHTML = '<i class="bi ' + (show ? 'bi-eye-slash-fill' : 'bi-eye-fill') + '" aria-hidden="true"></i>';
+    });
+  });
+  var meter = document.querySelector('[data-strength-for]');
+  if (meter) {
+    var input = document.getElementById(meter.getAttribute('data-strength-for'));
+    var bar = meter.querySelector('span'), label = meter.querySelector('small');
+    input.addEventListener('input', function () {
+      var v = input.value, score = 0;
+      if (v.length >= 8) score++; if (v.length >= 12) score++;
+      if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score++; if (/\d/.test(v)) score++; if (/[^A-Za-z0-9]/.test(v)) score++;
+      var levels = [['', 0, ''], ['Too short', 20, '#FF6B5B'], ['Weak', 40, '#FF9F43'], ['Okay', 60, '#F5B800'], ['Strong', 80, '#2FB872'], ['Super strong', 100, '#1C9D5A']];
+      var l = v ? levels[Math.max(1, Math.min(score, 5))] : levels[0];
+      bar.style.width = l[1] + '%'; bar.style.background = l[2]; label.textContent = l[0];
+    });
+  }
+})();
+</script>
+{% block auth_js %}{% endblock %}
+{% endblock %}

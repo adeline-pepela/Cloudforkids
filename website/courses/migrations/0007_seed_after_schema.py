@@ -1,16 +1,8 @@
-from django.core.management import call_command
 from django.db import migrations
 
 
-def seed_data(apps, schema_editor):
-    """Populate tiers, courses, lessons, badges, partners and the demo account on a fresh database.
-    Skipped when programme data already exists so admin edits are never overwritten."""
-    Tier = apps.get_model("courses", "Tier")
-    if not Tier.objects.exists():
-        call_command("seed_data_fixed")
-
-
 class Migration(migrations.Migration):
+    """Seeding used to run here. It now runs after `migrate` finishes (courses/seeding.py), once every column exists."""
 
     dependencies = [
         ("courses", "0006_longer_slugs"),
@@ -19,6 +11,4 @@ class Migration(migrations.Migration):
         ("dashboard", "0001_labcompletion"),
     ]
 
-    operations = [
-        migrations.RunPython(seed_data, migrations.RunPython.noop),
-    ]
+    operations = []

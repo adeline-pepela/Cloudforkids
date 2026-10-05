@@ -29,7 +29,7 @@
         <div class="fm-avatar sm" aria-hidden="true"><i class="bi bi-easel2-fill"></i></div>
         <div class="flex-grow-1">
           <h3 class="mb-0">{{ r.classroom.name }}</h3>
-          <small class="text-secondary">{{ r.classroom.tier.name|default:"All tiers" }}{% if r.classroom.school_name %} &middot; {{ r.classroom.school_name }}{% endif %}</small>
+          <small class="text-secondary">{{ r.classroom.tier.display_name|default:"All tiers" }}{% if r.classroom.school_name %} &middot; {{ r.classroom.school_name }}{% endif %}</small>
         </div>
         <span class="tc-code" title="Join code">{{ r.classroom.join_code }}</span>
       </div>

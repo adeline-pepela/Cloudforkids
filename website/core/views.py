@@ -5,7 +5,9 @@ from accounts.models import User
 from courses.models import Course, Lesson, LessonCompletion, Tier
 from dashboard.models import LabCompletion
 from .forms import ContactForm, NewsletterForm
-from .models import ImpactStat, InfoCard, Partner, TeamMember, Testimonial
+from django.http import Http404
+
+from .models import ImpactStat, LegalPage, InfoCard, Partner, TeamMember, Testimonial
 
 
 def _cards(section):
@@ -23,6 +25,14 @@ def live_numbers():
     }
 
 
+def grade_span(tiers):
+    """'Grade 1 to Grade 12' from the tiers' own grade ranges."""
+    import re
+
+    numbers = [int(n) for t in tiers for n in re.findall(r"\d+", t.grade_range)]
+    return f"Grade {min(numbers)} to Grade {max(numbers)}" if numbers else ""
+
+
 def home(request):
     tiers = Tier.objects.all()
     partners = Partner.objects.all()[:6]
@@ -31,7 +41,7 @@ def home(request):
     return render(
         request,
         "core/home.html",
-        {"tiers": tiers, "partners": partners, "stats": stats, "testimonials": testimonials, "live": live_numbers()},
+        {"tiers": tiers, "grade_span": grade_span(tiers), "partners": partners, "stats": stats, "testimonials": testimonials, "live": live_numbers()},
     )
 
 
@@ -95,3 +105,10 @@ def subscribe_newsletter(request):
         else:
             messages.error(request, "That didn't look like a valid email \u2014 please try again.")
     return redirect(request.META.get("HTTP_REFERER", "core:home"))
+
+
+def legal(request, slug):
+    page = LegalPage.objects.filter(slug=slug).first()
+    if page is None:
+        raise Http404
+    return render(request, "core/legal.html", {"page": page})

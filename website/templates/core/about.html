@@ -91,7 +91,7 @@
       <div class="section-eyebrow">The pathway</div>
       <h2 class="section-title mb-4">From first clicks to a cloud portfolio</h2>
       {% for tier in tiers %}
-      <div class="timeline-step"><span class="step-num">{{ forloop.counter }}</span><h5>{{ tier.name }} ({{ tier.grade_range }})</h5><p class="text-secondary mb-0">{{ tier.summary }}</p></div>
+      <div class="timeline-step"><span class="step-num">{{ forloop.counter }}</span><h5>{{ tier.display_name }} ({{ tier.grade_range }})</h5><p class="text-secondary mb-0">{{ tier.display_summary }}</p></div>
       {% endfor %}
     </div>
   </div>

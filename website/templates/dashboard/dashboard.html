@@ -20,7 +20,7 @@
     <div>
       <div class="small text-uppercase fw-bold" style="opacity:.85;">Continue where you left off</div>
       <h4 class="mb-0 text-white">{{ continue_lesson.title }}</h4>
-      <div class="small" style="opacity:.9;">{{ continue_lesson.course.title }} &middot; {{ continue_lesson.duration_minutes }} min</div>
+      <div class="small" style="opacity:.9;">{{ continue_lesson.course.display_title }} &middot; {{ continue_lesson.duration_minutes }} min</div>
     </div>
     <a href="{{ continue_lesson.get_absolute_url }}" class="btn btn-sun btn-lg">Resume <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
   </div>
@@ -34,9 +34,9 @@
         <div class="d-flex align-items-center gap-3">
           <div class="ring" style="--p: {{ e.progress_percent }};"><span>{{ e.progress_percent }}%</span></div>
           <div class="flex-grow-1">
-            <span class="badge-pill">{{ e.course.tier.name }}</span>
-            <h5 class="mt-2 mb-1"><i class="bi bi-{{ e.course.icon }}" aria-hidden="true"></i> {{ e.course.title }}</h5>
-            <p class="text-secondary small mb-0">{{ e.course.summary }}</p>
+            <span class="badge-pill">{{ e.course.tier.display_name }}</span>
+            <h5 class="mt-2 mb-1"><i class="bi bi-{{ e.course.icon }}" aria-hidden="true"></i> {{ e.course.display_title }}</h5>
+            <p class="text-secondary small mb-0">{{ e.course.display_summary }}</p>
           </div>
           <a href="{{ e.course.get_absolute_url }}" class="btn btn-outline-cloud btn-sm">Open</a>
         </div>
@@ -57,7 +57,7 @@
         <div class="col-md-4">
           <div class="course-card p-3">
             <span class="course-icon"><i class="bi bi-{{ course.icon }}" aria-hidden="true"></i></span>
-            <h6>{{ course.title }}</h6>
+            <h6>{{ course.display_title }}</h6>
             <a href="{{ course.get_absolute_url }}" class="small fw-bold">View course &rarr;</a>
           </div>
         </div>

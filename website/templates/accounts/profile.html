@@ -61,7 +61,7 @@
       {% for tier in form.fields.tier.queryset %}
       <div class="tier-opt">
         <input type="radio" name="tier" id="tier-{{ tier.pk }}" value="{{ tier.pk }}" {% if form.tier.value|stringformat:"s" == tier.pk|stringformat:"s" %}checked{% endif %}>
-        <label for="tier-{{ tier.pk }}"><i class="bi bi-{{ tier.icon }}" aria-hidden="true"></i><strong>{{ tier.name }}</strong><small>{{ tier.grade_range }}</small></label>
+        <label for="tier-{{ tier.pk }}"><i class="bi bi-{{ tier.icon }}" aria-hidden="true"></i><strong>{{ tier.display_name }}</strong><small>{{ tier.grade_range }}</small></label>
       </div>
       {% endfor %}
     </div>

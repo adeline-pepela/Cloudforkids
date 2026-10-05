@@ -9,6 +9,17 @@ from .models import Lesson
 QUESTION = re.compile(r'<div class="mcq-question"[^>]*>.*?<div class="mcq-explain">.*?</div></div>', re.S)
 PASS_PERCENT = 70
 
+TEXT = {
+    "en": dict(
+        intro="You have reached the end of <strong>{title}</strong>! This exam checks everything you learned across every lesson in this module. "
+              "Answer all {count} questions, then tap <strong>Submit Exam</strong> to see your score. You need {pass_}% to pass, and you can always try again.",
+        progress="Answered 0 of {count}", button="Submit Exam &amp; See My Score"),
+    "sw": dict(
+        intro="Umefika mwisho wa <strong>{title}</strong>! Mtihani huu unapima kila ulichojifunza katika masomo yote ya kozi hii. "
+              "Jibu maswali yote {count}, kisha bonyeza <strong>Wasilisha Mtihani</strong> uone alama zako. Unahitaji {pass_}% kufaulu, na unaweza kujaribu tena.",
+        progress="Umejibu 0 kati ya {count}", button="Wasilisha Mtihani na Uone Alama"),
+}
+
 
 def course_questions(course):
     """Every quiz question (as HTML) from the course's teaching lessons, in lesson order."""
@@ -18,21 +29,23 @@ def course_questions(course):
     return questions
 
 
-def build_exam_content(course, questions):
+def build_exam_content(course, questions, lang="en"):
     count = len(questions)
+    t = TEXT[lang]
+    title = (getattr(course, "title_sw", "") or course.title) if lang == "sw" else course.title
+    intro = t["intro"].format(title=title, count=count, pass_=PASS_PERCENT)
     return (
         '<div class="lesson-content tone-fun">\n'
         '  <div class="exam-wrap">\n'
-        f'    <p><i class="bi bi-mortarboard-fill" aria-hidden="true"></i> You have reached the end of <strong>{course.title}</strong>! '
-        f'This exam checks everything you learned across every lesson in this module. Answer all {count} questions, then tap '
-        f'<strong>Submit Exam</strong> to see your score. You need {PASS_PERCENT}% to pass, and you can always try again.</p>\n'
+        f'    <p><i class="bi bi-mortarboard-fill" aria-hidden="true"></i> {intro}</p>\n'
         f'    <div class="exam-form" data-pass="{PASS_PERCENT}">\n'
         '      <div class="exam-progress-wrap">\n'
         '        <div class="exam-progress-track"><div class="exam-progress-bar"></div></div>\n'
-        f'        <span class="exam-progress-label">Answered 0 of {count}</span>\n'
+        f'        <span class="exam-progress-label">{t["progress"].format(count=count)}</span>\n'
         '      </div>\n'
         f'      <div class="mcq-block">{"".join(questions)}</div>\n'
-        '      <div class="exam-submit-row"><button type="button" class="btn btn-cloud btn-lg exam-submit-btn">Submit Exam</button></div>\n'
+        '      <div class="exam-submit-row"><button type="button" class="exam-submit-btn btn btn-cloud btn-lg">'
+        f'<i class="bi bi-clipboard-check-fill" aria-hidden="true"></i> {t["button"]}</button></div>\n'
         '      <div class="exam-result"></div>\n'
         '    </div>\n'
         '  </div>\n'
@@ -69,6 +82,12 @@ def ensure_exam(course, refresh=False):
     if refresh and questions:
         exam.content = build_exam_content(course, questions)
         changed.append("content")
+        sw_questions = []
+        for lesson in course.lessons.filter(lesson_type=Lesson.LessonType.LESSON).order_by("order"):
+            sw_questions.extend(QUESTION.findall(lesson.content_sw or "")) if lesson.content_sw else None
+        if exam.content_sw and len(sw_questions) == len(questions):
+            exam.content_sw = build_exam_content(course, sw_questions, "sw")
+            changed.append("content_sw")
     if changed:
         exam.save(update_fields=changed)
     return exam, "refreshed" if "content" in changed else "kept"

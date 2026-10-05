@@ -1,12 +1,12 @@
 {% extends request.user.is_authenticated|yesno:"learner/base.html,base.html" %}
-{% block title %}{{ course.title }}{% endblock %}
+{% block title %}{{ course.display_title }}{% endblock %}
 {% block content %}
 <section class="container py-5">
   <div class="row">
     <div class="col-lg-8">
-      <div class="section-eyebrow">{{ course.tier.name }} &middot; {{ course.tier.grade_range }}</div>
-      <h1 class="section-title"><i class="bi bi-{{ course.icon }}" aria-hidden="true"></i> {{ course.title }}</h1>
-      <p class="text-secondary lead">{{ course.summary }}</p>
+      <div class="section-eyebrow">{{ course.tier.display_name }} &middot; {{ course.tier.grade_range }}</div>
+      <h1 class="section-title"><i class="bi bi-{{ course.icon }}" aria-hidden="true"></i> {{ course.display_title }}</h1>
+      <p class="text-secondary lead">{{ course.display_summary }}</p>
       {% if course.description %}<p class="text-secondary">{{ course.description }}</p>{% endif %}
 
       {% if enrollment %}
@@ -26,8 +26,8 @@
         <a href="{{ lesson.get_absolute_url }}" class="text-decoration-none text-dark">
           <div class="lesson-row {% if lesson.id in completed_ids %}done{% endif %}">
             <div>
-              <span class="fw-bold">{{ forloop.counter }}. {{ lesson.title }}</span>
-              <p class="text-secondary small mb-0">{{ lesson.summary }}</p>
+              <span class="fw-bold">{{ forloop.counter }}. {{ lesson.display_title }}</span>
+              <p class="text-secondary small mb-0">{{ lesson.display_summary }}</p>
             </div>
             <div class="text-end">
               {% if lesson.id in completed_ids %}
@@ -67,8 +67,8 @@
     <div class="col-lg-4">
       <div class="tier-card p-4 mt-4 mt-lg-0">
         <h6>About this tier</h6>
-        <p class="text-secondary small">{{ course.tier.summary }}</p>
-        <a href="{{ course.tier.get_absolute_url }}" class="small fw-bold">See the full {{ course.tier.name }} tier &rarr;</a>
+        <p class="text-secondary small">{{ course.tier.display_summary }}</p>
+        <a href="{{ course.tier.get_absolute_url }}" class="small fw-bold">See the full {{ course.tier.display_name }} tier &rarr;</a>
       </div>
     </div>
   </div>

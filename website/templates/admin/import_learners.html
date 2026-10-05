@@ -1,0 +1,41 @@
+{% extends "admin/base_site.html" %}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Home</a> &rsaquo; Import learners</div>{% endblock %}
+{% block content_title %}<h1>Import learners from a CSV file</h1>{% endblock %}
+
+{% block content %}
+{% if done %}
+<div class="d-panel" style="margin-bottom:18px;">
+  <h3><i class="bi bi-check-circle-fill" style="color:#2FBF71;"></i> {{ created|length }} learner{{ created|length|pluralize }} created</h3>
+  {% if created %}
+  <p>Passwords are shown <strong>only on this page</strong>. Download them now and hand them out safely. Learners can change their password after logging in, or use Forgot password if they have an email.</p>
+  <p><a class="button default" download="learner-logins.csv" href="data:text/csv;charset=utf-8,{{ credentials_csv|urlencode }}"><i class="bi bi-download"></i> Download logins (CSV)</a></p>
+  <table class="d-table"><thead><tr><th>Name</th><th>Grade</th><th>Username</th><th>Password</th></tr></thead><tbody>
+    {% for c in created %}<tr><td>{{ c.first }} {{ c.last }}</td><td>{{ c.grade }}</td><td><code>{{ c.username }}</code></td><td><code>{{ c.password }}</code></td></tr>{% endfor %}
+  </tbody></table>
+  {% endif %}
+</div>
+{% if errors %}
+<div class="d-panel d-attention" style="margin-bottom:18px;">
+  <h3><i class="bi bi-exclamation-triangle-fill"></i> {{ errors|length }} row{{ errors|length|pluralize }} skipped</h3>
+  <ul class="d-list">{% for row, message in errors %}<li><div>{% if row %}Row {{ row }}: {% endif %}{{ message }}</div></li>{% endfor %}</ul>
+</div>
+{% endif %}
+<p><a href="{% url 'tools:import_learners' %}">Import another file</a></p>
+{% else %}
+<div class="d-panel" style="max-width:760px;">
+  <p>Upload a CSV with one learner per row (up to 500). Usernames and passwords are created for you. <a href="{% url 'tools:learners_template' %}">Download a template</a>.</p>
+  <p style="font-size:.85rem;color:var(--body-quiet-color);">Columns: <code>first_name</code>, <code>last_name</code> (required) and optional <code>username</code>, <code>email</code>, <code>date_of_birth</code> (2014-03-12), <code>grade</code>, <code>school</code>, <code>county</code>, <code>parent_name</code>, <code>parent_email</code>, <code>parent_phone</code>.</p>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+    <div class="form-row" style="margin-bottom:12px;">
+      {% if field.name == "confirm" %}<label style="font-weight:600;">{{ field }} {{ field.label }}</label>{% else %}<label for="{{ field.id_for_label }}" style="display:block;font-weight:600;margin-bottom:4px;">{{ field.label }}</label>{{ field }}{% endif %}
+      {{ field.errors }}
+    </div>
+    {% endfor %}
+    <input type="submit" value="Import learners" class="default">
+  </form>
+</div>
+{% endif %}
+{% endblock %}
