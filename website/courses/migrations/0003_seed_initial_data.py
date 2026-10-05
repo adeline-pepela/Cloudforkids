@@ -7,7 +7,8 @@ def seed_data(apps, schema_editor):
     account automatically whenever `migrate` is run, so the site never
     shows an empty "Programme data hasn't been seeded yet" state on a
     fresh database."""
-    call_command("seed_data_fixed")
+    # Seeding now happens in 0006_seed_after_schema, once every column it needs exists.
+    return
 
 
 def noop(apps, schema_editor):

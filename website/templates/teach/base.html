@@ -1,0 +1,16 @@
+{% extends "learner/base.html" %}
+{% load static %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/family.css' %}">{% endblock %}
+{% block brand_url %}{% url 'teach:home' %}{% endblock %}
+{% block side_nav %}
+<nav class="l-nav" aria-label="Facilitator menu">
+  <a class="l-link{% if nav == 'home' %} active{% endif %}" href="{% url 'teach:home' %}"><i class="bi bi-grid-1x2-fill" aria-hidden="true"></i> Overview</a>
+  {% for c in classes %}
+  <a class="l-link{% if nav == c.pk %} active{% endif %}" href="{% url 'teach:class' c.pk %}"><i class="bi bi-easel2-fill" aria-hidden="true"></i> {{ c.name|truncatechars:20 }}</a>
+  {% endfor %}
+  <a class="l-link{% if nav == 'new' %} active{% endif %}" href="{% url 'teach:class_new' %}"><i class="bi bi-plus-circle-fill" aria-hidden="true"></i> New class</a>
+  <a class="l-link{% if nav == 'curriculum' %} active{% endif %}" href="{% url 'teach:curriculum' %}"><i class="bi bi-journal-bookmark-fill" aria-hidden="true"></i> Curriculum</a>
+  <a class="l-link" href="{% url 'core:contact' %}"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i> Contact us</a>
+</nav>
+{% endblock %}
+{% block side_tip %}Habari, teacher! Short, regular sessions work best.{% endblock %}

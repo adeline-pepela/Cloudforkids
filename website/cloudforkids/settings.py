@@ -2,9 +2,23 @@
 Django settings for cloudforkids project.
 """
 
+import os
 from pathlib import Path
 
+import dj_database_url
+
+
+def _load_env_file(path):
+    """Tiny .env reader (KEY=value lines) so no extra package is needed."""
+    if path.exists():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, _, value = line.partition("=")
+                os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+_load_env_file(BASE_DIR / '.env')
 
 SECRET_KEY = 'django-insecure-85(pchmsa6_durq_a(z&kj*63$a)4+qh&9*t#08xou7t6lq8d-'
 
@@ -51,6 +65,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'dashboard.context_processors.learner_chips',
+                'core.context_processors.site_settings',
             ],
         },
     },
@@ -59,12 +75,16 @@ TEMPLATES = [
 WSGI_APPLICATION = 'cloudforkids.wsgi.application'
 
 
+# PostgreSQL when DATABASE_URL is set (see .env.example), otherwise local SQLite.
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600,
+    )
 }
+if 'pooler' in DATABASES['default'].get('HOST', ''):
+    # Neon's pooled endpoint doesn't support server-side cursors
+    DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
 
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -96,7 +116,7 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-MEDIA_URL = 'media/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

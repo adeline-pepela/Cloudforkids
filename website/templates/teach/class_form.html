@@ -1,0 +1,23 @@
+{% extends "teach/base.html" %}
+{% block title %}{% if editing %}Edit class{% else %}New class{% endif %}{% endblock %}
+{% block content %}
+<h1 class="l-title">{% if editing %}Edit {{ editing.name }}{% else %}Create a class{% endif %}</h1>
+<p class="l-sub">{% if editing %}Change the details of your class.{% else %}You will get a join code to share with learners as soon as the class is created.{% endif %}</p>
+<div class="row"><div class="col-lg-7">
+  <div class="l-card" style="height:auto;">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+      <div class="mb-3">
+        <label class="form-label fw-bold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+        {{ field.errors }}
+      </div>
+      {% endfor %}
+      <button type="submit" class="btn btn-cloud btn-big"><i class="bi bi-check2-circle" aria-hidden="true"></i> {% if editing %}Save changes{% else %}Create class{% endif %}</button>
+      <a href="{% if editing %}{% url 'teach:class' editing.pk %}{% else %}{% url 'teach:home' %}{% endif %}" class="btn btn-outline-cloud btn-big">Cancel</a>
+    </form>
+  </div>
+</div></div>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "parent/base.html" %}
+{% block title %}Family overview{% endblock %}
+{% block content %}
+<h1 class="l-title">Habari, {{ user.first_name|default:user.username }}</h1>
+<p class="l-sub">Follow your child's learning here. No need to ask "did you study?". It's all on this page.</p>
+
+{% if not reports %}
+<div class="l-card text-center py-5" style="height:auto;">
+  <div class="fm-empty-ico"><i class="bi bi-person-hearts" aria-hidden="true"></i></div>
+  <h3>Add your first child</h3>
+  <p class="text-secondary mx-auto" style="max-width:480px;">Ask your child to open <strong>My Profile</strong> and read out their <strong>family code</strong>. Then enter it with their username. It takes a minute.</p>
+  <a href="{% url 'family:add' %}" class="btn btn-cloud btn-big"><i class="bi bi-person-plus-fill" aria-hidden="true"></i> Add a child</a>
+</div>
+{% else %}
+
+{% if nudge_count %}
+<div class="fm-banner"><i class="bi bi-bell-fill" aria-hidden="true"></i> {{ nudge_count }} child{{ nudge_count|pluralize:",ren" }} could use a friendly nudge. See the cards below.</div>
+{% endif %}
+
+<div class="row g-4">
+  {% for r in reports %}
+  <div class="col-lg-6">
+    <a href="{% url 'family:child' r.child.pk %}" class="fm-card">
+      <div class="d-flex align-items-center gap-3 mb-3">
+        <div class="fm-avatar sm" aria-hidden="true">{{ r.name|slice:":1"|upper }}</div>
+        <div class="flex-grow-1">
+          <h3 class="mb-0">{{ r.child.get_full_name|default:r.child.username }}</h3>
+          <small class="text-secondary">{{ r.tier.name|default:"No tier yet" }} &middot; last active {{ r.last_active_text }}</small>
+        </div>
+        <span class="fm-health {{ r.health.0 }}"><i class="bi {{ r.health.2 }}" aria-hidden="true"></i> {{ r.health.1 }}</span>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-end">
+        <span class="fm-eyebrow">{{ r.stage }}</span><span class="fm-percent sm">{{ r.percent }}<small>%</small></span>
+      </div>
+      <div class="fm-meter slim"><div class="fm-meter-fill" style="width: {{ r.percent }}%"></div><span class="fm-meter-cloud" style="left: {{ r.percent }}%"><i class="bi bi-cloud-upload-fill" aria-hidden="true"></i></span></div>
+
+      <div class="fm-mini">
+        <span><i class="bi bi-fire" aria-hidden="true"></i><b>{{ r.stats.streak }}</b> streak</span>
+        <span><i class="bi bi-patch-check-fill" aria-hidden="true"></i><b>{% if r.avg_score is not None %}{{ r.avg_score }}%{% else %}-{% endif %}</b> quiz avg</span>
+        <span><i class="bi bi-journal-check" aria-hidden="true"></i><b>{{ r.lessons_done }}/{{ r.lessons_total }}</b> lessons</span>
+        <span><i class="bi bi-trophy-fill" aria-hidden="true"></i><b>{{ r.badge_total }}</b> badges</span>
+      </div>
+
+      {% if r.insights %}<p class="fm-peek"><i class="bi {{ r.insights.0.1 }}" aria-hidden="true"></i> {{ r.insights.0.2 }}</p>{% endif %}
+      <span class="fm-more">See full report <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "parent/base.html" %}
+{% block title %}Add a child{% endblock %}
+{% block content %}
+<h1 class="l-title">Add a child</h1>
+<p class="l-sub">Link your account to your child's learner account to follow their progress.</p>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="l-card" style="height:auto;">
+      <h3><i class="bi bi-link-45deg text-primary" aria-hidden="true"></i> Link with a family code</h3>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <label class="form-label fw-bold" for="f-username">Your child's username</label>
+        <input class="form-control form-control-lg mb-3" id="f-username" name="username" autocomplete="off" required placeholder="e.g. amani_k">
+        <label class="form-label fw-bold" for="f-code">Family code</label>
+        <input class="form-control form-control-lg mb-3 text-uppercase fm-code-input" id="f-code" name="code" autocomplete="off" maxlength="8" required placeholder="ABC123">
+        <button type="submit" class="btn btn-cloud btn-big w-100"><i class="bi bi-person-plus-fill" aria-hidden="true"></i> Link my child</button>
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="l-card" style="height:auto;">
+      <h3><i class="bi bi-question-circle-fill text-warning" aria-hidden="true"></i> Where do I find the code?</h3>
+      <ol class="fm-steps">
+        <li>Your child logs in and opens <strong>My Profile</strong>.</li>
+        <li>In the <strong>Family code</strong> box, they will see a 6-character code.</li>
+        <li>Type their username and that code here.</li>
+      </ol>
+      <p class="small text-secondary mb-0"><i class="bi bi-shield-lock-fill" aria-hidden="true"></i> The code keeps strangers from seeing your child's progress. Only people your child shares it with can link to them.</p>
+      {% if not children %}<p class="small text-secondary mt-2 mb-0">No child account yet? Your child can sign up as a learner on their own device first.</p>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

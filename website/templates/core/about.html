@@ -1,58 +1,150 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}About{% endblock %}
 {% block content %}
+
+<section class="page-banner">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-6">
+        <div class="section-eyebrow">About us</div>
+        <h1 class="section-title mb-3">{{ site.about_title }}</h1>
+        <p class="text-secondary lead">{{ site.about_lead }}
+        </p>
+        <div class="d-flex flex-wrap gap-3 mt-4">
+          <a href="{% url 'core:contact' %}" class="btn btn-cloud btn-lg">Partner with us</a>
+          <a href="{% url 'courses:programs' %}" class="btn btn-outline-cloud btn-lg">See the programme</a>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="rounded-4 overflow-hidden shadow-sm">{% include "partials/slot.html" with name="about-hero" icon="bi-mortarboard-fill" tone="sky" alt="Children learning cloud concepts in a classroom" cls="" %}</div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="container py-5">
-  <div class="row">
+  <div class="row g-4 text-center">
+    {% for stat in stats %}
+    <div class="col-6 col-lg-3"><div class="stat-card"><div class="stat-value">{{ stat.value }}</div><p class="small mb-1">{{ stat.label }}</p>{% if stat.source %}<p class="text-secondary mb-0" style="font-size:.72rem;">{{ stat.source }}</p>{% endif %}</div></div>
+    {% endfor %}
+  </div>
+  <div class="live-band mt-4" aria-label="Cloud for Kids right now">
+    <div><strong>{{ live.learners }}</strong><span>learner{{ live.learners|pluralize }} signed up</span></div>
+    <div><strong>{{ live.courses }}</strong><span>course{{ live.courses|pluralize }}</span></div>
+    <div><strong>{{ live.lessons }}</strong><span>lessons to explore</span></div>
+    <div><strong>{{ live.lessons_done }}</strong><span>lessons completed</span></div>
+    <div><strong>{{ live.labs_done }}</strong><span>labs finished</span></div>
+  </div>
+</section>
+
+<section class="container py-4">
+  <div class="row align-items-center g-5">
+    <div class="col-lg-6 order-lg-2">
+      <div class="rounded-4 overflow-hidden shadow-sm">{% include "partials/slot.html" with name="about-story" icon="bi-globe-europe-africa" tone="sun" alt="Learners in a community learning hub" cls="" %}</div>
+    </div>
+    <div class="col-lg-6">
+      <div class="section-eyebrow">Our story</div>
+      <h2 class="section-title">{{ site.story_title }}</h2>
+      <div class="text-secondary">{{ site.story_text|linebreaks }}</div>
+    </div>
+  </div>
+</section>
+
+<section class="container py-5">
+  <div class="row g-4">
+    <div class="col-md-6">
+      <div class="tier-card p-4">
+        <div class="value-icon"><i class="bi bi-bullseye" aria-hidden="true"></i></div>
+        <h4>Our mission</h4>
+        <p class="text-secondary mb-0">{{ site.mission }}</p>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="tier-card p-4">
+        <div class="value-icon"><i class="bi bi-stars" aria-hidden="true"></i></div>
+        <h4>Our vision</h4>
+        <p class="text-secondary mb-0">{{ site.vision }}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="container py-5">
+  <div class="text-center mb-4">
+    <div class="section-eyebrow">What we believe</div>
+    <h2 class="section-title">How we teach</h2>
+  </div>
+  <div class="row g-4">
+    {% for c in teach %}
+    <div class="col-md-6 col-lg-3"><div class="tier-card value-card"><div class="value-icon"><i class="bi bi-{{ c.icon|default:'stars' }}" aria-hidden="true"></i></div><h5>{{ c.title }}</h5><p class="text-secondary small mb-0">{{ c.text }}</p></div></div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="container py-5">
+  <div class="row g-5 align-items-center">
+    <div class="col-lg-5">
+      <div class="rounded-4 overflow-hidden shadow-sm">{% include "partials/slot.html" with name="about-pathway" icon="bi-rocket-takeoff-fill" tone="purple" alt="Teenagers building a cloud project" cls="" %}</div>
+    </div>
+    <div class="col-lg-7">
+      <div class="section-eyebrow">The pathway</div>
+      <h2 class="section-title mb-4">From first clicks to a cloud portfolio</h2>
+      {% for tier in tiers %}
+      <div class="timeline-step"><span class="step-num">{{ forloop.counter }}</span><h5>{{ tier.name }} ({{ tier.grade_range }})</h5><p class="text-secondary mb-0">{{ tier.summary }}</p></div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="container py-5">
+  <div class="row g-4">
     <div class="col-lg-8">
-      <div class="section-eyebrow">About us</div>
-      <h1 class="section-title mb-4">Building Kenya's next generation of cloud-ready digital innovators</h1>
-      <p class="text-secondary">
-        Cloud for Kids is a proposed cloud computing literacy programme for Kenyan children aged
-        approximately 9 to 17 &mdash; spanning upper primary through senior secondary school &mdash;
-        delivered through school partnerships and after-school learning hubs. It teaches
-        foundational cloud computing concepts, digital citizenship, and applied coding and cloud
-        skills in a way that's aligned with Kenya's Competency-Based Curriculum (CBC), currently
-        transitioning to Competency-Based Education (CBE).
-      </p>
-      <p class="text-secondary">
-        The initiative responds to a well-documented, employer-validated digital skills gap: a
-        2025 SAP survey found that 79% of Kenyan firms cite cloud computing specifically as their
-        biggest skills shortage. Cloud for Kids is designed to intercept this gap early, positioning
-        young learners for the STEM pathway at Senior School and for Kenya's growing cloud and
-        technology job market.
-      </p>
-      <p class="text-secondary">
-        Rather than assuming reliable classroom internet everywhere, Cloud for Kids uses a phased,
-        hybrid delivery model &mdash; starting with an urban and peri-urban pilot, then expanding
-        with an offline-first "unplugged cloud concepts" curriculum and mobile learning hubs
-        modelled on Ajira Digital Centres and Konza Technopolis's Jitume hubs.
-      </p>
-
-      <h3 class="mt-5">Our mission</h3>
-      <p class="text-secondary">To close Kenya's cloud skills gap at the source &mdash; by building genuine cloud literacy into childhood education, not just adult retraining.</p>
-
-      <h3 class="mt-4">Why Cloud for Kids is different</h3>
+      <h3>Why Cloud for Kids is different</h3>
       <ul class="text-secondary">
-        <li>First cloud-specific (not just general coding) literacy programme for kids in Kenya.</li>
-        <li>Directly aligned to CBC/CBE and the new Senior School STEM pathway.</li>
-        <li>A feeder pipeline into AWS Educate, AWS re/Start, and university Computer Science &mdash; complementing, not competing with, the existing ecosystem.</li>
-        <li>Built around Kenya's real connectivity realities with a hybrid offline/online model.</li>
-      </ul>
+        {% for c in different %}<li>{{ c.text }}</li>
+        {% endfor %}
+            </ul>
+      <h3 class="mt-4">Who it's for</h3>
+      <div class="row g-3 mt-1">
+        {% for c in audience %}
+        <div class="col-sm-6"><div class="d-flex gap-3"><span class="value-icon" style="flex-shrink:0;"><i class="bi bi-{{ c.icon|default:'people' }}" aria-hidden="true"></i></span><div><strong>{{ c.title }}</strong><p class="text-secondary small mb-0">{{ c.text }}</p></div></div></div>
+        {% endfor %}
+      </div>
     </div>
     <div class="col-lg-4">
-      <div class="tier-card p-4 mt-4 mt-lg-0">
-        <div class="avatar-badge mb-2">AM</div>
-        <h5 class="mb-0">Adeline Makokha</h5>
-        <p class="text-secondary small">General Consultant</p>
-        <p class="text-secondary small">Programme design, curriculum strategy, and investor relations.</p>
-        <a href="mailto:adelinemakokha@gmail.com" class="fw-bold small">adelinemakokha@gmail.com</a> </br>
+      {% for m in team %}
+      <div class="tier-card p-4{% if not forloop.first %} mt-3{% endif %}">
+        <div class="avatar-badge mb-2">{{ m.initials }}</div>
+        <h5 class="mb-0">{{ m.name }}</h5>
+        <p class="text-secondary small">{{ m.role }}</p>
+        {% if m.bio %}<p class="text-secondary small">{{ m.bio }}</p>{% endif %}
+        {% if m.email %}<a href="mailto:{{ m.email }}" class="fw-bold small">{{ m.email }}</a>{% endif %}
       </div>
+      {% endfor %}
+      {% if roles %}
       <div class="tier-card p-4 mt-3">
         <h6>Open roles as we scale</h6>
-        <p class="text-secondary small mb-1">Head of Curriculum</p>
-        <p class="text-secondary small mb-1">Head of Partnerships</p>
-        <p class="text-secondary small mb-0">Lead Facilitator</p>
+        {% for r in roles %}<p class="text-secondary small mb-{% if forloop.last %}0{% else %}1{% endif %}">{{ r.title }}</p>{% endfor %}
       </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<section class="container pb-5">    </div>
+  </div>
+</section>
+
+<section class="container pb-5">
+  <div class="cta-band">
+    <div class="row align-items-center g-4">
+      <div class="col-lg-7 text-center text-lg-start">
+        <h2 class="mb-2">Help us reach every classroom</h2>
+        <p class="mb-4" style="opacity:.95;">Bring Cloud for Kids to your school, join the Phase 1 pilot, or partner with us.</p>
+        <a href="{% url 'core:contact' %}" class="btn btn-sun btn-lg">Get in touch</a>
+      </div>
+      <div class="col-lg-5">{% include "partials/slot.html" with name="about-cta" icon="bi-emoji-smile-fill" tone="coral" alt="Smiling learners celebrating" cls="" %}
     </div>
   </div>
 </section>

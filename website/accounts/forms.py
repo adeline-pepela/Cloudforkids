@@ -10,7 +10,9 @@ class SignUpForm(BootstrapFormMixin, UserCreationForm):
     first_name = forms.CharField(max_length=150, required=True)
     last_name = forms.CharField(max_length=150, required=True)
     email = forms.EmailField(required=True)
-    role = forms.ChoiceField(choices=User.Role.choices, initial=User.Role.LEARNER)
+    role = forms.ChoiceField(
+        choices=[c for c in User.Role.choices if c[0] != User.Role.ADMIN], initial=User.Role.LEARNER
+    )
 
     class Meta:
         model = User
@@ -45,5 +47,11 @@ class LearnerProfileForm(BootstrapFormMixin, forms.ModelForm):
         ]
         widgets = {
             "date_of_birth": forms.DateInput(attrs={"type": "date"}),
-            "bio": forms.Textarea(attrs={"rows": 3}),
+            "bio": forms.Textarea(attrs={"rows": 3, "placeholder": "What do you like? What would you like to build?"}),
+            "grade": forms.TextInput(attrs={"placeholder": "e.g. Grade 6"}),
+            "school_name": forms.TextInput(attrs={"placeholder": "Name of your school"}),
+            "county": forms.TextInput(attrs={"placeholder": "e.g. Nairobi"}),
+            "parent_guardian_name": forms.TextInput(attrs={"placeholder": "Full name"}),
+            "parent_guardian_email": forms.EmailInput(attrs={"placeholder": "parent@example.com"}),
+            "parent_guardian_phone": forms.TextInput(attrs={"placeholder": "07xx xxx xxx"}),
         }

@@ -1,0 +1,124 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block bodyclass %}dashboard{% endblock %}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Home</a> &rsaquo; Dashboard</div>{% endblock %}
+{% block content_title %}{% endblock %}
+{% block coltype %}colDash{% endblock %}
+
+{% block content %}
+{% if c4k %}
+<div class="d-hero">
+  <div>
+    <h1>Welcome back, {{ user.first_name|default:user.get_username }}</h1>
+    <p>Here's how Cloud for Kids is doing. {{ c4k.signups_week }} new account{{ c4k.signups_week|pluralize }} in the last 7 days.</p>
+  </div>
+  <div class="d-actions">
+    <a href="{% url 'admin:courses_course_add' %}"><i class="bi bi-plus-lg"></i> New course</a>
+    <a href="{% url 'admin:courses_lesson_add' %}"><i class="bi bi-plus-lg"></i> New lesson</a>
+    <a href="{% url 'admin:core_testimonial_add' %}"><i class="bi bi-chat-quote-fill"></i> Add testimonial</a>
+    <a class="alt" href="{% url 'admin:accounts_user_add' %}"><i class="bi bi-person-plus-fill"></i> Add user</a>
+  </div>
+</div>
+
+<div class="d-cards">
+  {% for s in c4k.cards %}
+  <a class="d-card{% if s.alert and s.value %} alert{% endif %}" href="{{ s.url }}">
+    <span class="ico {{ s.tone }}"><i class="bi {{ s.icon }}"></i></span>
+    <span class="txt"><span class="num">{{ s.value }}</span><span class="lbl">{{ s.label }}</span><span class="sub">{{ s.sub }}</span></span>
+  </a>
+  {% endfor %}
+</div>
+
+{% if c4k.attention %}
+<div class="d-panel d-attention">
+  <h3><i class="bi bi-bell-fill"></i> Needs your attention</h3>
+  <ul>{% for a in c4k.attention %}<li><a href="{{ a.url }}"><i class="bi {{ a.icon }}"></i> {{ a.text }} <i class="bi bi-arrow-right"></i></a></li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<div class="d-grid">
+  <section class="d-panel span-2">
+    <h3>New sign-ups <small>last 30 days</small></h3>
+    <div class="chart-box"><canvas id="ch-signups" aria-label="Line chart of daily sign-ups" role="img"></canvas></div>
+  </section>
+  <section class="d-panel">
+    <h3>Who is on the platform <small>by role</small></h3>
+    <div class="chart-box"><canvas id="ch-roles" aria-label="Doughnut chart of users by role" role="img"></canvas></div>
+  </section>
+
+  <section class="d-panel span-2">
+    <h3>Lessons completed <small>last 14 days</small></h3>
+    <div class="chart-box"><canvas id="ch-completions" aria-label="Bar chart of lessons completed per day" role="img"></canvas></div>
+  </section>
+  <section class="d-panel">
+    <h3>Learners by tier</h3>
+    <div class="chart-box"><canvas id="ch-tiers" aria-label="Doughnut chart of learners by tier" role="img"></canvas></div>
+  </section>
+
+  <section class="d-panel span-2">
+    <h3>Enrollments per course</h3>
+    <div class="chart-box tall"><canvas id="ch-enrollments" aria-label="Bar chart of enrollments per course" role="img"></canvas></div>
+  </section>
+  <section class="d-panel">
+    <h3>Most completed lessons</h3>
+    {% if c4k.charts.top_lessons.values %}
+    <div class="chart-box tall"><canvas id="ch-top" aria-label="Bar chart of the most completed lessons" role="img"></canvas></div>
+    {% else %}<p class="d-empty">No lessons have been completed yet.</p>{% endif %}
+  </section>
+
+  <section class="d-panel span-2">
+    <h3>Course performance</h3>
+    <table class="d-table">
+      <thead><tr><th>Course</th><th>Tier</th><th class="num">Enrolled</th><th class="num">Lessons</th><th>Completion</th></tr></thead>
+      <tbody>
+      {% for c in c4k.courses %}
+        <tr>
+          <td><a href="{{ c.url }}"><i class="bi bi-{{ c.icon }}"></i> {{ c.title }}</a></td>
+          <td>{{ c.tier }}</td>
+          <td class="num">{{ c.enrollments }}</td>
+          <td class="num">{{ c.lessons }}</td>
+          <td><span class="bar"><span style="width: {{ c.rate }}%"></span></span> <b>{{ c.rate }}%</b></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <section class="d-panel">
+    <h3>Newest members</h3>
+    <ul class="d-list">
+      {% for u in c4k.recent_users %}
+      <li><span class="c4k-avatar sm">{{ u.get_username|slice:":1"|upper }}</span>
+        <span><a href="{% url 'admin:accounts_user_change' u.pk %}">{{ u.get_full_name|default:u.get_username }}</a><small>{{ u.get_role_display }} &middot; {{ u.date_joined|timesince }} ago</small></span></li>
+      {% empty %}<li class="d-empty">No members yet.</li>{% endfor %}
+    </ul>
+  </section>
+
+  <section class="d-panel span-2">
+    <h3>Latest contact messages <a class="more" href="{% url 'admin:core_contactmessage_changelist' %}">View all</a></h3>
+    <ul class="d-list">
+      {% for m in c4k.recent_messages %}
+      <li><span class="c4k-avatar sm"><i class="bi bi-envelope-fill"></i></span>
+        <span><a href="{% url 'admin:core_contactmessage_change' m.pk %}">{{ m.name }}</a> <em>({{ m.get_role_display }})</em>
+        {% if not m.handled %}<span class="pill new">new</span>{% endif %}
+        <small>{{ m.message|truncatechars:90 }} &middot; {{ m.submitted_at|timesince }} ago</small></span></li>
+      {% empty %}<li class="d-empty">No messages yet.</li>{% endfor %}
+    </ul>
+  </section>
+  <section class="d-panel">
+    <h3>Recent admin activity</h3>
+    <ul class="d-list">
+      {% for e in c4k.recent_actions %}
+      <li><span class="c4k-avatar sm"><i class="bi bi-pencil-fill"></i></span>
+        <span>{% if e.is_deletion or not e.get_admin_url %}{{ e.object_repr }}{% else %}<a href="{{ e.get_admin_url }}">{{ e.object_repr }}</a>{% endif %}
+        <small>{{ e.user }} &middot; {{ e.content_type|default:"" }} &middot; {{ e.action_time|timesince }} ago</small></span></li>
+      {% empty %}<li class="d-empty">Nothing yet.</li>{% endfor %}
+    </ul>
+  </section>
+</div>
+
+{{ c4k.charts|json_script:"c4k-charts" }}
+<script src="{% static 'vendor/chartjs/chart.umd.js' %}"></script>
+<script src="{% static 'js/admin-dashboard.js' %}"></script>
+{% endif %}
+{% endblock %}

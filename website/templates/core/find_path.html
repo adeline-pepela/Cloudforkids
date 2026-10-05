@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Find your path{% endblock %}
+{% block content %}
+<section class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+      <div class="text-center mb-4">
+        <img src="{% static 'img/nimbus.svg' %}" alt="" class="nimbus nimbus-bob">
+        <div class="section-eyebrow mt-2">Find your path</div>
+        <h1 class="section-title">Which tier is right for me?</h1>
+        <p class="text-secondary">Three quick questions. Parents and teachers can answer for a child too.</p>
+      </div>
+
+      <div class="tier-card p-4 p-md-5" id="pf" style="height:auto;">
+        <div class="progress mb-4" style="height:8px;" role="progressbar" aria-label="Quiz progress"><div class="progress-bar" id="pf-bar" style="width:0%"></div></div>
+
+        <div class="pf-step" data-step="0">
+          <h4 class="mb-3">1. How old is the learner?</h4>
+          <button type="button" class="quiz-option" data-q="age" data-v="0">7 &ndash; 11 years</button>
+          <button type="button" class="quiz-option" data-q="age" data-v="1">12 &ndash; 14 years</button>
+          <button type="button" class="quiz-option" data-q="age" data-v="2">15 &ndash; 17 years</button>
+        </div>
+        <div class="pf-step d-none" data-step="1">
+          <h4 class="mb-3">2. Have they used a computer or coded before?</h4>
+          <button type="button" class="quiz-option" data-q="exp" data-v="0">Not really &mdash; just starting out</button>
+          <button type="button" class="quiz-option" data-q="exp" data-v="1">A little: games, typing or Scratch</button>
+          <button type="button" class="quiz-option" data-q="exp" data-v="2">Yes &mdash; they've written some code</button>
+        </div>
+        <div class="pf-step d-none" data-step="2">
+          <h4 class="mb-3">3. What sounds most exciting?</h4>
+          <button type="button" class="quiz-option" data-q="int" data-v="Safe &amp; smart online habits">Staying safe and smart online</button>
+          <button type="button" class="quiz-option" data-q="int" data-v="Building programs and projects">Building programs and projects</button>
+          <button type="button" class="quiz-option" data-q="int" data-v="Real cloud services, websites and AI">Real cloud services, websites and AI</button>
+        </div>
+
+        <div class="pf-step d-none text-center" data-step="3" id="pf-result">
+          <i class="bi bi-stars fs-1 text-warning" aria-hidden="true"></i>
+          <p class="text-secondary mb-1">Your recommended starting point</p>
+          <h2 class="section-title" id="pf-tier-name"></h2>
+          <p class="text-secondary" id="pf-tier-note"></p>
+          <div class="d-flex flex-wrap gap-2 justify-content-center">
+            <a href="#" class="btn btn-cloud btn-lg" id="pf-tier-link">See this tier</a>
+            <a href="{% url 'accounts:signup' %}" class="btn btn-outline-cloud btn-lg">Create a free account</a>
+          </div>
+          <button type="button" class="btn btn-link mt-3" id="pf-restart">Start again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script type="application/json" id="pf-tiers">[{% for tier in tiers %}{"name": "{{ tier.name|escapejs }}", "grades": "{{ tier.grade_range|escapejs }}", "url": "{{ tier.get_absolute_url|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]</script>
+<script>
+(function () {
+  var tiers = JSON.parse(document.getElementById('pf-tiers').textContent);
+  var ans = {}, step = 0;
+  var steps = document.querySelectorAll('.pf-step'), bar = document.getElementById('pf-bar');
+  function show(n) {
+    steps.forEach(function (s) { s.classList.toggle('d-none', +s.getAttribute('data-step') !== n); });
+    bar.style.width = Math.min(n, 3) / 3 * 100 + '%';
+  }
+  document.getElementById('pf').addEventListener('click', function (e) {
+    var b = e.target.closest('.quiz-option'); if (!b) return;
+    ans[b.getAttribute('data-q')] = b.getAttribute('data-v');
+    step++;
+    if (step === 3) {
+      var idx = +ans.age + (+ans.exp >= 2 ? 1 : 0) - (+ans.exp === 0 && +ans.age > 0 ? 1 : 0);
+      if (ans.int.indexOf('Real cloud') === 0) idx = Math.max(idx, +ans.age === 0 ? 1 : 2);
+      idx = Math.max(0, Math.min(tiers.length - 1, idx));
+      var t = tiers[idx] || { name: 'Foundational', grades: '', url: '/learn/' };
+      document.getElementById('pf-tier-name').textContent = t.name + (t.grades ? ' (' + t.grades + ')' : '');
+      document.getElementById('pf-tier-note').textContent = 'A great fit for someone excited by: ' + ans.int.replace('&amp;', '&') + '.';
+      document.getElementById('pf-tier-link').href = t.url;
+      if (window.c4kConfetti) window.c4kConfetti();
+    }
+    show(step);
+  });
+  document.getElementById('pf-restart').addEventListener('click', function () { ans = {}; step = 0; show(0); });
+})();
+</script>
+{% endblock %}

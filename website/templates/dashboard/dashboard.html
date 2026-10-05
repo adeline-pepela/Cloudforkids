@@ -1,37 +1,52 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}My dashboard{% endblock %}
 {% block content %}
 <section class="container py-5">
   <div class="mb-4">
     <div class="section-eyebrow">Welcome back</div>
-    <h1 class="section-title">Hi {{ user.first_name|default:user.username }} &#128075;</h1>
-    <p class="text-secondary">{{ enrollments.count }} course{{ enrollments.count|pluralize }} in progress &middot; {{ total_lessons_done }} lesson{{ total_lessons_done|pluralize }} completed &middot; {{ badges.count }} badge{{ badges.count|pluralize }} earned</p>
+    <h1 class="section-title">Hi {{ user.first_name|default:user.username }}</h1>
   </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3"><div class="tier-card stat-pill"><i class="bi bi-fire fs-2 text-warning" aria-hidden="true"></i><div><div class="big">{{ streak }}</div><div class="small text-secondary">day streak</div></div></div></div>
+    <div class="col-6 col-md-3"><div class="tier-card stat-pill"><i class="bi bi-journal-check fs-2 text-success" aria-hidden="true"></i><div><div class="big">{{ total_lessons_done }}</div><div class="small text-secondary">lesson{{ total_lessons_done|pluralize }} done</div></div></div></div>
+    <div class="col-6 col-md-3"><div class="tier-card stat-pill"><i class="bi bi-collection-fill fs-2 text-primary" aria-hidden="true"></i><div><div class="big">{{ enrollments|length }}</div><div class="small text-secondary">course{{ enrollments|length|pluralize }}</div></div></div></div>
+    <div class="col-6 col-md-3"><div class="tier-card stat-pill"><i class="bi bi-trophy-fill fs-2 text-warning" aria-hidden="true"></i><div><div class="big">{{ badges|length }}</div><div class="small text-secondary">badge{{ badges|length|pluralize }}</div></div></div></div>
+  </div>
+
+  {% if continue_lesson %}
+  <div class="continue-card mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <div>
+      <div class="small text-uppercase fw-bold" style="opacity:.85;">Continue where you left off</div>
+      <h4 class="mb-0 text-white">{{ continue_lesson.title }}</h4>
+      <div class="small" style="opacity:.9;">{{ continue_lesson.course.title }} &middot; {{ continue_lesson.duration_minutes }} min</div>
+    </div>
+    <a href="{{ continue_lesson.get_absolute_url }}" class="btn btn-sun btn-lg">Resume <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+  </div>
+  {% endif %}
 
   <div class="row g-4">
     <div class="col-lg-8">
       <h4 class="mb-3">My courses</h4>
       {% for e in enrollments %}
-      <div class="tier-card p-4 mb-3">
-        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-          <div>
+      <div class="tier-card p-4 mb-3" style="height:auto;">
+        <div class="d-flex align-items-center gap-3">
+          <div class="ring" style="--p: {{ e.progress_percent }};"><span>{{ e.progress_percent }}%</span></div>
+          <div class="flex-grow-1">
             <span class="badge-pill">{{ e.course.tier.name }}</span>
-            <h5 class="mt-2 mb-1">{{ e.course.icon }} {{ e.course.title }}</h5>
+            <h5 class="mt-2 mb-1"><i class="bi bi-{{ e.course.icon }}" aria-hidden="true"></i> {{ e.course.title }}</h5>
             <p class="text-secondary small mb-0">{{ e.course.summary }}</p>
           </div>
-          <a href="{{ e.course.get_absolute_url }}" class="btn btn-outline-cloud btn-sm">Continue</a>
-        </div>
-        <div class="mt-3">
-          <div class="d-flex justify-content-between small fw-bold mb-1">
-            <span>Progress</span><span>{{ e.progress_percent }}%</span>
-          </div>
-          <div class="progress-c4k"><div class="bar" style="width: {{ e.progress_percent }}%;"></div></div>
+          <a href="{{ e.course.get_absolute_url }}" class="btn btn-outline-cloud btn-sm">Open</a>
         </div>
       </div>
       {% empty %}
-      <div class="tier-card p-4 text-center">
-        <p class="text-secondary mb-3">You haven't enrolled in any courses yet.</p>
+      <div class="tier-card empty-state" style="height:auto;">
+        <img src="{% static 'img/nimbus.svg' %}" alt="" class="nimbus nimbus-bob">
+        <p class="text-secondary">Nimbus says: you haven't enrolled in any courses yet. Let's pick your first one!</p>
         <a href="{% url 'courses:programs' %}" class="btn btn-cloud">Browse the programme</a>
+        <a href="{% url 'core:find_path' %}" class="btn btn-outline-cloud">Find my tier</a>
       </div>
       {% endfor %}
 
@@ -41,7 +56,7 @@
         {% for course in suggested_courses %}
         <div class="col-md-4">
           <div class="course-card p-3">
-            <span class="course-icon">{{ course.icon }}</span>
+            <span class="course-icon"><i class="bi bi-{{ course.icon }}" aria-hidden="true"></i></span>
             <h6>{{ course.title }}</h6>
             <a href="{{ course.get_absolute_url }}" class="small fw-bold">View course &rarr;</a>
           </div>
@@ -53,21 +68,31 @@
 
     <div class="col-lg-4">
       <h4 class="mb-3">My badges</h4>
-      <div class="tier-card p-4">
+      <div class="tier-card p-4" style="height:auto;">
         {% for lb in badges %}
           <div class="d-flex align-items-center gap-2 mb-3">
-            <span class="fs-3">{{ lb.badge.icon }}</span>
+            <span class="fs-3 text-warning"><i class="bi bi-{{ lb.badge.icon }}" aria-hidden="true"></i></span>
             <div>
               <p class="fw-bold mb-0 small">{{ lb.badge.name }}</p>
               <p class="text-secondary mb-0" style="font-size:.75rem;">{{ lb.badge.description }}</p>
             </div>
           </div>
-        {% empty %}
-          <p class="text-secondary small mb-0">Complete your first lesson to earn a badge\!</p>
         {% endfor %}
+        {% for b in locked_badges %}
+          <div class="d-flex align-items-center gap-2 mb-3 badge-locked" title="Not earned yet">
+            <span class="fs-3"><i class="bi bi-{{ b.icon }}" aria-hidden="true"></i></span>
+            <div>
+              <p class="fw-bold mb-0 small">{{ b.name }} <i class="bi bi-lock-fill" aria-hidden="true"></i></p>
+              <p class="text-secondary mb-0" style="font-size:.75rem;">{{ b.criteria|default:b.description }}</p>
+            </div>
+          </div>
+        {% endfor %}
+        {% if not badges and not locked_badges %}
+          <p class="text-secondary small mb-0">Complete your first lesson to earn a badge!</p>
+        {% endif %}
       </div>
 
-      <div class="tier-card p-4 mt-3">
+      <div class="tier-card p-4 mt-3" style="height:auto;">
         <h6>Keep your profile up to date</h6>
         <p class="text-secondary small">Add your grade and school so we can recommend the right tier.</p>
         <a href="{% url 'accounts:profile' %}" class="btn btn-outline-cloud btn-sm">Edit profile</a>

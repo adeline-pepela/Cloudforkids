@@ -1,0 +1,60 @@
+<div class="lesson-content tone-fun">
+  <div class="lesson-visual">
+    <svg viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" class="lesson-visual-svg" role="img" aria-label="lesson illustration"><rect x="1" y="1" width="298" height="138" rx="18" fill="#FFF4E6"/><text x="150" y="52" font-size="46" text-anchor="middle" dominant-baseline="middle" fill="var(--sky-dark)" font-family="bootstrap-icons">&#xF1D9;</text><text x="150" y="96" font-size="11" font-weight="600" fill="var(--ink)" text-anchor="middle">Your S3 Bucket</text><text x="78" y="98" font-size="22" text-anchor="middle" dominant-baseline="middle" fill="var(--sky-dark)" font-family="bootstrap-icons">&#xF47A;</text><text x="222" y="98" font-size="22" text-anchor="middle" dominant-baseline="middle" fill="var(--sky-dark)" font-family="bootstrap-icons">&#xF885;</text></svg>
+    <p class="visual-caption">An S3 bucket is your own named storage container in the cloud.</p>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head"><i class="bi bi-bullseye" aria-hidden="true"></i> What You'll Learn</h5>
+    <ul class="objective-list"><li>Create an Amazon S3 bucket inside a safe sandbox account</li><li>Upload a file and understand the difference between public and private access</li></ul>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head"><i class="bi bi-cpu-fill" aria-hidden="true"></i> The Big Idea</h5>
+    <p>In Amazon S3, a bucket is a named container that holds your files, called objects. Every bucket needs a globally unique name, a bit like a username that nobody else in the world can use. When you upload an object, you choose its permissions: private means only you (and anyone you specifically allow) can see it, while public means anyone on the internet with the link can view it - which is powerful, but something to decide on carefully and never by accident.</p>
+  </div>
+
+  <div class="lesson-section fact-box">
+    <span class="box-emoji"><i class="bi bi-lightbulb-fill" aria-hidden="true"></i></span>
+    <p><strong>Did You Know?</strong> Amazon S3 is designed to be so reliable that if you stored 10 million files, you'd statistically expect to lose less than one over 10,000 years.</p>
+  </div>
+
+  <div class="lesson-section activity-card">
+    <h5 class="section-head"><i class="bi bi-tools" aria-hidden="true"></i> Try It Yourself</h5>
+    <p>Inside your AWS Educate sandbox account, create an S3 bucket with a unique name (try yourname-cloudforkids-2026). Upload one image or text file as an object. Check its permissions, keep it private, and explain in your own words what would change if you made it public instead.</p>
+  </div>
+
+  <div class="lesson-section realworld-box">
+    <span class="box-emoji"><i class="bi bi-globe-europe-africa" aria-hidden="true"></i></span>
+    <p><strong>Real-World Connection:</strong> Kenyan photographers, journalists, and small businesses increasingly back up important files to S3-style cloud storage so a lost or stolen laptop doesn't mean losing everything.</p>
+  </div>
+
+  <div class="lesson-section deepdive-box">
+    <span class="box-emoji"><i class="bi bi-search" aria-hidden="true"></i></span>
+    <p><strong>Dig Deeper:</strong> S3 organises everything into 'buckets', which behave like top-level folders with their own permissions, region, and settings - a structure chosen so that storage can scale from a single personal file to trillions of objects without changing how it works. Every object you store gets a unique address called a key, and S3's promise of 'eleven nines' of durability means data loss is designed to be almost statistically impossible under normal operation. Understanding buckets, keys, and permissions - the three ideas in this lesson - unlocks the ability to work with cloud storage from almost any provider, since the same basic concepts appear under different names everywhere.</p>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head"><i class="bi bi-journal-bookmark-fill" aria-hidden="true"></i> Word Bank <span class="hint-text">(tap a card to flip)</span></h5>
+    <div class="vocab-grid"><details class="vocab-card"><summary>Bucket</summary><p>A named container in Amazon S3 that holds your files</p></details><details class="vocab-card"><summary>Object</summary><p>A single file stored inside an S3 bucket</p></details><details class="vocab-card"><summary>Public Access</summary><p>A setting that allows anyone with the link to view a file</p></details><details class="vocab-card"><summary>Permissions</summary><p>Rules that control who can view, upload, or change files</p></details></div>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head"><i class="bi bi-image-fill" aria-hidden="true"></i> Picture the Ideas</h5>
+    <div class="illustration-grid"><div class="concept-chip"><span class="chip-emoji"><i class="bi bi-key-fill" aria-hidden="true"></i></span><span class="chip-label">Bucket</span></div><div class="concept-chip"><span class="chip-emoji"><i class="bi bi-book-fill" aria-hidden="true"></i></span><span class="chip-label">Object</span></div><div class="concept-chip"><span class="chip-emoji"><i class="bi bi-puzzle-fill" aria-hidden="true"></i></span><span class="chip-label">Public Access</span></div><div class="concept-chip"><span class="chip-emoji"><i class="bi bi-star-fill" aria-hidden="true"></i></span><span class="chip-label">Permissions</span></div></div>
+  </div>
+
+  <div class="lesson-section quiz-card">
+    <h5 class="section-head"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Quick Check</h5>
+    <p>If you accidentally set your bucket to 'public' instead of 'private', who could suddenly see your files?</p>
+    <details class="quiz-reveal">
+      <summary>Reveal a model answer</summary>
+      <p>Anyone on the internet with the link could view your files - which is why it's important to double-check permissions before making anything public.</p>
+    </details>
+  </div>
+
+  <div class="lesson-section">
+    <h5 class="section-head"><i class="bi bi-pencil-square" aria-hidden="true"></i> Quiz Time</h5>
+    <div class="mcq-block"><div class="mcq-question" data-correct="0"><p class="mcq-prompt">Which word matches this definition? <em>“A named container in Amazon S3 that holds your files”</em></p><div class="mcq-options"><button type="button" class="mcq-option" data-index="0">Bucket</button><button type="button" class="mcq-option" data-index="1">Object</button><button type="button" class="mcq-option" data-index="2">Public Access</button><button type="button" class="mcq-option" data-index="3">Permissions</button></div><div class="mcq-explain"><strong>Bucket</strong> - A named container in Amazon S3 that holds your files</div></div><div class="mcq-question" data-correct="0"><p class="mcq-prompt">Which word matches this definition? <em>“A single file stored inside an S3 bucket”</em></p><div class="mcq-options"><button type="button" class="mcq-option" data-index="0">Object</button><button type="button" class="mcq-option" data-index="1">Public Access</button><button type="button" class="mcq-option" data-index="2">Permissions</button><button type="button" class="mcq-option" data-index="3">Bucket</button></div><div class="mcq-explain"><strong>Object</strong> - A single file stored inside an S3 bucket</div></div><div class="mcq-question" data-correct="0"><p class="mcq-prompt">Which word matches this definition? <em>“A setting that allows anyone with the link to view a file”</em></p><div class="mcq-options"><button type="button" class="mcq-option" data-index="0">Public Access</button><button type="button" class="mcq-option" data-index="1">Permissions</button><button type="button" class="mcq-option" data-index="2">Bucket</button><button type="button" class="mcq-option" data-index="3">Object</button></div><div class="mcq-explain"><strong>Public Access</strong> - A setting that allows anyone with the link to view a file</div></div></div>
+  </div>
+</div>

@@ -7,12 +7,12 @@ class Tier(models.Model):
     """The three programme tiers: Foundational, Intermediate, Advanced."""
 
     name = models.CharField(max_length=100)
-    slug = models.SlugField(unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
     grade_range = models.CharField(max_length=50, help_text="e.g. Grade 4-6")
     cbc_alignment = models.CharField(max_length=200, blank=True, help_text="CBC/CBE subject alignment")
     summary = models.CharField(max_length=300)
     description = models.TextField(blank=True)
-    icon = models.CharField(max_length=10, default="\u2601\ufe0f", help_text="Emoji icon")
+    icon = models.CharField(max_length=40, default="cloud-fill", help_text="Bootstrap Icons name, e.g. cloud-fill")
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
@@ -28,10 +28,10 @@ class Tier(models.Model):
 class Course(models.Model):
     tier = models.ForeignKey(Tier, on_delete=models.CASCADE, related_name="courses")
     title = models.CharField(max_length=150)
-    slug = models.SlugField(unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
     summary = models.CharField(max_length=300)
     description = models.TextField(blank=True)
-    icon = models.CharField(max_length=10, default="\U0001F4E6")
+    icon = models.CharField(max_length=40, default="box-seam-fill", help_text="Bootstrap Icons name")
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
@@ -73,7 +73,7 @@ class Lesson(models.Model):
 
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="lessons")
     title = models.CharField(max_length=150)
-    slug = models.SlugField()
+    slug = models.SlugField(max_length=100)
     summary = models.CharField(max_length=300, blank=True)
     content = models.TextField(help_text="Lesson content (supports plain text / simple markup)")
     duration_minutes = models.PositiveIntegerField(default=30)
@@ -89,6 +89,11 @@ class Lesson(models.Model):
     class Meta:
         ordering = ["course__tier__order", "course__order", "order"]
         unique_together = ("course", "slug")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["course"], condition=models.Q(lesson_type="exam"), name="one_exam_per_course"
+            ),
+        ]
 
     def __str__(self):
         return f"{self.course.title} - {self.title}"
@@ -135,6 +140,10 @@ class Enrollment(models.Model):
 
     @property
     def is_complete(self):
+        """A course is complete once its module exam has been passed (or, with no exam, every lesson is done)."""
+        exam = self.course.exam
+        if exam is not None:
+            return LessonCompletion.objects.filter(enrollment=self, lesson=exam).exists()
         return self.course.lesson_count > 0 and self.progress_percent == 100
 
 
@@ -142,6 +151,9 @@ class LessonCompletion(models.Model):
     enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE, related_name="completions")
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name="completions")
     completed_at = models.DateTimeField(auto_now_add=True)
+    score_percent = models.PositiveIntegerField(
+        null=True, blank=True, help_text="Quiz or exam score when the lesson was completed (blank if it has no quiz)"
+    )
 
     class Meta:
         unique_together = ("enrollment", "lesson")
@@ -150,7 +162,7 @@ class LessonCompletion(models.Model):
 class Badge(models.Model):
     name = models.CharField(max_length=100)
     description = models.CharField(max_length=250)
-    icon = models.CharField(max_length=10, default="\U0001F3C6")
+    icon = models.CharField(max_length=40, default="trophy-fill", help_text="Bootstrap Icons name")
     criteria = models.CharField(
         max_length=250, blank=True, help_text="Human-readable note on how this badge is earned"
     )
@@ -170,3 +182,19 @@ class LearnerBadge(models.Model):
 
     def __str__(self):
         return f"{self.learner} earned {self.badge}"
+
+
+class QuizResult(models.Model):
+    """A learner's best result on a lesson's quiz (or module exam). A passed quiz unlocks "Mark complete"."""
+
+    learner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="quiz_results")
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name="quiz_results")
+    score_percent = models.PositiveIntegerField(default=0)
+    passed = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("learner", "lesson")
+
+    def __str__(self):
+        return f"{self.learner} - {self.lesson}: {self.score_percent}%"

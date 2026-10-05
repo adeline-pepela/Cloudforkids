@@ -1,0 +1,45 @@
+{% extends "learner/base.html" %}
+{% load static %}
+{% block title %}My Courses{% endblock %}
+{% block content %}
+<h1 class="l-title">My Courses</h1>
+<p class="l-sub">Pick up any course you've started, or try a new one.</p>
+
+<div class="row g-3 mb-4">
+  {% for e in enrollments %}
+  <div class="col-md-6">
+    <a class="l-card lab-card" href="{{ e.course.get_absolute_url }}">
+      <div class="d-flex align-items-center gap-3">
+        <div class="ring" style="--p: {{ e.progress_percent }}; --size: 72px;"><span>{{ e.progress_percent }}%</span></div>
+        <div>
+          <span class="badge-pill">{{ e.course.tier.name }}</span>
+          <h5 class="fw-bold mt-1 mb-0"><i class="bi bi-{{ e.course.icon }}" aria-hidden="true"></i> {{ e.course.title }}</h5>
+          <small class="text-secondary">{{ e.course.summary }}</small>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% empty %}
+  <div class="col-12"><div class="l-card text-center">
+    <img src="{% static 'img/nimbus.svg' %}" alt="" width="90" class="nimbus-bob">
+    <p class="mt-2">You haven't started a course yet. Pick one below!</p>
+  </div></div>
+  {% endfor %}
+</div>
+
+{% if more_courses %}
+<h2 class="l-title" style="font-size:1.4rem;">Start something new</h2>
+<div class="row g-3">
+  {% for c in more_courses %}
+  <div class="col-md-6 col-xl-4">
+    <a class="l-card lab-card" href="{{ c.get_absolute_url }}">
+      <span class="lab-ico ico tone-sky"><i class="bi bi-{{ c.icon }}" aria-hidden="true"></i></span>
+      <h5 class="fw-bold mb-0">{{ c.title }}</h5>
+      <p class="text-secondary small mb-0">{{ c.summary }}</p>
+      <div class="lab-meta"><span class="badge-pill">{{ c.tier.name }}</span><span>{{ c.lesson_count }} lessons</span></div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

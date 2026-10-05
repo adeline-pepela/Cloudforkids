@@ -1,0 +1,72 @@
+{% extends "teach/base.html" %}
+{% block title %}Facilitator overview{% endblock %}
+{% block content %}
+<h1 class="l-title">Habari, {{ user.first_name|default:user.username }}</h1>
+<p class="l-sub">See how each of your classes is doing and who needs your attention.</p>
+
+{% if not reports %}
+<div class="l-card text-center py-5" style="height:auto;">
+  <div class="fm-empty-ico"><i class="bi bi-easel2-fill" aria-hidden="true"></i></div>
+  <h3>Create your first class</h3>
+  <p class="text-secondary mx-auto" style="max-width:520px;">A class is a group of learners, like a club or a grade. You get a join code, learners enter it on their profile page, and then you can follow their progress and set assignments.</p>
+  <a href="{% url 'teach:class_new' %}" class="btn btn-cloud btn-big"><i class="bi bi-plus-circle-fill" aria-hidden="true"></i> Create a class</a>
+</div>
+{% else %}
+
+<div class="fm-kpis">
+  <div class="fm-kpi sky"><i class="bi bi-easel2-fill" aria-hidden="true"></i><strong>{{ reports|length }}</strong><span>active class{{ reports|length|pluralize:",es" }}</span></div>
+  <div class="fm-kpi purple"><i class="bi bi-people-fill" aria-hidden="true"></i><strong>{{ learners }}</strong><span>learner{{ learners|pluralize }}</span></div>
+  <div class="fm-kpi grass"><i class="bi bi-lightning-charge-fill" aria-hidden="true"></i><strong>{{ active_week }}</strong><span>active this week</span></div>
+  <div class="fm-kpi coral"><i class="bi bi-bell-fill" aria-hidden="true"></i><strong>{{ attention_total }}</strong><span>need attention</span></div>
+  <div class="fm-kpi sun"><i class="bi bi-clipboard-check-fill" aria-hidden="true"></i><strong>{{ assignments_open }}</strong><span>open assignment{{ assignments_open|pluralize }}</span></div>
+</div>
+
+<div class="row g-4 mb-4">
+  {% for r in reports %}
+  <div class="col-lg-6">
+    <a href="{% url 'teach:class' r.classroom.pk %}" class="fm-card">
+      <div class="d-flex align-items-start gap-3 mb-3">
+        <div class="fm-avatar sm" aria-hidden="true"><i class="bi bi-easel2-fill"></i></div>
+        <div class="flex-grow-1">
+          <h3 class="mb-0">{{ r.classroom.name }}</h3>
+          <small class="text-secondary">{{ r.classroom.tier.name|default:"All tiers" }}{% if r.classroom.school_name %} &middot; {{ r.classroom.school_name }}{% endif %}</small>
+        </div>
+        <span class="tc-code" title="Join code">{{ r.classroom.join_code }}</span>
+      </div>
+      <div class="d-flex justify-content-between align-items-end">
+        <span class="fm-eyebrow">Average progress</span><span class="fm-percent sm">{{ r.avg_progress }}<small>%</small></span>
+      </div>
+      <div class="fm-meter slim"><div class="fm-meter-fill" style="width: {{ r.avg_progress }}%"></div></div>
+      <div class="fm-mini">
+        <span><i class="bi bi-people-fill" aria-hidden="true"></i><b>{{ r.count }}</b> learner{{ r.count|pluralize }}</span>
+        <span><i class="bi bi-lightning-charge-fill" aria-hidden="true"></i><b>{{ r.active_week }}</b> active this week</span>
+        <span><i class="bi bi-patch-check-fill" aria-hidden="true"></i><b>{% if r.avg_score is not None %}{{ r.avg_score }}%{% else %}-{% endif %}</b> quiz avg</span>
+        <span><i class="bi bi-bell-fill" aria-hidden="true"></i><b>{{ r.attention|length }}</b> need attention</span>
+      </div>
+      <span class="fm-more">Open class <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+
+{% if attention %}
+<div class="l-card mb-4" style="height:auto;">
+  <h3><i class="bi bi-bell-fill text-warning" aria-hidden="true"></i> Needs your attention</h3>
+  <div class="tc-table-wrap">
+    <table class="tc-table">
+      <tbody>
+        {% for classroom, row in attention %}
+        <tr>
+          <td><a href="{% url 'teach:learner' classroom.pk row.user.pk %}"><strong>{{ row.name }}</strong></a><small>{{ classroom.name }}</small></td>
+          <td><span class="tc-status {{ row.status }}">{{ row.status_label }}</span></td>
+          <td class="text-secondary">Last active {{ row.last_text }}</td>
+          <td class="text-end">{{ row.percent }}% done</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

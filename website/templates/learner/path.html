@@ -1,0 +1,52 @@
+{% extends "learner/base.html" %}
+{% block title %}My Path{% endblock %}
+{% block content %}
+<h1 class="l-title">My Learning Path</h1>
+{% if tier %}
+<p class="l-sub">{{ tier.name }} &middot; {{ tier.grade_range }}. Follow the path from top to bottom, one step at a time.</p>
+{% if not has_profile_tier %}
+<div class="lab-goal"><i class="bi bi-lightbulb-fill" aria-hidden="true"></i> We picked this tier for you. <a href="{% url 'accounts:profile' %}">Choose your own tier in My Profile</a> or <a href="{% url 'core:find_path' %}">take the quiz</a>.</div>
+{% endif %}
+
+<ol class="path-list">
+  {% for s in steps %}
+  <li class="path-step {{ s.status }}">
+    <div class="rail">
+      <div class="path-node"><i class="bi {% if s.status == 'done' %}bi-check-lg{% else %}bi-{{ s.course.icon }}{% endif %}" aria-hidden="true"></i></div>
+    </div>
+    <div class="l-card path-body" style="height:auto;">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+        <div>
+          <h4 class="mb-1 fw-bold" style="font-family:'Baloo 2';">Step {{ forloop.counter }}: {{ s.course.title }}</h4>
+          <p class="text-secondary mb-2">{{ s.course.summary }}</p>
+        </div>
+        <span class="badge-pill">{% if s.status == 'done' %}Finished!{% elif s.status == 'current' %}Next up{% else %}Coming up{% endif %}</span>
+      </div>
+      <div class="mini-bar mb-2"><span style="width: {{ s.percent }}%"></span></div>
+      <div class="d-flex justify-content-between align-items-center">
+        <small class="text-secondary">{{ s.percent }}% done &middot; {{ s.course.lesson_count }} lesson{{ s.course.lesson_count|pluralize }}</small>
+        <a href="{{ s.course.get_absolute_url }}" class="btn btn-cloud">{% if s.status == 'done' %}Review{% elif s.percent > 0 %}Keep going{% else %}Start{% endif %}</a>
+      </div>
+    </div>
+  </li>
+  {% endfor %}
+  <li class="path-step todo">
+    <div class="rail"><div class="path-node"><i class="bi bi-flag-fill" aria-hidden="true"></i></div></div>
+    <div class="l-card path-body" style="height:auto;"><h4 class="mb-1 fw-bold" style="font-family:'Baloo 2';">Tier complete!</h4><p class="mb-0 text-secondary">Finish every step to earn graduate badges and move on to the next tier.</p></div>
+  </li>
+</ol>
+
+{% if other_tiers %}
+<h2 class="l-title mt-4" style="font-size:1.4rem;">Other tiers</h2>
+<div class="row g-3">
+  {% for t in other_tiers %}
+  <div class="col-md-6"><a class="l-card d-block text-decoration-none" style="color:inherit;height:auto;" href="{{ t.get_absolute_url }}">
+    <h5 class="fw-bold mb-1"><i class="bi bi-{{ t.icon }}" aria-hidden="true"></i> {{ t.name }} <span class="badge-pill">{{ t.grade_range }}</span></h5>
+    <p class="text-secondary small mb-0">{{ t.summary }}</p></a></div>
+  {% endfor %}
+</div>
+{% endif %}
+{% else %}
+<p class="l-sub">No tiers yet. Ask your teacher or an admin to add them.</p>
+{% endif %}
+{% endblock %}

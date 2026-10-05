@@ -1,0 +1,12 @@
+{% if not is_complete %}
+<form method="post" action="{% url 'courses:mark_lesson_complete' course.slug lesson.slug %}" class="complete-form">
+  {% csrf_token %}
+  <button type="submit" id="complete-btn" class="btn btn-cloud btn-lg w-100"{% if quiz_total and not quiz_passed %} disabled{% endif %}>
+    {% if lesson.is_exam %}I've finished the exam &amp; reviewed my score{% else %}Mark complete &amp; continue{% endif %}
+  </button>
+</form>
+{% elif next_lesson %}
+  <a href="{{ next_lesson.get_absolute_url }}" class="btn btn-cloud btn-lg w-100">Next: {{ next_lesson.title }} &rarr;</a>
+{% else %}
+  <a href="{{ course.get_absolute_url }}" class="btn btn-cloud btn-lg w-100">Back to course</a>
+{% endif %}

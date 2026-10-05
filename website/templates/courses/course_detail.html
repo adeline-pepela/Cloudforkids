@@ -1,11 +1,11 @@
-{% extends "base.html" %}
+{% extends request.user.is_authenticated|yesno:"learner/base.html,base.html" %}
 {% block title %}{{ course.title }}{% endblock %}
 {% block content %}
 <section class="container py-5">
   <div class="row">
     <div class="col-lg-8">
       <div class="section-eyebrow">{{ course.tier.name }} &middot; {{ course.tier.grade_range }}</div>
-      <h1 class="section-title">{{ course.icon }} {{ course.title }}</h1>
+      <h1 class="section-title"><i class="bi bi-{{ course.icon }}" aria-hidden="true"></i> {{ course.title }}</h1>
       <p class="text-secondary lead">{{ course.summary }}</p>
       {% if course.description %}<p class="text-secondary">{{ course.description }}</p>{% endif %}
 
@@ -31,7 +31,7 @@
             </div>
             <div class="text-end">
               {% if lesson.id in completed_ids %}
-                <span class="badge-pill">&#9989; Done</span>
+                <span class="badge-pill"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Done</span>
               {% else %}
                 <span class="text-secondary small">{{ lesson.duration_minutes }} min</span>
               {% endif %}
@@ -47,7 +47,7 @@
         <a href="{{ exam.get_absolute_url }}" class="text-decoration-none text-dark">
           <div class="lesson-row exam-row {% if exam.id in completed_ids %}done{% endif %}">
             <div>
-              <span class="fw-bold">&#127891; {{ exam.title }}</span>
+              <span class="fw-bold"><i class="bi bi-mortarboard-fill" aria-hidden="true"></i> {{ exam.title }}</span>
               <p class="text-secondary small mb-0">{{ exam.summary }}</p>
               {% if not lessons_unlocked %}
                 <p class="text-secondary small mb-0 fst-italic">Finish every lesson above first for the best shot at passing.</p>
@@ -55,7 +55,7 @@
             </div>
             <div class="text-end">
               {% if exam.id in completed_ids %}
-                <span class="badge-pill">&#9989; Passed</span>
+                <span class="badge-pill"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Passed</span>
               {% else %}
                 <span class="text-secondary small">{{ exam.duration_minutes }} min &middot; {{ exam.pass_score_percent }}% to pass</span>
               {% endif %}

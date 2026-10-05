@@ -32,14 +32,57 @@ PRO_TEXT = "#475569"
 PRO_TEXT_SOFT = "#64748B"
 
 
+# Bootstrap Icons codepoints used inside the lesson SVG illustrations.
+BOOTSTRAP_ICON_CODES = {
+    "archive-fill": 0xF10C,
+    "arrow-repeat": 0xF130,
+    "bank2": 0xF62F,
+    "briefcase-fill": 0xF1CB,
+    "bucket-fill": 0xF1D9,
+    "buildings-fill": 0xF87C,
+    "chat-dots-fill": 0xF249,
+    "check-circle-fill": 0xF26A,
+    "cloud-fill": 0xF29E,
+    "controller": 0xF2D4,
+    "credit-card-fill": 0xF2DB,
+    "emoji-smile-fill": 0xF324,
+    "film": 0xF3C3,
+    "folder-fill": 0xF3D1,
+    "globe-europe-africa": 0xF885,
+    "globe2": 0xF3EF,
+    "hospital-fill": 0xF773,
+    "image-fill": 0xF429,
+    "key-fill": 0xF44E,
+    "keyboard-fill": 0xF450,
+    "laptop-fill": 0xF455,
+    "lock-fill": 0xF47A,
+    "mortarboard-fill": 0xF6FD,
+    "pc-display": 0xF6A6,
+    "phone-fill": 0xF4E2,
+    "rocket-takeoff-fill": 0xF844,
+    "router-fill": 0xF6EB,
+    "search": 0xF52A,
+    "shuffle": 0xF544,
+    "star-fill": 0xF586,
+    "trophy-fill": 0xF5E6,
+}
+
+
 def _bg(fill=SKY_LIGHT):
     return f'<rect x="1" y="1" width="298" height="138" rx="18" fill="{fill}"/>'
 
 
-def _icon(x, y, size, emoji):
+def _bi(name):
+    """Inline Bootstrap Icons glyph for use in HTML text."""
+    return f'<i class="bi bi-{name}" aria-hidden="true"></i>'
+
+
+def _icon(x, y, size, name):
+    """Bootstrap Icons glyph drawn inside an SVG (needs the bootstrap-icons font on the page)."""
     return (
         f'<text x="{x}" y="{y}" font-size="{size}" text-anchor="middle" '
-        f'dominant-baseline="middle">{emoji}</text>'
+        f'dominant-baseline="middle" font-family="bootstrap-icons" fill="var(--sky-dark)">'
+        f'&#x{BOOTSTRAP_ICON_CODES[name]:X};</text>'
     )
 
 
@@ -86,7 +129,7 @@ def _svg(*parts):
 # no separate question bank to keep in sync.
 # ---------------------------------------------------------------------------
 
-CHIP_EMOJI = ["\U0001F511", "\U0001F4D8", "\U0001F9E9", "\u2B50", "\U0001F30D", "\U0001F680"]
+CHIP_ICONS = ["key-fill", "book-fill", "puzzle-fill", "star-fill", "globe-europe-africa", "rocket-takeoff-fill"]
 
 
 def _mcq_html(prompt, options, correct_index, explanation):
@@ -127,7 +170,7 @@ def _vocab_mcqs(vocab, count, prompt_template="Which word matches this definitio
 def _concept_chips(vocab, tone="fun"):
     chips = []
     for i, (term, _definition) in enumerate(vocab):
-        emoji = "\u25AA" if tone == "pro" else CHIP_EMOJI[i % len(CHIP_EMOJI)]
+        emoji = "\u25AA" if tone == "pro" else CHIP_ICONS[i % len(CHIP_ICONS)]
         chips.append(
             f'<div class="concept-chip"><span class="chip-emoji">{emoji}</span>'
             f'<span class="chip-label">{term}</span></div>'
@@ -312,9 +355,9 @@ def _lesson(title, summary, objectives, big_idea, activity, vocab, quiz, quiz_an
     concept_chips = _concept_chips(vocab, tone)
     practice_mcqs = _vocab_mcqs(vocab, min(3, len(vocab)))
 
-    box_emoji_fact = "" if tone == "pro" else "\U0001F4A1"
-    box_emoji_real = "" if tone == "pro" else "\U0001F30D"
-    box_emoji_dig = "" if tone == "pro" else "\U0001F50D"
+    box_emoji_fact = "" if tone == "pro" else _bi("lightbulb-fill")
+    box_emoji_real = "" if tone == "pro" else _bi("globe-europe-africa")
+    box_emoji_dig = "" if tone == "pro" else _bi("search")
 
     if tone == "pro":
         head_learn = "Objectives"
@@ -329,16 +372,16 @@ def _lesson(title, summary, objectives, big_idea, activity, vocab, quiz, quiz_an
         head_quiz = "Quiz Time"
         hint = ""
     else:
-        head_learn = "\U0001F3AF What You'll Learn"
-        head_idea = "\U0001F9E0 The Big Idea"
+        head_learn = _bi("bullseye") + " What You'll Learn"
+        head_idea = _bi("cpu-fill") + " The Big Idea"
         head_fact = "Did You Know?"
-        head_try = "\U0001F6E0\uFE0F Try It Yourself"
+        head_try = _bi("tools") + " Try It Yourself"
         head_real = "Real-World Connection:"
         head_dig = "Dig Deeper:"
-        head_word = "\U0001F4DA Word Bank"
-        head_picture = "\U0001F5BC\uFE0F Picture the Ideas"
-        head_check = "\u2705 Quick Check"
-        head_quiz = "\U0001F4DD Quiz Time"
+        head_word = _bi("journal-bookmark-fill") + " Word Bank"
+        head_picture = _bi("image-fill") + " Picture the Ideas"
+        head_check = _bi("check-circle-fill") + " Quick Check"
+        head_quiz = _bi("pencil-square") + " Quiz Time"
         hint = '<span class="hint-text">(tap a card to flip)</span>'
 
     content = f"""<div class="lesson-content tone-{tone}">
@@ -444,13 +487,13 @@ def _build_exam(course_title, lessons):
         submit_label = "Submit Exam"
     else:
         intro = (
-            f"<p>\U0001F393 You've made it to the end of <strong>{course_title}</strong>! This exam checks "
+            f"<p>{_bi('mortarboard-fill')} You've made it to the end of <strong>{course_title}</strong>! This exam checks "
             f"everything you learned across every lesson in this module. Answer all {total_questions} "
             f"questions, then tap <strong>Submit Exam</strong> to see your score. You'll need "
             f"{pass_score}% to pass - and you can always try again if you don't make it the first time.</p>"
         )
-        label = "\U0001F393 Full Module Exam"
-        submit_label = "\U0001F4CB Submit Exam & See My Score"
+        label = "Full Module Exam"
+        submit_label = _bi("clipboard-check-fill") + " Submit Exam & See My Score"
 
     content = f"""<div class="lesson-content tone-{tone}">
   <div class="exam-wrap">
@@ -492,12 +535,12 @@ TIERS = [
             "introduces core ideas of data, storage, networks, and the internet as groundwork "
             "for cloud concepts later on."
         ),
-        "icon": "\u2601\ufe0f",
+        "icon": "cloud-fill",
         "courses": [
             {
                 "title": "What Is the Cloud, Really?",
                 "summary": "Unplugged activities that explain data, storage, and networks with everyday objects.",
-                "icon": "\U0001F4E6",
+                "icon": "box-seam-fill",
                 "lessons": [
                     _lesson(
                         "Where Does Your Data Live?",
@@ -532,11 +575,11 @@ TIERS = [
                         "It's saved as data on a real server inside a data centre - maybe thousands of kilometres away. The internet just makes the trip feel instant.",
                         _svg(
                             _bg(),
-                            _icon(48, 62, 38, "\U0001F4F1"), _label(48, 100, "My Device", 10),
+                            _icon(48, 62, 38, "phone-fill"), _label(48, 100, "My Device", 10),
                             _arrow(118, 62),
-                            _icon(150, 62, 40, "\U0001F310"), _label(150, 100, "Internet", 10),
+                            _icon(150, 62, 40, "globe2"), _label(150, 100, "Internet", 10),
                             _arrow(182, 62),
-                            _icon(254, 62, 44, "\U0001F5A5\uFE0F"), _label(254, 103, "Server", 10),
+                            _icon(254, 62, 44, "pc-display"), _label(254, 103, "Server", 10),
                         ),
                         "Your photo travels from your device, through the internet, to a server far away.",
                     ),
@@ -573,9 +616,9 @@ TIERS = [
                         "If every device shouted at once, messages would get lost or jumbled. A router checks each message's address and sends it only where it needs to go.",
                         _svg(
                             _bg(),
-                            _icon(150, 40, 30, "\U0001F4E1"), _label(150, 68, "Router", 10),
+                            _icon(150, 40, 30, "router-fill"), _label(150, 68, "Router", 10),
                             _line(150, 50, 65, 92), _line(150, 50, 150, 92), _line(150, 50, 235, 92),
-                            _icon(65, 108, 24, "\U0001F4BB"), _icon(150, 108, 24, "\U0001F4BB"), _icon(235, 108, 24, "\U0001F4BB"),
+                            _icon(65, 108, 24, "laptop-fill"), _icon(150, 108, 24, "laptop-fill"), _icon(235, 108, 24, "laptop-fill"),
                         ),
                         "A router connects many devices into one network - the internet connects networks together.",
                     ),
@@ -611,9 +654,9 @@ TIERS = [
                         "Computers turn colours, letters and sounds into numbers first, then store those numbers as patterns of 1s and 0s - and turn them back into colour when you view the photo.",
                         _svg(
                             _bg(),
-                            _icon(60, 55, 28, "\U0001F5C2\uFE0F"), _icon(150, 55, 28, "\U0001F5C2\uFE0F"), _icon(240, 55, 28, "\U0001F5C2\uFE0F"),
+                            _icon(60, 55, 28, "folder-fill"), _icon(150, 55, 28, "folder-fill"), _icon(240, 55, 28, "folder-fill"),
                             _label(60, 92, "Animals", 10), _label(150, 92, "Numbers", 10), _label(240, 92, "Colours", 10),
-                            _icon(150, 118, 22, "\U0001F500"),
+                            _icon(150, 118, 22, "shuffle"),
                         ),
                         "Sorting cards into folders is just like how a computer organises files.",
                     ),
@@ -649,8 +692,8 @@ TIERS = [
                         "A short, common password like a pet's name can be guessed quickly, while a long, unusual phrase takes far too long for guessing tools to crack.",
                         _svg(
                             _bg(),
-                            _icon(88, 58, 40, "\U0001F511"), _label(88, 100, "Strong Password", 10),
-                            _icon(212, 58, 40, "\U0001F4AC"), _label(212, 100, "Kind Words", 10),
+                            _icon(88, 58, 40, "key-fill"), _label(88, 100, "Strong Password", 10),
+                            _icon(212, 58, 40, "chat-dots-fill"), _label(212, 100, "Kind Words", 10),
                         ),
                         "A strong password and kind words both help keep the internet safer.",
                     ),
@@ -659,7 +702,7 @@ TIERS = [
             {
                 "title": "My First Digital Projects",
                 "summary": "Simple, low-tech creative projects that build comfort with digital tools.",
-                "icon": "\U0001F3A8",
+                "icon": "palette-fill",
                 "lessons": [
                     _lesson(
                         "Typing & Files 101",
@@ -692,9 +735,9 @@ TIERS = [
                         "'Homework_Maths_Oct3.txt' - it tells you exactly what the file is and when it was made, even months later.",
                         _svg(
                             _bg(),
-                            _icon(88, 62, 38, "\u2328\uFE0F"), _label(88, 102, "Type", 10),
+                            _icon(88, 62, 38, "keyboard-fill"), _label(88, 102, "Type", 10),
                             _arrow(150, 62),
-                            _icon(212, 62, 38, "\U0001F5C3\uFE0F"), _label(212, 102, "Save & Name", 10),
+                            _icon(212, 62, 38, "archive-fill"), _label(212, 102, "Save & Name", 10),
                         ),
                         "Typing, naming, and saving are the first steps in any digital project.",
                     ),
@@ -729,7 +772,7 @@ TIERS = [
                         _svg(
                             _bg(),
                             _box(38, 38, 55, 22, SKY, SKY_DARK), _box(38, 66, 55, 22, GRASS, SKY_DARK), _box(38, 94, 55, 22, SUN, SKY_DARK),
-                            _icon(225, 70, 48, "\U0001F431"), _label(225, 112, "Sprite", 10),
+                            _icon(225, 70, 48, "emoji-smile-fill"), _label(225, 112, "Sprite", 10),
                         ),
                         "Scratch blocks snap together like puzzle pieces to build a program.",
                     ),
@@ -763,8 +806,8 @@ TIERS = [
                         "There's no single right answer - a good one is short and uses an everyday example, like 'it's borrowing someone else's powerful computer to save and run things.'",
                         _svg(
                             _bg(),
-                            _icon(150, 55, 48, "\U0001F5BC\uFE0F"), _label(150, 98, "Present & Share", 10),
-                            _icon(68, 100, 22, "\u2B50"), _icon(232, 100, 22, "\u2B50"),
+                            _icon(150, 55, 48, "image-fill"), _label(150, 98, "Present & Share", 10),
+                            _icon(68, 100, 22, "star-fill"), _icon(232, 100, 22, "star-fill"),
                         ),
                         "Explaining an idea in your own words proves you really understand it.",
                     ),
@@ -782,12 +825,12 @@ TIERS = [
             "Google Cloud Skills Boost, and Microsoft Learn for Educators, alongside basic "
             "coding from Scratch through to Python."
         ),
-        "icon": "\u2699\ufe0f",
+        "icon": "gear-fill",
         "courses": [
             {
                 "title": "Coding Foundations",
                 "summary": "From block-based coding to real Python programs.",
-                "icon": "\U0001F4BB",
+                "icon": "laptop-fill",
                 "lessons": [
                     _lesson(
                         "From Scratch to Python",
@@ -856,7 +899,7 @@ TIERS = [
                         _svg(
                             _bg(),
                             _box(38, 55, 95, 30, "#fff", SKY_DARK), _label(85, 74, "score = 0", 11),
-                            _icon(205, 68, 38, "\U0001F501"), _label(205, 110, "Repeat", 10),
+                            _icon(205, 68, 38, "arrow-repeat"), _label(205, 110, "Repeat", 10),
                         ),
                         "A variable stores a value, and a loop repeats an action automatically.",
                     ),
@@ -892,8 +935,8 @@ TIERS = [
                         "Read the error message carefully - it usually names the exact line and type of mistake, which is the fastest way to start debugging.",
                         _svg(
                             _bg(),
-                            _icon(88, 60, 40, "\U0001F3AE"), _label(88, 102, "Guess the Number", 10),
-                            _icon(212, 60, 40, "\u2705"), _label(212, 102, "It Works!", 10),
+                            _icon(88, 60, 40, "controller"), _label(88, 102, "Guess the Number", 10),
+                            _icon(212, 60, 40, "check-circle-fill"), _label(212, 102, "It Works!", 10),
                         ),
                         "Planning input, logic, and output turns an idea into a working program.",
                     ),
@@ -902,7 +945,7 @@ TIERS = [
             {
                 "title": "Getting Started in the Cloud",
                 "summary": "First cloud accounts and first cloud-hosted mini-projects.",
-                "icon": "\u2601\ufe0f",
+                "icon": "cloud-fill",
                 "lessons": [
                     _lesson(
                         "Setting Up AWS Educate",
@@ -935,8 +978,8 @@ TIERS = [
                         "A new AWS Educate account typically starts with about $100 in free credits, and learners can register from age 13 with just an email address.",
                         _svg(
                             _bg(),
-                            _icon(88, 60, 42, "\U0001F393"), _label(88, 104, "AWS Educate", 10),
-                            _icon(212, 60, 40, "\U0001F4B3"), _label(212, 104, "$100 Credits", 10),
+                            _icon(88, 60, 42, "mortarboard-fill"), _label(88, 104, "AWS Educate", 10),
+                            _icon(212, 60, 40, "credit-card-fill"), _label(212, 104, "$100 Credits", 10),
                         ),
                         "AWS Educate gives students free credits and hundreds of hours of real cloud courses.",
                     ),
@@ -970,7 +1013,7 @@ TIERS = [
                         "'View only' stops anyone from accidentally - or deliberately - changing or deleting your original file, while still letting them see it.",
                         _svg(
                             _bg(),
-                            _icon(88, 60, 36, "\U0001F4C1"), _arrow(150, 60), _icon(212, 60, 42, "\u2601\uFE0F"),
+                            _icon(88, 60, 36, "folder-fill"), _arrow(150, 60), _icon(212, 60, 42, "cloud-fill"),
                             _label(150, 108, "Upload & Share", 10),
                         ),
                         "Uploading to the cloud means your files live on a server, reachable from anywhere.",
@@ -1006,7 +1049,7 @@ TIERS = [
                         _svg(
                             _bg(),
                             _box(65, 35, 170, 65, "#fff", SKY_DARK), _label(150, 55, "yoursite.com", 10),
-                            _icon(150, 82, 28, "\U0001F30D"),
+                            _icon(150, 82, 28, "globe-europe-africa"),
                         ),
                         "Hosting puts your web page on a server that's online and reachable 24/7.",
                     ),
@@ -1042,7 +1085,7 @@ TIERS = [
                             _bg(),
                             _box(45, 42, 90, 50, SKY, SKY_DARK), _label(90, 71, "AWS", 13, "#fff", "800"),
                             _box(165, 42, 90, 50, SUN, SKY_DARK), _label(210, 71, "GCP", 13, INK, "800"),
-                            _icon(150, 115, 22, "\U0001F50D"),
+                            _icon(150, 115, 22, "search"),
                         ),
                         "Different cloud providers look different, but they solve the same big problems.",
                     ),
@@ -1051,7 +1094,7 @@ TIERS = [
             {
                 "title": "AWS for Kids: Explore Amazon's Cloud",
                 "summary": "A dedicated, hands-on journey into AWS: what it is, its core services, and your first real projects.",
-                "icon": "\U0001F7E0",
+                "icon": "amazon",
                 "lessons": [
                     _lesson(
                         "What Is AWS and Why Does It Matter?",
@@ -1087,8 +1130,8 @@ TIERS = [
                         _svg(
                             _bg(AWS_BG),
                             _box(100, 32, 100, 75, AWS_ORANGE, AWS_ORANGE_DARK), _label(150, 76, "AWS", 24, "#fff", "800"),
-                            _icon(48, 52, 24, "\U0001F3E6"), _icon(252, 52, 24, "\U0001F3AC"),
-                            _icon(48, 98, 24, "\U0001F3E5"), _icon(252, 98, 24, "\U0001F3AE"),
+                            _icon(48, 52, 24, "bank2"), _icon(252, 52, 24, "film"),
+                            _icon(48, 98, 24, "hospital-fill"), _icon(252, 98, 24, "controller"),
                         ),
                         "AWS quietly powers banks, streaming services, games and more, behind the scenes.",
                     ),
@@ -1163,7 +1206,7 @@ TIERS = [
                         _svg(
                             _bg(AWS_BG),
                             _box(58, 32, 184, 55, "#fff", AWS_ORANGE), _label(150, 54, "Lab Catalogue", 11),
-                            _icon(150, 78, 22, "\U0001F3C6"), _label(150, 115, "Earn Your First Badge", 10),
+                            _icon(150, 78, 22, "trophy-fill"), _label(150, 115, "Earn Your First Badge", 10),
                         ),
                         "Your AWS Educate dashboard tracks labs completed, badges earned, and credits remaining.",
                     ),
@@ -1198,8 +1241,8 @@ TIERS = [
                         "Anyone on the internet with the link could view your files - which is why it's important to double-check permissions before making anything public.",
                         _svg(
                             _bg(AWS_BG),
-                            _icon(150, 52, 46, "\U0001FAA3"), _label(150, 96, "Your S3 Bucket", 11),
-                            _icon(78, 98, 22, "\U0001F512"), _icon(222, 98, 22, "\U0001F30D"),
+                            _icon(150, 52, 46, "bucket-fill"), _label(150, 96, "Your S3 Bucket", 11),
+                            _icon(78, 98, 22, "lock-fill"), _icon(222, 98, 22, "globe-europe-africa"),
                         ),
                         "An S3 bucket is your own named storage container in the cloud.",
                     ),
@@ -1234,7 +1277,7 @@ TIERS = [
                         _svg(
                             _bg(AWS_BG),
                             _box(58, 32, 184, 52, "#fff", AWS_ORANGE), _label(150, 54, "your-bucket.s3-website", 9),
-                            _icon(150, 98, 30, "\U0001F680"),
+                            _icon(150, 98, 30, "rocket-takeoff-fill"),
                         ),
                         "Flip one setting, and your S3 bucket becomes a live website address.",
                     ),
@@ -1271,9 +1314,9 @@ TIERS = [
                         "AWS re/Start teaches skills like Linux, Python, networking, security and databases - all things Cloud for Kids already introduces a little at a time.",
                         _svg(
                             _bg(AWS_BG),
-                            _icon(48, 78, 28, "\U0001F3EB"), _arrow(100, 78),
-                            _icon(150, 78, 30, "\u2601\uFE0F"), _arrow(200, 78),
-                            _icon(252, 78, 32, "\U0001F4BC"),
+                            _icon(48, 78, 28, "buildings-fill"), _arrow(100, 78),
+                            _icon(150, 78, 30, "cloud-fill"), _arrow(200, 78),
+                            _icon(252, 78, 32, "briefcase-fill"),
                             _label(150, 120, "School \u2192 Cloud Skills \u2192 Career", 9),
                         ),
                         "From today's lessons to AWS Educate to AWS re/Start - a real path into a cloud career.",
@@ -1293,12 +1336,12 @@ TIERS = [
             "services, with an emphasis on portfolio-building toward AWS Educate, AWS re/Start "
             "and university Computer Science admission."
         ),
-        "icon": "\U0001F680",
+        "icon": "rocket-takeoff-fill",
         "courses": [
             {
                 "title": "Cloud Databases & Web Apps",
                 "summary": "Build and host a simple database-backed web application.",
-                "icon": "\U0001F5C3\ufe0f",
+                "icon": "archive-fill",
                 "lessons": [
                     _lesson(
                         "Databases 101",
@@ -1426,7 +1469,7 @@ TIERS = [
             {
                 "title": "AI & Cloud Services",
                 "summary": "An introductory look at AI services that run on the cloud.",
-                "icon": "\U0001F916",
+                "icon": "robot",
                 "lessons": [
                     _lesson(
                         "What Is Cloud AI?",
@@ -1511,7 +1554,7 @@ TIERS = [
             {
                 "title": "Capstone: Your Cloud Portfolio",
                 "summary": "Package your best work into a portfolio for AWS Educate, re/Start or university applications.",
-                "icon": "\U0001F393",
+                "icon": "mortarboard-fill",
                 "lessons": [
                     _lesson(
                         "Choosing Your Capstone Project",
@@ -1656,7 +1699,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         for tier_data in TIERS:
-            tier, _ = Tier.objects.update_or_create(
+            tier, _ = Tier.objects.get_or_create(
                 slug=slugify(tier_data["name"]),
                 defaults={
                     "name": tier_data["name"],
@@ -1670,7 +1713,7 @@ class Command(BaseCommand):
             )
 
             for c_index, course_data in enumerate(tier_data["courses"]):
-                course, _ = Course.objects.update_or_create(
+                course, _ = Course.objects.get_or_create(
                     slug=slugify(course_data["title"]),
                     defaults={
                         "tier": tier,
@@ -1682,7 +1725,8 @@ class Command(BaseCommand):
                 )
 
                 for l_index, lesson_data in enumerate(course_data["lessons"]):
-                    Lesson.objects.update_or_create(
+                    # get_or_create: never overwrite lessons already in the database (admin edits win)
+                    Lesson.objects.get_or_create(
                         course=course,
                         slug=slugify(lesson_data["title"]),
                         defaults={
@@ -1697,17 +1741,21 @@ class Command(BaseCommand):
                     )
 
         badges = [
-            ("First Lesson", "Completed your very first lesson.", "\U0001F680", "Complete 1 lesson"),
-            ("Rising Cloud", "Completed 5 lessons.", "\u2601\ufe0f", "Complete 5 lessons"),
-            ("Cloud Champion", "Completed 15 lessons across the programme.", "\U0001F3C6", "Complete 15 lessons"),
+            ("First Lesson", "Completed your very first lesson.", "rocket-takeoff-fill", "Complete 1 lesson"),
+            ("Rising Cloud", "Completed 5 lessons.", "cloud-fill", "Complete 5 lessons"),
+            ("Cloud Champion", "Completed 15 lessons across the programme.", "trophy-fill", "Complete 15 lessons"),
+            ("Lab Explorer", "Finished your first Practice Lab.", "wrench-adjustable", "Finish 1 Practice Lab"),
+            ("Lab Master", "Finished every Practice Lab.", "stars", "Finish all Practice Labs"),
+            ("3-Day Streak", "Learned three days in a row.", "fire", "Learn 3 days in a row"),
+            ("7-Day Streak", "Learned seven days in a row.", "lightning-charge-fill", "Learn 7 days in a row"),
         ]
         for name, description, icon, criteria in badges:
-            Badge.objects.update_or_create(
+            Badge.objects.get_or_create(
                 name=name, defaults={"description": description, "icon": icon, "criteria": criteria}
             )
 
         for name, description in PARTNERS:
-            Partner.objects.update_or_create(name=name, defaults={"description": description})
+            Partner.objects.get_or_create(name=name, defaults={"description": description})
 
         if not User.objects.filter(username="demo_learner").exists():
             demo = User.objects.create_user(

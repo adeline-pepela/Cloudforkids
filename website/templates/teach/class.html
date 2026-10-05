@@ -1,0 +1,188 @@
+{% extends "teach/base.html" %}
+{% block title %}{{ r.classroom.name }}{% endblock %}
+{% block content %}
+{% with c=r.classroom %}
+
+<div class="fm-head">
+  <div class="fm-avatar" aria-hidden="true"><i class="bi bi-easel2-fill"></i></div>
+  <div class="flex-grow-1">
+    <h1 class="l-title mb-1">{{ c.name }}</h1>
+    <div class="fm-meta">
+      <span><i class="bi bi-signpost-split-fill" aria-hidden="true"></i> {{ c.tier.name|default:"All tiers" }}</span>
+      {% if c.school_name %}<span><i class="bi bi-building-fill" aria-hidden="true"></i> {{ c.school_name }}</span>{% endif %}
+      {% if c.description %}<span><i class="bi bi-info-circle-fill" aria-hidden="true"></i> {{ c.description }}</span>{% endif %}
+      {% if c.archived %}<span class="text-danger fw-bold">Archived</span>{% endif %}
+    </div>
+  </div>
+  <div class="d-flex flex-wrap gap-2 no-print">
+    <a href="{% url 'teach:class_export' c.pk %}" class="btn btn-outline-cloud"><i class="bi bi-file-earmark-spreadsheet-fill" aria-hidden="true"></i> Export CSV</a>
+    <button type="button" class="btn btn-outline-cloud" onclick="window.print()"><i class="bi bi-printer-fill" aria-hidden="true"></i> Print</button>
+    <a href="{% url 'teach:class_edit' c.pk %}" class="btn btn-outline-cloud"><i class="bi bi-pencil-fill" aria-hidden="true"></i> Edit</a>
+  </div>
+</div>
+
+<!-- Join code -->
+<div class="l-card mb-4 pf-code" style="height:auto;">
+  <div>
+    <h3 class="mb-1"><i class="bi bi-key-fill text-warning" aria-hidden="true"></i> Class join code</h3>
+    <p class="text-secondary small mb-0">Learners open <strong>My Profile</strong>, find <strong>My classes</strong> and type this code to join {{ c.name }}.</p>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <div class="pf-code-val" id="tc-code">{{ c.join_code }}</div>
+    <button type="button" class="btn btn-outline-cloud no-print" id="tc-copy" aria-label="Copy join code"><i class="bi bi-clipboard-fill" aria-hidden="true"></i> Copy</button>
+  </div>
+</div>
+
+<div class="fm-kpis">
+  <div class="fm-kpi purple"><i class="bi bi-people-fill" aria-hidden="true"></i><strong>{{ r.count }}</strong><span>learner{{ r.count|pluralize }}</span></div>
+  <div class="fm-kpi sky"><i class="bi bi-signpost-2-fill" aria-hidden="true"></i><strong>{{ r.avg_progress }}%</strong><span>average progress</span></div>
+  <div class="fm-kpi grass"><i class="bi bi-patch-check-fill" aria-hidden="true"></i><strong>{% if r.avg_score is not None %}{{ r.avg_score }}%{% else %}-{% endif %}</strong><span>quiz average</span></div>
+  <div class="fm-kpi sun"><i class="bi bi-lightning-charge-fill" aria-hidden="true"></i><strong>{{ r.active_week }}/{{ r.count }}</strong><span>active this week</span></div>
+  <div class="fm-kpi coral"><i class="bi bi-bell-fill" aria-hidden="true"></i><strong>{{ r.attention|length }}</strong><span>need attention</span></div>
+</div>
+
+<!-- Roster -->
+<div class="l-card mb-4" style="height:auto;">
+  <h3><i class="bi bi-people-fill text-primary" aria-hidden="true"></i> Learners</h3>
+  {% if r.roster %}
+  <div class="tc-table-wrap">
+    <table class="tc-table">
+      <thead><tr><th>Learner</th><th>Progress</th><th>Quiz avg</th><th>Streak</th><th>Labs</th><th>Last active</th><th>Status</th><th class="no-print"></th></tr></thead>
+      <tbody>
+        {% for row in r.roster %}
+        <tr>
+          <td><a href="{% url 'teach:learner' c.pk row.user.pk %}"><strong>{{ row.name }}</strong></a><small>@{{ row.user.username }}</small></td>
+          <td style="min-width:140px;"><div class="d-flex align-items-center gap-2"><span class="fm-bar flex-grow-1"><span style="width: {{ row.percent }}%"></span></span><b>{{ row.percent }}%</b></div></td>
+          <td>{% if row.avg_score is not None %}{{ row.avg_score }}%{% else %}-{% endif %}</td>
+          <td>{{ row.streak }}d</td>
+          <td>{{ row.labs }}</td>
+          <td class="text-secondary">{{ row.last_text }}</td>
+          <td><span class="tc-status {{ row.status }}">{{ row.status_label }}</span></td>
+          <td class="no-print text-end">
+            <form method="post" action="{% url 'teach:member_remove' c.pk row.user.pk %}" onsubmit="return confirm('Remove {{ row.name|escapejs }} from this class? Their account and progress are not deleted.');">
+              {% csrf_token %}<button class="btn btn-link btn-sm text-secondary p-0" title="Remove from class" aria-label="Remove {{ row.name }} from class"><i class="bi bi-person-dash" aria-hidden="true"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="fm-empty"><i class="bi bi-person-plus" aria-hidden="true"></i> No learners yet. Share the join code above and they will appear here as soon as they join.</p>
+  {% endif %}
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Assignments -->
+  <div class="col-lg-7">
+    <div class="l-card">
+      <h3><i class="bi bi-clipboard-check-fill text-success" aria-hidden="true"></i> Assignments</h3>
+      {% for item in r.assignments %}
+      <div class="fm-row {% if item.overdue and item.finished < r.count %}warn{% else %}ok{% endif %}">
+        <div>
+          <strong>{{ item.a.course.title }}</strong>
+          <small>{% if item.a.due_date %}Due {{ item.a.due_date|date:"j M" }}{% if item.overdue %} (overdue){% elif item.days_left == 0 %} (today){% else %} ({{ item.days_left }} day{{ item.days_left|pluralize }} left){% endif %}{% else %}No due date{% endif %} &middot; {{ item.finished }} of {{ r.count }} finished &middot; average {{ item.avg }}%{% if item.a.note %} &middot; {{ item.a.note }}{% endif %}</small>
+        </div>
+        <form method="post" action="{% url 'teach:assignment_delete' c.pk item.a.pk %}" class="no-print">{% csrf_token %}<button class="btn btn-link btn-sm text-secondary p-0" aria-label="Remove assignment"><i class="bi bi-trash3" aria-hidden="true"></i></button></form>
+      </div>
+      {% empty %}
+      <p class="fm-empty"><i class="bi bi-clipboard" aria-hidden="true"></i> No assignments yet. Pick a course below to give your class a goal.</p>
+      {% endfor %}
+      <form method="post" action="{% url 'teach:assignment_add' c.pk %}" class="tc-assign no-print">
+        {% csrf_token %}
+        <div class="row g-2">
+          <div class="col-md-5">{{ assignment_form.course }}</div>
+          <div class="col-md-3">{{ assignment_form.due_date }}</div>
+          <div class="col-md-4">{{ assignment_form.note }}</div>
+        </div>
+        <button type="submit" class="btn btn-cloud mt-2"><i class="bi bi-plus-circle-fill" aria-hidden="true"></i> Assign to class</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Attention + tips -->
+  <div class="col-lg-5">
+    <div class="l-card">
+      <h3><i class="bi bi-bell-fill text-warning" aria-hidden="true"></i> Needs attention</h3>
+      {% for row in r.attention %}
+      <div class="fm-row {% if row.status == 'help' %}warn{% else %}todo{% endif %}">
+        <div><a href="{% url 'teach:learner' c.pk row.user.pk %}"><strong>{{ row.name }}</strong></a><small>{{ row.status_label }} &middot; last active {{ row.last_text }}</small></div>
+        <span class="fm-score {% if row.status == 'help' %}warn{% else %}todo{% endif %}">{{ row.percent }}%</span>
+      </div>
+      {% empty %}
+      <p class="fm-empty"><i class="bi bi-emoji-sunglasses-fill" aria-hidden="true"></i> Everyone is on track.</p>
+      {% endfor %}
+      <hr>
+      <h6 class="fw-bold"><i class="bi bi-lightbulb-fill text-warning" aria-hidden="true"></i> Suggestions</h6>
+      <ul class="fm-tips mb-0">{% for t in tips %}<li><i class="bi bi-check2-circle" aria-hidden="true"></i><span>{{ t }}</span></li>{% endfor %}</ul>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-7">
+    <div class="l-card">
+      <h3><i class="bi bi-bar-chart-fill text-primary" aria-hidden="true"></i> Learners active: last 14 days</h3>
+      <div class="fm-chart" role="img" aria-label="Number of learners active each day for the last 14 days">
+        {% for d in r.series %}
+        <div class="fm-col{% if d.today %} today{% endif %}" title="{{ d.date|date:'D j M' }}: {{ d.count }}">
+          <div class="fm-bar-wrap"><span class="fm-bar-v{% if not d.count %} empty{% endif %}" style="height: {{ d.height }}%">{% if d.count %}{{ d.count }}{% endif %}</span></div>
+          <small>{{ d.label }}</small>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="l-card">
+      <h3><i class="bi bi-exclamation-diamond-fill text-danger" aria-hidden="true"></i> Hardest topics</h3>
+      <p class="small text-secondary">Lessons where learners scored lowest or failed the quiz.</p>
+      {% for f in r.hard %}
+      <div class="fm-row warn"><div><strong>{{ f.lesson.title }}</strong><small>{{ f.course.title }} &middot; {{ f.failed }} of {{ f.attempts }} did not pass</small></div><span class="fm-score warn">{{ f.avg }}%</span></div>
+      {% empty %}
+      <p class="fm-empty"><i class="bi bi-hourglass-split" aria-hidden="true"></i> Not enough quiz results yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Lesson by lesson -->
+<div class="l-card mb-4" style="height:auto;">
+  <h3><i class="bi bi-diagram-3-fill text-primary" aria-hidden="true"></i> Lesson by lesson</h3>
+  <p class="small text-secondary">How many learners have completed each lesson, and how they scored.</p>
+  <div class="tc-table-wrap">
+    <table class="tc-table">
+      <thead><tr><th>Lesson</th><th>Completed</th><th>Quiz avg</th></tr></thead>
+      <tbody>
+        {% for f in r.funnel %}
+        <tr>
+          <td><strong>{{ f.lesson.title }}</strong><small>{{ f.course.title }}</small></td>
+          <td style="min-width:180px;"><div class="d-flex align-items-center gap-2"><span class="fm-bar flex-grow-1"><span style="width: {{ f.percent }}%"></span></span><b>{{ f.done }}/{{ r.count }}</b></div></td>
+          <td>{% if f.avg is not None %}<b class="{% if f.avg >= 70 %}text-success{% else %}text-danger{% endif %}">{{ f.avg }}%</b>{% else %}-{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<form method="post" action="{% url 'teach:class_archive' c.pk %}" class="text-end no-print">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-link text-secondary btn-sm"><i class="bi bi-archive" aria-hidden="true"></i> {% if c.archived %}Restore this class{% else %}Archive this class{% endif %}</button>
+</form>
+{% endwith %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var btn = document.getElementById('tc-copy'), code = document.getElementById('tc-code');
+  if (!btn || !code) return;
+  btn.addEventListener('click', function () {
+    var done = function () { btn.innerHTML = '<i class="bi bi-check2"></i> Copied'; setTimeout(function () { btn.innerHTML = '<i class="bi bi-clipboard-fill"></i> Copy'; }, 1800); };
+    if (navigator.clipboard) navigator.clipboard.writeText(code.textContent.trim()).then(done);
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,107 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}My Learning{% endblock %} | Cloud for Kids</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><path fill=%22%230ea5e9%22 d=%22M25 75a18 18 0 0 1-1-36 26 26 0 0 1 50-6 21 21 0 0 1 2 42z%22/></svg>">
+  <link href="{% static 'vendor/bootstrap/bootstrap.min.css' %}" rel="stylesheet">
+  <link href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}" rel="stylesheet">
+  <link href="{% static 'vendor/fonts/fonts.css' %}" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/extras.css' %}">
+  <link rel="stylesheet" href="{% static 'css/learner.css' %}">
+  <link rel="stylesheet" href="{% static 'css/family.css' %}">
+  <script src="{% static 'js/site.js' %}"></script>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="learner-app">
+<div class="l-shell">
+  <aside class="l-side" id="l-side" aria-label="Main menu">
+    <a class="l-brand" href="{% block brand_url %}{% url 'dashboard:home' %}{% endblock %}">
+      <span class="l-brand-ico"><i class="bi bi-cloud-fill" aria-hidden="true"></i></span>
+      <span>Cloud for Kids</span>
+    </a>
+
+    {% block side_nav %}
+    <nav class="l-nav">
+      <a class="l-link{% if nav == 'home' %} active{% endif %}" href="{% url 'dashboard:home' %}"><i class="bi bi-house-fill" aria-hidden="true"></i> Home</a>
+      <a class="l-link{% if nav == 'path' %} active{% endif %}" href="{% url 'dashboard:path' %}"><i class="bi bi-signpost-split-fill" aria-hidden="true"></i> My Path</a>
+      <a class="l-link{% if nav == 'courses' or request.resolver_match.namespace == 'courses' %} active{% endif %}" href="{% url 'dashboard:courses' %}"><i class="bi bi-journal-check" aria-hidden="true"></i> My Courses</a>
+      <a class="l-link{% if nav == 'labs' %} active{% endif %}" href="{% url 'dashboard:labs' %}"><i class="bi bi-joystick" aria-hidden="true"></i> Practice Lab</a>
+      <a class="l-link{% if nav == 'achievements' %} active{% endif %}" href="{% url 'dashboard:achievements' %}"><i class="bi bi-trophy-fill" aria-hidden="true"></i> Achievements</a>
+      <a class="l-link{% if request.resolver_match.url_name == 'profile' %} active{% endif %}" href="{% url 'accounts:profile' %}"><i class="bi bi-person-circle" aria-hidden="true"></i> My Profile</a>
+    </nav>
+    {% endblock %}
+
+    <div class="l-side-foot">
+      <div class="l-tip">
+        <img src="{% static 'img/nimbus.svg' %}" alt="" width="54">
+        <p>{% block side_tip %}Nimbus says: learn a little every day to keep your streak going!{% endblock %}</p>
+      </div>
+      <form method="post" action="{% url 'accounts:logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="l-logout"><i class="bi bi-box-arrow-left" aria-hidden="true"></i> Log out</button>
+      </form>
+    </div>
+  </aside>
+  <div class="l-backdrop" id="l-backdrop"></div>
+
+  <div class="l-main">
+    <header class="l-top">
+      <button type="button" class="l-burger" id="l-burger" aria-label="Open menu"><i class="bi bi-list" aria-hidden="true"></i></button>
+      <div class="l-hello">Hi, <strong>{{ user.first_name|default:user.username }}</strong></div>
+      {% if stats %}
+      <div class="l-chips">
+        <span class="l-chip fire" title="Learning streak"><i class="bi bi-fire" aria-hidden="true"></i> {{ stats.streak }} day{{ stats.streak|pluralize }}</span>
+        <span class="l-chip star" title="Level {{ stats.level }}: {{ stats.level_name }}"><i class="bi bi-star-fill" aria-hidden="true"></i> {{ stats.xp }} XP</span>
+      </div>
+      {% endif %}
+    </header>
+
+    {% if messages %}
+    <div class="l-content pb-0">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show rounded-4 mb-2" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <main class="l-content" id="content-start">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<button type="button" id="a11y-fab" class="a11y-fab" aria-expanded="false" aria-controls="a11y-panel" aria-label="Display and accessibility options">
+  <i class="bi bi-universal-access-circle" aria-hidden="true"></i>
+</button>
+<div id="a11y-panel" class="a11y-panel" role="dialog" aria-label="Display and accessibility options">
+  <h6>Display</h6>
+  <button type="button" class="btn btn-outline-cloud btn-sm w-100 mb-3" data-pref="theme" data-value="toggle"><i class="bi bi-moon-stars-fill" aria-hidden="true"></i> Light / dark mode</button>
+  <h6>Text size</h6>
+  <div class="btn-group w-100 mb-3" role="group">
+    <button type="button" class="btn btn-outline-cloud btn-sm" data-pref="text" data-value="md">A</button>
+    <button type="button" class="btn btn-outline-cloud btn-sm" data-pref="text" data-value="lg">A+</button>
+    <button type="button" class="btn btn-outline-cloud btn-sm" data-pref="text" data-value="xl">A++</button>
+  </div>
+  <h6>Reading</h6>
+  <button type="button" class="btn btn-outline-cloud btn-sm w-100" data-pref="easy" data-value="toggle"><i class="bi bi-eye-fill" aria-hidden="true"></i> Easy-read font</button>
+</div>
+
+<script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'js/quiz.js' %}"></script>
+<script>
+  (function () {
+    var b = document.getElementById('l-burger'), back = document.getElementById('l-backdrop');
+    function t(open) { document.body.classList.toggle('l-open', open); }
+    if (b) b.addEventListener('click', function () { t(true); });
+    if (back) back.addEventListener('click', function () { t(false); });
+  })();
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

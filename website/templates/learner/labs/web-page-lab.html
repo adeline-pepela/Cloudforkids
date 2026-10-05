@@ -1,0 +1,24 @@
+<div class="lab-goal"><i class="bi bi-bullseye" aria-hidden="true"></i> Goal: build a tiny web page about you, then publish it to the cloud (pretend!).</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-6">
+    <h6 class="fw-bold">1. Edit the code</h6>
+    <textarea id="wp-code" class="wp-code" spellcheck="false" aria-label="HTML code editor">&lt;h1&gt;Hello!&lt;/h1&gt;
+&lt;p&gt;Write something about yourself here.&lt;/p&gt;</textarea>
+  </div>
+  <div class="col-md-6">
+    <h6 class="fw-bold">2. See your page</h6>
+    <iframe id="wp-frame" class="wp-frame" sandbox title="Live preview of your web page"></iframe>
+  </div>
+</div>
+
+<h6 class="fw-bold">Your missions</h6>
+<ul class="checklist mb-3" id="wp-checks">
+  <li data-rule="h1"><i class="bi bi-circle" aria-hidden="true"></i> Change the heading to your own title</li>
+  <li data-rule="p"><i class="bi bi-circle" aria-hidden="true"></i> Write a paragraph with at least 5 words about you</li>
+  <li data-rule="color"><i class="bi bi-circle" aria-hidden="true"></i> Add some colour, e.g. <code>&lt;h1 style="color: tomato"&gt;</code></li>
+</ul>
+<p class="small text-secondary"><i class="bi bi-lightbulb-fill text-warning" aria-hidden="true"></i> Tags come in pairs: <code>&lt;h1&gt;</code> opens a big heading and <code>&lt;/h1&gt;</code> closes it.</p>
+
+<button type="button" class="btn btn-cloud btn-big" id="wp-publish" disabled><i class="bi bi-cloud-arrow-up-fill" aria-hidden="true"></i> Publish to the cloud</button>
+<div class="mt-3 fw-bold" id="wp-status" aria-live="polite"></div>

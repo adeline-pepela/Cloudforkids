@@ -1,0 +1,27 @@
+{% extends "learner/base.html" %}
+{% load static %}
+{% block title %}{{ lab.title }}{% endblock %}
+{% block content %}
+<a href="{% url 'dashboard:labs' %}" class="text-decoration-none fw-bold small"><i class="bi bi-arrow-left" aria-hidden="true"></i> All labs</a>
+<div class="d-flex align-items-center gap-3 mt-2 mb-3">
+  <span class="lab-ico ico tone-{{ lab.tone }}"><i class="bi {{ lab.icon }}" aria-hidden="true"></i></span>
+  <div>
+    <h1 class="l-title mb-0">{{ lab.title }}</h1>
+    <div class="lab-meta"><span><i class="bi bi-clock" aria-hidden="true"></i> about {{ lab.minutes }} min</span><span><i class="bi bi-lightbulb" aria-hidden="true"></i> {{ lab.skill }}</span>{% if done %}<span class="done-pill">Done</span>{% endif %}</div>
+  </div>
+</div>
+
+<div class="lab-stage" id="lab" data-lab="{{ lab.slug }}" data-complete-url="{% url 'dashboard:lab_complete' lab.slug %}" data-done="{{ done|yesno:'1,0' }}" data-user="{{ user.username }}">
+  {% if has_template %}{% include "learner/labs/"|add:lab.slug|add:".html" %}{% else %}<p class="text-secondary">This lab is being built. Check back soon!</p>{% endif %}
+
+  <div class="lab-done-banner" id="lab-done" role="status">
+    <h4 class="mb-1 text-white"><i class="bi bi-stars" aria-hidden="true"></i> Lab complete!</h4>
+    <p class="mb-2" id="lab-done-text">Great work!</p>
+    <a href="{% url 'dashboard:labs' %}" class="btn btn-yellow btn-big">More labs</a>
+    <a href="{% url 'dashboard:home' %}" class="btn btn-outline-light btn-big">Back home</a>
+  </div>
+</div>
+{% csrf_token %}
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/labs.js' %}"></script>{% endblock %}

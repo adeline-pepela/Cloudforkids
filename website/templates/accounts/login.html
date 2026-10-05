@@ -1,34 +1,54 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Log in{% endblock %}
 {% block content %}
 <section class="container py-5">
-  <div class="row justify-content-center">
-    <div class="col-lg-5">
-      <div class="text-center mb-4">
+  <div class="row justify-content-center g-4">
+    <div class="col-lg-5 order-lg-2">
+      <div class="auth-aside">
+        {% include "partials/slot.html" with name="login" icon="bi-laptop-fill" tone="sky" alt="A learner logging in to continue their lessons" cls="" %}
+        <h3 class="mt-3 mb-0">Pick up where you left off</h3>
+        <ul>
+          <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Continue your lessons and quizzes</li>
+          <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Track your progress on every course</li>
+          <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Collect badges as you learn</li>
+        </ul>
+      </div>
+    </div>
+    <div class="col-lg-5 order-lg-1">
+      <div class="mb-4">
         <div class="section-eyebrow">Welcome back</div>
         <h1 class="section-title">Log in to Cloud for Kids</h1>
+        <p class="text-secondary mb-0">Enter your username and password to get back to learning.</p>
       </div>
-      <div class="tier-card p-4 p-md-5">
+      <div class="tier-card p-4 p-md-5" style="height:auto;">
         <form method="post" novalidate>
           {% csrf_token %}
+          {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
           <div class="mb-3">
-            <label class="form-label fw-bold">Username</label>
-            <input type="text" name="username" class="form-control rounded-3" required autofocus>
+            <label class="form-label fw-bold" for="id_username">Username</label>
+            <div class="input-group">
+              <span class="input-group-text bg-white"><i class="bi bi-person-fill" aria-hidden="true"></i></span>
+              <input type="text" name="username" id="id_username" class="form-control" autocomplete="username" required autofocus>
+            </div>
           </div>
           <div class="mb-3">
-            <label class="form-label fw-bold">Password</label>
-            <input type="password" name="password" class="form-control rounded-3" required>
+            <label class="form-label fw-bold" for="id_password">Password</label>
+            <div class="input-group">
+              <span class="input-group-text bg-white"><i class="bi bi-lock-fill" aria-hidden="true"></i></span>
+              <input type="password" name="password" id="id_password" class="form-control" autocomplete="current-password" required>
+            </div>
           </div>
           {% if form.errors %}
-            <div class="alert alert-danger rounded-4">Incorrect username or password.</div>
+            <div class="alert alert-danger rounded-4"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> Incorrect username or password.</div>
           {% endif %}
-          <button type="submit" class="btn btn-cloud btn-lg w-100 mt-2">Log in</button>
+          <button type="submit" class="btn btn-cloud btn-lg w-100 mt-2"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Log in</button>
         </form>
         <p class="text-center small text-secondary mt-3 mb-0">
           New here? <a href="{% url 'accounts:signup' %}" class="fw-bold">Create a free account</a>
         </p>
         <p class="text-center small text-secondary mt-2 mb-0">
-          Demo login: <code>demo_learner</code> / <code>CloudForKids2026</code>
+          Parent or teacher? <a href="{% url 'core:contact' %}" class="fw-bold">Contact us</a> for help getting set up.
         </p>
       </div>
     </div>

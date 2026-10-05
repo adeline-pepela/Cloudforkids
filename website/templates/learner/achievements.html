@@ -1,0 +1,30 @@
+{% extends "learner/base.html" %}
+{% block title %}Achievements{% endblock %}
+{% block content %}
+<h1 class="l-title">My Achievements</h1>
+<p class="l-sub">Collect badges by learning, practising and keeping your streak.</p>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-4"><div class="l-tile"><span class="ico tone-sun"><i class="bi bi-star-fill" aria-hidden="true"></i></span><div><div class="num">Level {{ stats.level }}</div><div class="lbl">{{ stats.level_name }} &middot; {{ stats.xp }} XP</div></div></div></div>
+  <div class="col-sm-4"><div class="l-tile"><span class="ico tone-orange"><i class="bi bi-fire" aria-hidden="true"></i></span><div><div class="num">{{ stats.streak }}</div><div class="lbl">day streak</div></div></div></div>
+  <div class="col-sm-4"><div class="l-tile"><span class="ico tone-grass"><i class="bi bi-trophy-fill" aria-hidden="true"></i></span><div><div class="num">{{ earned|length }}</div><div class="lbl">badges earned</div></div></div></div>
+</div>
+
+<h2 class="l-title" style="font-size:1.4rem;">Earned</h2>
+<div class="row g-3 mb-4">
+  {% for lb in earned %}
+  <div class="col-6 col-md-4 col-lg-3"><div class="badge-tile"><div class="b-ico"><i class="bi bi-{{ lb.badge.icon }}" aria-hidden="true"></i></div><h6>{{ lb.badge.name }}</h6><p>{{ lb.badge.description }}</p><p class="mt-1">{{ lb.earned_at|date:"j M Y" }}</p></div></div>
+  {% empty %}
+  <div class="col-12"><div class="l-card">No badges yet. Finish a lesson or a Practice Lab to earn your first one!</div></div>
+  {% endfor %}
+</div>
+
+{% if locked %}
+<h2 class="l-title" style="font-size:1.4rem;">Still to unlock</h2>
+<div class="row g-3">
+  {% for b in locked %}
+  <div class="col-6 col-md-4 col-lg-3"><div class="badge-tile locked"><div class="b-ico"><i class="bi bi-lock-fill" aria-hidden="true"></i></div><h6>{{ b.name }}</h6><p>{{ b.criteria|default:b.description }}</p></div></div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

@@ -9,6 +9,8 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
+    path('teach/', include('dashboard.teach_urls')),
+    path('family/', include('dashboard.family_urls')),
     path('dashboard/', include('dashboard.urls')),
     path('learn/', include('courses.urls')),
     path('', include('core.urls')),

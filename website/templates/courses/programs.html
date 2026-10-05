@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Programs{% endblock %}
 {% block content %}
 <section class="container py-5">
@@ -11,21 +12,36 @@
     </p>
   </div>
 
+  <div class="filter-bar" role="group" aria-label="Filter courses">
+    <button type="button" class="filter-chip active" data-tier="all">All tiers</button>
+    {% for tier in tiers %}<button type="button" class="filter-chip" data-tier="{{ tier.slug }}">{{ tier.name }}</button>{% endfor %}
+    <input type="search" id="course-search" class="form-control rounded-pill" style="max-width:240px;" placeholder="Search courses..." aria-label="Search courses">
+    <a href="{% url 'core:find_path' %}" class="btn btn-outline-cloud btn-sm"><i class="bi bi-compass-fill" aria-hidden="true"></i> Not sure? Find my tier</a>
+  </div>
+  <p id="no-results" class="text-center text-secondary d-none">No courses match that search.</p>
+
   {% for tier in tiers %}
-  <div id="{{ tier.slug }}" class="mb-5">
+  <div id="{{ tier.slug }}" class="mb-5 tier-section" data-tier="{{ tier.slug }}">
+    <div class="row align-items-center g-4 mb-3">
+      <div class="col-md-4 {% if forloop.counter|divisibleby:2 %}order-md-2{% endif %}">
+        <div class="rounded-4 overflow-hidden shadow-sm">{% if forloop.counter == 1 %}{% include "partials/slot.html" with name="program-1" icon="bi-emoji-smile-fill" tone="sun" alt="Young learners exploring digital basics" cls="" %}{% elif forloop.counter == 2 %}{% include "partials/slot.html" with name="program-2" icon="bi-code-slash" tone="sky" alt="Learners coding together" cls="" %}{% else %}{% include "partials/slot.html" with name="program-3" icon="bi-cloud-fill" tone="purple" alt="Teenagers building on the cloud" cls="" %}{% endif %}</div>
+      </div>
+      <div class="col-md-8">
     <div class="d-flex align-items-center gap-3 mb-3">
-      <span class="fs-1">{{ tier.icon }}</span>
+      <span class="fs-1"><i class="bi bi-{{ tier.icon }}" aria-hidden="true"></i></span>
       <div>
         <h2 class="mb-0">{{ tier.name }} <span class="badge-pill">{{ tier.grade_range }}</span></h2>
         <p class="text-secondary mb-0">{{ tier.cbc_alignment }}</p>
       </div>
     </div>
     <p class="text-secondary">{{ tier.description|default:tier.summary }}</p>
+      </div>
+    </div>
     <div class="row g-4">
       {% for course in tier.courses.all %}
-      <div class="col-md-6 col-lg-4">
+      <div class="col-md-6 col-lg-4 course-item" data-title="{{ course.title|lower }} {{ course.summary|lower }}">
         <div class="course-card p-4">
-          <span class="course-icon">{{ course.icon }}</span>
+          <span class="course-icon"><i class="bi bi-{{ course.icon }}" aria-hidden="true"></i></span>
           <h5>{{ course.title }}</h5>
           <p class="text-secondary small">{{ course.summary }}</p>
           <p class="small fw-bold text-secondary">{{ course.lesson_count }} lesson{{ course.lesson_count|pluralize }}</p>
@@ -39,4 +55,26 @@
  
   {% endfor %}
 </section>
+<script>
+(function () {
+  var chips = document.querySelectorAll('.filter-chip'), search = document.getElementById('course-search'), tier = 'all';
+  function apply() {
+    var q = search.value.trim().toLowerCase(), any = false;
+    document.querySelectorAll('.tier-section').forEach(function (sec) {
+      var show = (tier === 'all' || sec.getAttribute('data-tier') === tier), count = 0;
+      sec.querySelectorAll('.course-item').forEach(function (it) {
+        var ok = !q || it.getAttribute('data-title').indexOf(q) !== -1;
+        it.classList.toggle('d-none', !ok); if (ok) count++;
+      });
+      var visible = show && (count > 0 || !q);
+      sec.classList.toggle('d-none', !visible); if (visible) any = true;
+    });
+    document.getElementById('no-results').classList.toggle('d-none', any);
+  }
+  chips.forEach(function (c) { c.addEventListener('click', function () {
+    chips.forEach(function (x) { x.classList.remove('active'); }); c.classList.add('active');
+    tier = c.getAttribute('data-tier'); apply(); }); });
+  search.addEventListener('input', apply);
+})();
+</script>
 {% endblock %}

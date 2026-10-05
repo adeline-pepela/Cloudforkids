@@ -1,0 +1,22 @@
+<div class="lab-goal"><i class="bi bi-bullseye" aria-hidden="true"></i> Goal: snap blocks together to guide the robot to the cloud. Don't bump into the walls! <span id="bc-level-text" class="fw-bold">Level 1 of 2</span></div>
+
+<div class="row g-4 align-items-start">
+  <div class="col-md-6"><div class="bc-grid" id="bc-grid" aria-label="Game board"></div></div>
+  <div class="col-md-6">
+    <h6 class="fw-bold">Blocks <small class="text-secondary fw-normal">(tap to add)</small></h6>
+    <div class="d-flex flex-wrap gap-2 mb-3" id="bc-palette">
+      <button type="button" class="bc-block up" data-dir="up"><i class="bi bi-arrow-up" aria-hidden="true"></i> Up</button>
+      <button type="button" class="bc-block down" data-dir="down"><i class="bi bi-arrow-down" aria-hidden="true"></i> Down</button>
+      <button type="button" class="bc-block left" data-dir="left"><i class="bi bi-arrow-left" aria-hidden="true"></i> Left</button>
+      <button type="button" class="bc-block right" data-dir="right"><i class="bi bi-arrow-right" aria-hidden="true"></i> Right</button>
+    </div>
+    <h6 class="fw-bold">My program</h6>
+    <div class="bc-prog mb-3" id="bc-prog" aria-live="polite"></div>
+    <div class="d-flex flex-wrap gap-2">
+      <button type="button" class="btn btn-cloud btn-big" id="bc-run"><i class="bi bi-play-fill" aria-hidden="true"></i> Run</button>
+      <button type="button" class="btn btn-outline-cloud btn-big" id="bc-undo"><i class="bi bi-backspace" aria-hidden="true"></i> Undo</button>
+      <button type="button" class="btn btn-outline-cloud btn-big" id="bc-clear"><i class="bi bi-trash3" aria-hidden="true"></i> Clear</button>
+    </div>
+    <p class="fw-bold mt-3 mb-0" id="bc-msg" aria-live="polite"></p>
+  </div>
+</div>

@@ -1,0 +1,45 @@
+<div class="lab-goal"><i class="bi bi-bullseye" aria-hidden="true"></i> Goal: save something to the cloud, then open it on a different device.</div>
+
+<h5 class="mb-2">1. Pick something to save</h5>
+<div class="d-flex flex-wrap gap-2 mb-3" id="cs-files">
+  <button type="button" class="btn btn-outline-cloud pick-file" data-code="f429" data-name="my photo"><i class="bi bi-image-fill" aria-hidden="true"></i> Photo</button>
+  <button type="button" class="btn btn-outline-cloud pick-file" data-code="f38a" data-name="my homework"><i class="bi bi-file-earmark-text-fill" aria-hidden="true"></i> Homework</button>
+  <button type="button" class="btn btn-outline-cloud pick-file" data-code="f49e" data-name="my song"><i class="bi bi-music-note-beamed" aria-hidden="true"></i> Song</button>
+  <button type="button" class="btn btn-outline-cloud pick-file" data-code="f3c3" data-name="my video"><i class="bi bi-film" aria-hidden="true"></i> Video</button>
+</div>
+
+<h5 class="mb-1">2. Follow its journey</h5>
+<svg class="cs-svg" viewBox="0 0 720 390" role="img" aria-label="A winding path from your device, across the internet, to the cloud servers">
+  <!-- the road: dotted, with a coloured trail that fills in as the file travels -->
+  <path id="cs-seg1" d="M100 70 C 260 5, 490 5, 540 125" class="cs-road"/>
+  <path id="cs-seg2" d="M540 125 C 600 245, 280 215, 110 262" class="cs-road"/>
+  <path id="cs-trail1" d="M100 70 C 260 5, 490 5, 540 125" class="cs-trail"/>
+  <path id="cs-trail2" d="M540 125 C 600 245, 280 215, 110 262" class="cs-trail"/>
+
+  <g class="cs-node active" id="cs-n-device" transform="translate(100 70)">
+    <circle r="42"/><text class="ico" text-anchor="middle" dominant-baseline="central">&#xf4e2;</text>
+    <text class="lbl" y="64" text-anchor="middle">Your device</text>
+  </g>
+  <g class="cs-node" id="cs-n-net" transform="translate(540 125)">
+    <circle r="42"/><text class="ico" text-anchor="middle" dominant-baseline="central">&#xf3ef;</text>
+    <text class="lbl" x="60" y="6">The internet</text>
+  </g>
+  <g class="cs-node" id="cs-n-cloud" transform="translate(110 262)">
+    <circle r="42"/><text class="ico" text-anchor="middle" dominant-baseline="central">&#xf40e;</text>
+    <text class="lbl" y="70" text-anchor="middle">Cloud servers</text>
+    <g class="cs-copies" transform="translate(-40 108)">
+      <text class="copy" x="0" y="0">&#xf35f;</text><text class="copy" x="28" y="0">&#xf35f;</text><text class="copy" x="56" y="0">&#xf35f;</text>
+    </g>
+  </g>
+
+  <g id="cs-packet" transform="translate(100 70)">
+    <rect x="-22" y="-22" width="44" height="44" rx="13"/>
+    <text id="cs-packet-icon" text-anchor="middle" dominant-baseline="central">&#xf429;</text>
+  </g>
+</svg>
+
+<p class="fw-bold text-center mb-3" id="cs-caption" aria-live="polite">Pick something above, then press the button.</p>
+<div class="d-flex flex-wrap gap-2 justify-content-center">
+  <button type="button" class="btn btn-cloud btn-big" id="cs-save" disabled><i class="bi bi-cloud-arrow-up-fill" aria-hidden="true"></i> Save to the cloud</button>
+  <button type="button" class="btn btn-outline-cloud btn-big d-none" id="cs-open"><i class="bi bi-tablet-fill" aria-hidden="true"></i> Open it on another device</button>
+</div>

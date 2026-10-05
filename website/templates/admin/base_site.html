@@ -1,0 +1,18 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | Cloud for Kids Admin{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><path fill=%22%230ea5e9%22 d=%22M25 75a18 18 0 0 1-1-36 26 26 0 0 1 50-6 21 21 0 0 1 2 42z%22/></svg>">
+<link rel="stylesheet" href="{% static 'vendor/fonts/fonts.css' %}">
+<link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/admin.css' %}">
+<link rel="stylesheet" href="{% static 'css/admin-shell.css' %}">
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}"><span class="brand-mark">&#9729;</span>Cloud for Kids <span style="font-weight:600;opacity:.8;">Admin</span></a></h1>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

@@ -1,0 +1,7 @@
+{% load static %}{% comment %}
+Photo slot. Shows static/img/photos/<name>.jpg when that file exists, otherwise a coloured
+placeholder with an icon. Params: name, icon, tone (sun|sky|grass|coral|purple), alt, cls (extra classes).
+{% endcomment %}<div class="photo-slot tone-{{ tone|default:'sky' }} {{ cls }}" role="img" aria-label="{{ alt }}">
+  <i class="bi {{ icon|default:'bi-people-fill' }}" aria-hidden="true"></i>
+  <img src="{% static 'img/photos/' %}{{ name }}.jpg" alt="" loading="lazy" onerror="this.remove()">
+</div>

@@ -1,0 +1,38 @@
+{% extends "teach/base.html" %}
+{% block title %}Curriculum{% endblock %}
+{% block content %}
+<h1 class="l-title">Curriculum</h1>
+<p class="l-sub">Every course and lesson in the programme. Open a lesson to preview exactly what learners see.</p>
+{% for row in rows %}
+<div class="l-card mb-4" style="height:auto;">
+  <h3><i class="bi bi-{{ row.tier.icon }} text-primary" aria-hidden="true"></i> {{ row.tier.name }} <span class="badge-pill">{{ row.tier.grade_range }}</span></h3>
+  <p class="small text-secondary">{{ row.tier.cbc_alignment }}</p>
+  <div class="accordion fm-acc" id="tc-{{ row.tier.pk }}">
+    {% for c in row.courses %}
+    <div class="accordion-item">
+      <h4 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tc-{{ row.tier.pk }}-{{ forloop.counter }}">
+          <span class="fm-step"><i class="bi bi-{{ c.course.icon }}" aria-hidden="true"></i></span>
+          <span class="flex-grow-1"><strong>{{ c.course.title }}</strong><small class="d-block text-secondary">{{ c.course.summary }}</small></span>
+          <span class="fm-acc-meta">{{ c.lessons|length }} items</span>
+        </button>
+      </h4>
+      <div id="tc-{{ row.tier.pk }}-{{ forloop.counter }}" class="accordion-collapse collapse" data-bs-parent="#tc-{{ row.tier.pk }}">
+        <div class="accordion-body">
+          <ul class="fm-lessons">
+            {% for lesson, questions in c.lessons %}
+            <li>
+              <i class="bi {% if lesson.is_exam %}bi-mortarboard-fill{% else %}bi-journal-text{% endif %}" aria-hidden="true"></i>
+              <span><a href="{{ lesson.get_absolute_url }}">{{ lesson.title }}</a></span>
+              <b class="text-secondary">{{ lesson.duration_minutes }} min{% if questions %} &middot; {{ questions }} questions{% endif %}</b>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

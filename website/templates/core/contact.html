@@ -1,25 +1,62 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Contact{% endblock %}
 {% block content %}
-<section class="container py-5">
-  <div class="row justify-content-center">
-    <div class="col-lg-7">
-      <div class="text-center mb-4">
+<section class="page-banner">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-6">
         <div class="section-eyebrow">Get in touch</div>
         <h1 class="section-title">Let's build Kenya's cloud-ready generation together</h1>
-        <p class="text-secondary">Whether you're a school, a parent, a facilitator, or a potential partner &mdash; we'd love to hear from you.</p>
+        <p class="text-secondary lead mb-0">Whether you're a school, a parent, a facilitator, or a potential partner &mdash; we'd love to hear from you.</p>
       </div>
+      <div class="col-lg-6 text-center">
+        <div class="mx-auto" style="max-width:480px;">{% include "partials/slot.html" with name="contact" icon="bi-chat-heart-fill" tone="coral" alt="Get in touch with the Cloud for Kids team" cls="" %}</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="container py-5">
+  <div class="row g-4">
+    <div class="col-lg-5">
       <div class="tier-card p-4 p-md-5">
+        <h4 class="mb-4">Ways to reach us</h4>
+        <div class="contact-info-item">
+          <span class="value-icon"><i class="bi bi-envelope-fill" aria-hidden="true"></i></span>
+          <div><strong>Email</strong><br><a href="mailto:{{ site.contact_email }}">{{ site.contact_email }}</a></div>
+        </div>
+        <div class="contact-info-item">
+          <span class="value-icon"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i></span>
+          <div><strong>Where we work</strong><br><span class="text-secondary">{{ site.location }}</span></div>
+        </div>
+        <div class="contact-info-item">
+          <span class="value-icon"><i class="bi bi-clock-fill" aria-hidden="true"></i></span>
+          <div><strong>Response time</strong><br><span class="text-secondary">{{ site.response_time }}</span></div>
+        </div>
+        <hr>
+        <h6 class="mb-3">Who usually writes to us</h6>
+        <ul class="list-unstyled text-secondary small mb-0">
+          {% for w in writes %}<li class="mb-2"><i class="bi bi-{{ w.icon|default:'chat-dots' }} text-primary me-2" aria-hidden="true"></i>{{ w.title }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    <div class="col-lg-7">
+      <div class="tier-card p-4 p-md-5">
+        <h4 class="mb-4">Send us a message</h4>
         <form method="post" novalidate>
           {% csrf_token %}
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label fw-bold">Name</label>
               {{ form.name }}
+              {{ form.name.errors }}
             </div>
             <div class="col-md-6">
               <label class="form-label fw-bold">Email</label>
               {{ form.email }}
+              {{ form.email.errors }}
             </div>
             <div class="col-md-6">
               <label class="form-label fw-bold">Phone (optional)</label>
@@ -32,9 +69,10 @@
             <div class="col-12">
               <label class="form-label fw-bold">Message</label>
               {{ form.message }}
+              {{ form.message.errors }}
             </div>
           </div>
-          <button type="submit" class="btn btn-cloud btn-lg mt-4 w-100">Send message</button>
+          <button type="submit" class="btn btn-cloud btn-lg mt-4 w-100"><i class="bi bi-send-fill" aria-hidden="true"></i> Send message</button>
         </form>
       </div>
     </div>

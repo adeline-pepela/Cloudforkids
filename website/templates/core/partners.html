@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Partners{% endblock %}
 {% block content %}
 <section class="container py-5">
@@ -10,17 +11,19 @@
       from global cloud providers to community hubs and government policy partners.
     </p>
   </div>
+  <div class="mb-5 mx-auto" style="max-width:900px;">{% include "partials/slot.html" with name="partners" icon="bi-diagram-3-fill" tone="purple" alt="Partners working together to bring cloud skills to children" cls="wide" %}</div>
   <div class="row g-4">
     {% for partner in partners %}
     <div class="col-md-6 col-lg-4">
       <div class="partner-card p-4 h-100">
-        <div class="fs-2 mb-2">&#127760;</div>
+        <div class="fs-2 mb-2"><i class="bi bi-globe2" aria-hidden="true"></i></div>
         <h5>{{ partner.name }}</h5>
+        {% if partner.role %}<span class="badge-pill mb-2 d-inline-block">{{ partner.role }}</span>{% endif %}
         <p class="text-secondary small mb-0">{{ partner.description }}</p>
       </div>
     </div>
     {% empty %}
-    <p class="text-secondary text-center">Partner data hasn't been seeded yet &mdash; run <code>python manage.py seed_data</code>.</p>
+    <p class="text-secondary text-center">Partners will be listed here soon.</p>
     {% endfor %}
   </div>
 </section>

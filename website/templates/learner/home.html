@@ -1,0 +1,112 @@
+{% extends "learner/base.html" %}
+{% load static %}
+{% block title %}My Home{% endblock %}
+{% block content %}
+
+<div class="l-hero mb-4">
+  <i class="bi bi-cloud-fill cloud-deco" aria-hidden="true"></i>
+  <div class="row align-items-center g-3">
+    <div class="col-md-8">
+      <span class="lvl"><i class="bi bi-star-fill" aria-hidden="true"></i> Level {{ stats.level }} &middot; {{ stats.level_name }}</span>
+      <h1>{% if stats.goal_done %}Great job today, {{ user.first_name|default:user.username }}!{% else %}Ready to learn, {{ user.first_name|default:user.username }}?{% endif %}</h1>
+      <p>{% if stats.goal_done %}You've finished today's mission. Keep going if you want more XP!{% else %}Today's mission: finish 1 lesson or 1 lab to keep your streak alive.{% endif %}</p>
+      <div class="bar mb-1" role="progressbar" aria-valuenow="{{ stats.xp_in_level }}" aria-valuemin="0" aria-valuemax="{{ stats.xp_per_level }}" aria-label="XP to next level"><span style="width: {{ stats.xp_in_level }}%"></span></div>
+      <small>{{ stats.xp_in_level }} / {{ stats.xp_per_level }} XP to level {{ stats.level|add:1 }}</small>
+    </div>
+    <div class="col-md-4 text-md-end">
+      {% if continue_lesson %}
+        <a href="{{ continue_lesson.get_absolute_url }}" class="btn btn-big btn-yellow"><i class="bi bi-play-circle-fill" aria-hidden="true"></i> Continue learning</a>
+        <div class="small mt-2" style="opacity:.9;">{{ continue_lesson.title }}</div>
+      {% else %}
+        <a href="{% url 'dashboard:path' %}" class="btn btn-big btn-yellow"><i class="bi bi-rocket-takeoff-fill" aria-hidden="true"></i> Start my path</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if teacher_tasks %}
+<div class="l-card mb-4" style="height:auto;">
+  <h3><i class="bi bi-clipboard-check-fill text-success" aria-hidden="true"></i> From your teacher</h3>
+  {% for t in teacher_tasks %}
+  <a class="tc-task" href="{{ t.a.course.get_absolute_url }}">
+    <i class="bi bi-{{ t.a.course.icon }} big" aria-hidden="true"></i>
+    <div class="flex-grow-1">
+      <strong>{{ t.a.course.title }}</strong>
+      <small>{{ t.classroom.name }}{% if t.a.due_date %} &middot; {% if t.overdue %}<span class="text-danger fw-bold">was due {{ t.a.due_date|date:"j M" }}</span>{% elif t.days_left == 0 %}<strong>due today</strong>{% else %}due {{ t.a.due_date|date:"j M" }} ({{ t.days_left }} day{{ t.days_left|pluralize }} left){% endif %}{% endif %}{% if t.a.note %} &middot; {{ t.a.note }}{% endif %}</small>
+      <span class="fm-bar mt-1"><span style="width: {{ t.percent }}%"></span></span>
+    </div>
+    <b>{{ t.percent }}%</b>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3"><div class="l-tile"><span class="ico tone-orange"><i class="bi bi-fire" aria-hidden="true"></i></span><div><div class="num">{{ stats.streak }}</div><div class="lbl">day streak</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="l-tile"><span class="ico tone-grass"><i class="bi bi-journal-check" aria-hidden="true"></i></span><div><div class="num">{{ stats.lessons_done }}</div><div class="lbl">lessons done</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="l-tile"><span class="ico tone-purple"><i class="bi bi-joystick" aria-hidden="true"></i></span><div><div class="num">{{ stats.labs_done }}/{{ stats.labs_total }}</div><div class="lbl">labs finished</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="l-tile"><span class="ico tone-sun"><i class="bi bi-trophy-fill" aria-hidden="true"></i></span><div><div class="num">{{ earned_count }}</div><div class="lbl">badges</div></div></div></div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-5">
+    <div class="l-card">
+      <h3><i class="bi bi-fire text-warning" aria-hidden="true"></i> My streak</h3>
+      <p class="mb-1">{% if stats.streak %}<strong>{{ stats.streak }} day{{ stats.streak|pluralize }}</strong> in a row. Awesome!{% else %}Learn today to start a streak!{% endif %}</p>
+      <div class="week">
+        {% for d in stats.week %}
+        <div class="{% if d.active %}on{% endif %} {% if d.today %}today{% endif %}">
+          <div class="dot"><i class="bi {% if d.active %}bi-check-lg{% else %}bi-dash{% endif %}" aria-hidden="true"></i></div>
+          <div class="day">{{ d.label }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="l-card">
+      <h3><i class="bi bi-signpost-split-fill text-primary" aria-hidden="true"></i> My learning path <a class="more" href="{% url 'dashboard:path' %}">See all</a></h3>
+      {% if tier %}<p class="text-secondary small mb-2">{{ tier.name }} &middot; {{ tier.grade_range }}</p>{% endif %}
+      {% for s in path_preview %}
+      <a href="{{ s.course.get_absolute_url }}" class="d-flex align-items-center gap-3 mb-2 text-decoration-none" style="color:inherit;">
+        <span class="ico {% if s.status == 'current' %}tone-sky{% else %}tone-purple{% endif %}" style="width:44px;height:44px;border-radius:14px;display:grid;place-items:center;color:#fff;font-size:1.3rem;"><i class="bi bi-{{ s.course.icon }}" aria-hidden="true"></i></span>
+        <div class="flex-grow-1">
+          <div class="fw-bold">{{ s.course.title }} {% if s.status == 'current' %}<span class="badge-pill">Next up</span>{% endif %}</div>
+          <div class="mini-bar"><span style="width: {{ s.percent }}%"></span></div>
+        </div>
+      </a>
+      {% empty %}
+      <p class="mb-0">You finished every course in this tier. Check out the next one on My Path!</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="mb-4">
+  <h2 class="l-title" style="font-size:1.4rem;">Try a Practice Lab</h2>
+  <div class="row g-3">
+    {% for lab in labs %}
+    <div class="col-md-4">
+      <a class="l-card lab-card" href="{% url 'dashboard:lab' lab.slug %}">
+        <span class="lab-ico ico tone-{{ lab.tone }}"><i class="bi {{ lab.icon }}" aria-hidden="true"></i></span>
+        <h5 class="mb-0 fw-bold">{{ lab.title }}</h5>
+        <p class="text-secondary small mb-0">{{ lab.summary }}</p>
+        <div class="lab-meta"><span><i class="bi bi-clock" aria-hidden="true"></i> {{ lab.minutes }} min</span>{% if lab.done %}<span class="done-pill"><i class="bi bi-check-lg" aria-hidden="true"></i> Done</span>{% endif %}</div>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="mb-2">
+  <h2 class="l-title" style="font-size:1.4rem;">My achievements <a class="small fw-bold ms-2" href="{% url 'dashboard:achievements' %}" style="font-family:Poppins;">See all</a></h2>
+  <div class="row g-3">
+    {% for lb in earned %}
+    <div class="col-6 col-md-4 col-lg-2"><div class="badge-tile"><div class="b-ico"><i class="bi bi-{{ lb.badge.icon }}" aria-hidden="true"></i></div><h6>{{ lb.badge.name }}</h6></div></div>
+    {% endfor %}
+    {% for b in next_badges %}
+    <div class="col-6 col-md-4 col-lg-2"><div class="badge-tile locked"><div class="b-ico"><i class="bi bi-lock-fill" aria-hidden="true"></i></div><h6>{{ b.name }}</h6><p>{{ b.criteria|default:b.description }}</p></div></div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

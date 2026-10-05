@@ -120,7 +120,7 @@
           resultItems.push(
             "<li>" +
               "<span class=\"" + (isCorrect ? "tag-correct" : "tag-incorrect") + "\">" +
-              (isCorrect ? "\u2713 Correct" : "\u2717 Review") +
+              (isCorrect ? "<i class=\"bi bi-check-circle-fill\"></i> Correct" : "<i class=\"bi bi-x-circle-fill\"></i> Review") +
               "</span> &mdash; " + promptText +
               "</li>"
           );
@@ -129,6 +129,7 @@
         var pct = total ? Math.round((correctCount / total) * 100) : 0;
         var passMark = parseInt(examForm.getAttribute("data-pass"), 10) || 70;
         var passed = pct >= passMark;
+        if (window.c4kQuizResult) window.c4kQuizResult(correctCount, total);
 
         var resultBox = examForm.querySelector(".exam-result");
         if (resultBox) {
@@ -139,11 +140,12 @@
             "<p class=\"fw-bold mb-1\">" + correctCount + " out of " + total + " correct</p>" +
             "<p class=\"mb-0\">" +
               (passed
-                ? "\uD83C\uDF89 Great job \u2014 you passed this module exam! Scroll down and mark it complete."
+                ? "<i class=\"bi bi-trophy-fill\"></i> Great job \u2014 you passed this module exam! Scroll down and mark it complete."
                 : "You need " + passMark + "% to pass. Review the questions below, revisit the lessons you're unsure about, then try again.") +
             "</p>" +
             "<ul class=\"exam-result-list\">" + resultItems.join("") + "</ul>";
           resultBox.scrollIntoView({ behavior: "smooth", block: "center" });
+          if (passed && window.c4kConfetti) window.c4kConfetti();
         }
 
         submitBtn.disabled = true;

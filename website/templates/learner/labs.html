@@ -1,0 +1,24 @@
+{% extends "learner/base.html" %}
+{% block title %}Practice Lab{% endblock %}
+{% block content %}
+<h1 class="l-title">Practice Lab</h1>
+<p class="l-sub">Learn by doing! Each lab is a short hands-on simulation. Finish one to earn <strong>15 XP</strong>. {{ stats.labs_done }} of {{ stats.labs_total }} done.</p>
+
+<div class="row g-3">
+  {% for lab in labs %}
+  <div class="col-md-6 col-xl-4">
+    <a class="l-card lab-card" href="{% url 'dashboard:lab' lab.slug %}">
+      <span class="lab-ico ico tone-{{ lab.tone }}"><i class="bi {{ lab.icon }}" aria-hidden="true"></i></span>
+      <h5 class="fw-bold mb-0">{{ lab.title }}</h5>
+      <p class="text-secondary small mb-0">{{ lab.summary }}</p>
+      <div class="lab-meta">
+        <span><i class="bi bi-clock" aria-hidden="true"></i> {{ lab.minutes }} min</span>
+        <span class="stars-lvl" title="Level {{ lab.level }} of 3">{% for i in "123" %}<i class="bi {% if forloop.counter <= lab.level %}bi-star-fill{% else %}bi-star{% endif %}" aria-hidden="true"></i>{% endfor %}</span>
+        {% if lab.done %}<span class="done-pill"><i class="bi bi-check-lg" aria-hidden="true"></i> Done</span>{% endif %}
+      </div>
+      <small class="text-secondary"><i class="bi bi-lightbulb" aria-hidden="true"></i> {{ lab.skill }}</small>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

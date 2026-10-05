@@ -1,0 +1,211 @@
+{% extends base_tpl|default:"parent/base.html" %}
+{% block title %}{{ r.name }}'s progress{% endblock %}
+{% block content %}
+{% with c=r.child %}
+
+{% if viewer == "teacher" %}<a href="{% url 'teach:class' classroom.pk %}" class="text-decoration-none fw-bold small no-print"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to {{ classroom.name }}</a>{% endif %}
+<!-- Header -->
+<div class="fm-head">
+  <div class="fm-avatar" aria-hidden="true">{{ r.name|slice:":1"|upper }}</div>
+  <div class="flex-grow-1">
+    <h1 class="l-title mb-1">{{ c.get_full_name|default:c.username }}</h1>
+    <div class="fm-meta">
+      {% if r.profile.grade %}<span><i class="bi bi-backpack2-fill" aria-hidden="true"></i> {{ r.profile.grade }}</span>{% endif %}
+      {% if r.profile.school_name %}<span><i class="bi bi-building-fill" aria-hidden="true"></i> {{ r.profile.school_name }}</span>{% endif %}
+      {% if r.tier %}<span><i class="bi bi-{{ r.tier.icon }}" aria-hidden="true"></i> {{ r.tier.name }} ({{ r.tier.grade_range }})</span>{% endif %}
+      <span><i class="bi bi-clock-history" aria-hidden="true"></i> Last active {{ r.last_active_text }}</span>
+    </div>
+  </div>
+  <span class="fm-health {{ r.health.0 }}"><i class="bi {{ r.health.2 }}" aria-hidden="true"></i> {{ r.health.1 }}</span>
+  <button type="button" class="btn btn-outline-cloud no-print" onclick="window.print()"><i class="bi bi-printer-fill" aria-hidden="true"></i> Print report</button>
+</div>
+
+<!-- Journey 0 to 100 -->
+<div class="l-card fm-journey">
+  <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-2">
+    <div>
+      <div class="fm-eyebrow">The journey from 0 to 100</div>
+      <h2 class="fm-big"><i class="bi {{ r.stage_icon }}" aria-hidden="true"></i> {{ r.stage }}</h2>
+    </div>
+    <div class="fm-percent">{{ r.percent }}<small>%</small></div>
+  </div>
+  <div class="fm-meter" role="progressbar" aria-valuenow="{{ r.percent }}" aria-valuemin="0" aria-valuemax="100" aria-label="Overall progress">
+    <div class="fm-meter-fill" style="width: {{ r.percent }}%"></div>
+    <span class="fm-meter-cloud" style="left: {{ r.percent }}%"><i class="bi bi-cloud-upload-fill" aria-hidden="true"></i></span>
+    {% for m in r.markers %}<span class="fm-tick{% if r.percent >= m.at %} on{% endif %}" style="left: {{ m.at }}%"></span>{% endfor %}
+  </div>
+  <div class="fm-scale"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+  <p class="mb-0 mt-2 text-secondary">
+    {{ r.name }} has finished <strong>{{ r.lessons_done }} of {{ r.lessons_total }}</strong> lessons on the {{ r.tier.name|default:"learning" }} path{% if r.percent < 100 and r.lessons_total %}. <strong>{{ r.lessons_remaining }}</strong> to go.{% else %}.{% endif %}
+  </p>
+</div>
+
+<!-- Key numbers -->
+<div class="fm-kpis">
+  <div class="fm-kpi sun"><i class="bi bi-fire" aria-hidden="true"></i><strong>{{ r.stats.streak }}</strong><span>day streak</span></div>
+  <div class="fm-kpi sky"><i class="bi bi-star-fill" aria-hidden="true"></i><strong>Level {{ r.stats.level }}</strong><span>{{ r.stats.level_name }} &middot; {{ r.stats.xp }} XP</span></div>
+  <div class="fm-kpi grass"><i class="bi bi-patch-check-fill" aria-hidden="true"></i><strong>{% if r.avg_score is not None %}{{ r.avg_score }}%{% else %}-{% endif %}</strong><span>quiz average</span></div>
+  <div class="fm-kpi purple"><i class="bi bi-stopwatch-fill" aria-hidden="true"></i><strong>{{ r.minutes }} min</strong><span>time learning</span></div>
+  <div class="fm-kpi coral"><i class="bi bi-joystick" aria-hidden="true"></i><strong>{{ r.labs_done }}/{{ r.labs|length }}</strong><span>practice labs</span></div>
+  <div class="fm-kpi sun"><i class="bi bi-trophy-fill" aria-hidden="true"></i><strong>{{ r.badge_total }}</strong><span>badges earned</span></div>
+</div>
+
+<!-- What we noticed -->
+{% if r.insights %}
+<div class="l-card mb-4" style="height:auto;">
+  <h3><i class="bi bi-lightbulb-fill text-warning" aria-hidden="true"></i> What we noticed</h3>
+  <ul class="fm-notes">
+    {% for tone, icon, text in r.insights %}
+    <li class="{{ tone }}"><i class="bi {{ icon }}" aria-hidden="true"></i><span>{{ text }}</span></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<!-- Strengths and weak points -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-6">
+    <div class="l-card">
+      <h3><i class="bi bi-hand-thumbs-up-fill text-success" aria-hidden="true"></i> Strengths</h3>
+      <p class="small text-secondary">Quizzes passed with {{ r.strong_score }}% or more.</p>
+      {% for q in r.strengths %}
+      <div class="fm-row ok">
+        <div><strong>{{ q.lesson.title }}</strong><small>{{ q.lesson.course.title }}</small></div>
+        <span class="fm-score ok">{{ q.score_percent }}%</span>
+      </div>
+      {% empty %}
+      <p class="fm-empty"><i class="bi bi-hourglass-split" aria-hidden="true"></i> Strengths will show here once {{ r.name }} passes a few quizzes.</p>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="l-card">
+      <h3><i class="bi bi-bullseye text-danger" aria-hidden="true"></i> Needs more practice</h3>
+      <p class="small text-secondary">Quizzes not passed yet, and Practice Labs not tried.</p>
+      {% for q in r.weak %}
+      <div class="fm-row warn">
+        <div><strong>{{ q.lesson.title }}</strong><small>{{ q.lesson.course.title }} &middot; needs {{ q.lesson.pass_score_percent }}%</small></div>
+        <span class="fm-score warn">{{ q.score_percent }}%</span>
+      </div>
+      {% endfor %}
+      {% for lab in r.labs_todo|slice:":3" %}
+      <div class="fm-row todo">
+        <div><strong>{{ lab.title }}</strong><small>Practice Lab &middot; {{ lab.skill }}</small></div>
+        <span class="fm-score todo"><i class="bi {{ lab.icon }}" aria-hidden="true"></i></span>
+      </div>
+      {% endfor %}
+      {% if not r.weak and not r.labs_todo %}
+      <p class="fm-empty"><i class="bi bi-emoji-sunglasses-fill" aria-hidden="true"></i> Nothing to worry about. Every quiz passed and every lab tried.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Course by course -->
+<div class="l-card mb-4" style="height:auto;">
+  <h3><i class="bi bi-signpost-split-fill text-primary" aria-hidden="true"></i> Course by course</h3>
+  <div class="accordion fm-acc" id="fm-courses">
+    {% for row in r.courses %}
+    <div class="accordion-item">
+      <h4 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#fm-c{{ forloop.counter }}" aria-expanded="false">
+          <span class="fm-step {{ row.status }}"><i class="bi {% if row.status == 'done' %}bi-check-lg{% else %}bi-{{ row.course.icon }}{% endif %}" aria-hidden="true"></i></span>
+          <span class="flex-grow-1">
+            <strong>{{ row.course.title }}</strong>
+            <span class="fm-bar"><span style="width: {{ row.percent }}%"></span></span>
+          </span>
+          <span class="fm-acc-meta">{{ row.percent }}%{% if row.avg_score is not None %} &middot; avg {{ row.avg_score }}%{% endif %}</span>
+        </button>
+      </h4>
+      <div id="fm-c{{ forloop.counter }}" class="accordion-collapse collapse" data-bs-parent="#fm-courses">
+        <div class="accordion-body">
+          <p class="small text-secondary">{{ row.done }} of {{ row.total }} lessons done{% if not row.started %} &middot; not started{% endif %}</p>
+          <ul class="fm-lessons">
+            {% for l in row.lessons %}
+            <li class="{% if l.done %}done{% endif %}">
+              <i class="bi {% if l.done %}bi-check-circle-fill{% elif l.passed is False %}bi-exclamation-circle-fill{% else %}bi-circle{% endif %}" aria-hidden="true"></i>
+              <span>{{ l.title }}{% if l.is_exam %} <em>(exam)</em>{% endif %}</span>
+              {% if l.score is not None %}<b class="{% if l.passed %}ok{% else %}warn{% endif %}">{{ l.score }}%</b>{% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <p class="fm-empty">No courses found for this tier yet.</p>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Activity -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-7">
+    <div class="l-card">
+      <h3><i class="bi bi-bar-chart-fill text-primary" aria-hidden="true"></i> Activity: last 14 days</h3>
+      <div class="fm-chart" role="img" aria-label="Lessons and labs finished each day for the last 14 days">
+        {% for d in r.series %}
+        <div class="fm-col{% if d.today %} today{% endif %}" title="{{ d.date|date:'D j M' }}: {{ d.count }}">
+          <div class="fm-bar-wrap"><span class="fm-bar-v{% if not d.count %} empty{% endif %}" style="height: {{ d.height }}%">{% if d.count %}{{ d.count }}{% endif %}</span></div>
+          <small>{{ d.label }}</small>
+        </div>
+        {% endfor %}
+      </div>
+      <p class="small text-secondary mb-0 mt-2">Studied on <strong>{{ r.active_days_week }} of the last 7 days</strong>. {{ r.this_week }} finished this week, {{ r.last_week }} the week before.</p>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="l-card">
+      <h3><i class="bi bi-joystick text-danger" aria-hidden="true"></i> Practice Labs</h3>
+      {% for lab in r.labs %}
+      <div class="fm-lab{% if lab.done %} done{% endif %}">
+        <i class="bi {{ lab.icon }}" aria-hidden="true"></i>
+        <div class="flex-grow-1"><strong>{{ lab.title }}</strong><small>{{ lab.skill }}</small></div>
+        <i class="bi {% if lab.done %}bi-check-circle-fill text-success{% else %}bi-circle text-secondary{% endif %}" aria-label="{% if lab.done %}Done{% else %}Not yet{% endif %}"></i>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Badges and help at home -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-6">
+    <div class="l-card">
+      <h3><i class="bi bi-trophy-fill text-warning" aria-hidden="true"></i> Badges ({{ r.badge_total }} of {{ r.badges_available }})</h3>
+      <div class="fm-badges">
+        {% for lb in r.badges %}
+        <div class="fm-badge" title="{{ lb.badge.description }}"><i class="bi bi-{{ lb.badge.icon }}" aria-hidden="true"></i><span>{{ lb.badge.name }}</span></div>
+        {% empty %}
+        <p class="fm-empty"><i class="bi bi-award" aria-hidden="true"></i> No badges yet. The first one is usually earned with the first lesson.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="l-card">
+      {% if viewer == "teacher" %}
+      <h3><i class="bi bi-easel-fill text-success" aria-hidden="true"></i> Teaching notes</h3>
+      <ul class="fm-tips">
+        {% for q in r.weak|slice:":2" %}<li><i class="bi bi-check2-circle" aria-hidden="true"></i><span>Revisit &ldquo;{{ q.lesson.title }}&rdquo; with {{ r.name }} (scored {{ q.score_percent }}%).</span></li>{% endfor %}
+        {% if r.health.0 == "nudge" %}<li><i class="bi bi-check2-circle" aria-hidden="true"></i><span>{{ r.name }} has been inactive. Check in and ask what is getting in the way.</span></li>{% endif %}
+        {% if r.health.0 == "new" %}<li><i class="bi bi-check2-circle" aria-hidden="true"></i><span>{{ r.name }} hasn't started. Help them finish the first lesson in class.</span></li>{% endif %}
+        {% for lab in r.labs_todo|slice:":1" %}<li><i class="bi bi-check2-circle" aria-hidden="true"></i><span>Suggest the &ldquo;{{ lab.title }}&rdquo; Practice Lab ({{ lab.minutes }} min).</span></li>{% endfor %}
+        {% if r.strengths %}<li><i class="bi bi-check2-circle" aria-hidden="true"></i><span>Strong in &ldquo;{{ r.strengths.0.lesson.title }}&rdquo;. Ask {{ r.name }} to help a classmate.</span></li>{% endif %}
+      </ul>
+      {% else %}
+      <h3><i class="bi bi-house-heart-fill text-success" aria-hidden="true"></i> How you can help at home</h3>
+      <ul class="fm-tips">
+        {% for t in r.tips %}<li><i class="bi bi-check2-circle" aria-hidden="true"></i><span>{{ t }}</span></li>{% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if viewer != "teacher" %}<form method="post" action="{% url 'family:remove' c.pk %}" class="text-end no-print" onsubmit="return confirm('Stop following {{ r.name|escapejs }}? Their account and progress are not deleted.');">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-link text-secondary btn-sm"><i class="bi bi-person-dash" aria-hidden="true"></i> Stop following {{ r.name }}</button>
+</form>{% endif %}
+{% endwith %}
+{% endblock %}

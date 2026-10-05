@@ -454,3 +454,35 @@ footer.site-footer h6 {
 .exam-result-list li:first-child { border-top: none; }
 .exam-result-list .tag-correct { color: var(--grass); font-weight: 800; }
 .exam-result-list .tag-incorrect { color: var(--coral); font-weight: 800; }
+
+/* Illustrations & image-led layouts */
+.tier-img { display: block; width: 100%; height: auto; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+.tier-card.has-img { padding: 0 !important; overflow: hidden; }
+.tier-card.has-img .tier-body { padding: 1.5rem; }
+.photo-card { border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-soft); background: #fff; height: 100%; }
+.photo-card img { display: block; width: 100%; height: auto; }
+.photo-card figcaption { padding: 1rem 1.25rem 1.25rem; }
+.photo-card figcaption strong { display: block; font-family: "Baloo 2", sans-serif; font-size: 1.1rem; color: var(--ink); }
+.page-banner { background: linear-gradient(160deg, var(--sky-light) 0%, #fff 70%); border-radius: 0 0 40px 40px; padding: 56px 0; }
+.page-banner img { max-width: 100%; height: auto; }
+.value-card { text-align: left; padding: 1.5rem; }
+.value-icon {
+  width: 52px; height: 52px; border-radius: 16px; display: inline-flex; align-items: center;
+  justify-content: center; font-size: 1.5rem; background: var(--sky-light); color: var(--sky-dark); margin-bottom: .75rem;
+}
+.contact-info-item { display: flex; gap: .9rem; align-items: flex-start; margin-bottom: 1.1rem; }
+.contact-info-item .value-icon { width: 44px; height: 44px; font-size: 1.2rem; border-radius: 14px; flex-shrink: 0; margin: 0;
+  display: inline-flex; align-items: center; justify-content: center; background: var(--sky-light); color: var(--sky-dark); }
+.auth-aside {
+  background: linear-gradient(160deg, var(--sky-dark) 0%, #38B6F2 100%);
+  color: #fff; border-radius: var(--radius-lg); padding: 2rem; height: 100%;
+  display: flex; flex-direction: column; justify-content: center; text-align: center;
+}
+.auth-aside img { max-width: 100%; height: auto; border-radius: 20px; }
+.auth-aside ul { list-style: none; padding: 0; margin: 1rem 0 0; text-align: left; }
+.auth-aside li { margin-bottom: .5rem; }
+.auth-aside li i { margin-right: .5rem; color: var(--sun); }
+.cta-band .cta-img { max-width: 100%; height: auto; }
+
+.tier-card.has-img h4 { font-size: 1.25rem; }
+.tier-card.has-img .badge-pill { margin-left: .5rem; }

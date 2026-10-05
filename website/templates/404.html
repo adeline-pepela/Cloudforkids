@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Page not found{% endblock %}
+{% block content %}
+<section class="container py-5 text-center">
+  <img src="{% static 'img/nimbus.svg' %}" alt="" class="nimbus nimbus-bob" style="width:160px;">
+  <h1 class="section-title mt-3">Oops! This page floated away</h1>
+  <p class="text-secondary mx-auto" style="max-width:480px;">We couldn't find what you were looking for. Let's get you back on track.</p>
+  <div class="d-flex flex-wrap gap-3 justify-content-center mt-4">
+    <a href="{% url 'core:home' %}" class="btn btn-cloud btn-lg">Go home</a>
+    <a href="{% url 'courses:programs' %}" class="btn btn-outline-cloud btn-lg">Browse programs</a>
+  </div>
+</section>
+{% endblock %}
