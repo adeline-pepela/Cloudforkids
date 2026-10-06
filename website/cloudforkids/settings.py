@@ -71,6 +71,10 @@ if not DEBUG and not TESTING:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", False)
     SECURE_REFERRER_POLICY = "same-origin"
 X_FRAME_OPTIONS = "SAMEORIGIN"
+# Own cookie names: cookies are shared across ports on 127.0.0.1, so another local project (or an older copy of this one)
+# can overwrite a plain "csrftoken"/"sessionid" and cause "CSRF token from POST incorrect".
+CSRF_COOKIE_NAME = "c4k_csrftoken"
+SESSION_COOKIE_NAME = "c4k_sessionid"
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 
@@ -117,6 +121,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'dashboard.context_processors.learner_chips',
+                'dashboard.context_processors.resume_learning',
                 'core.context_processors.site_settings',
                 'core.context_processors.language',
                 'core.context_processors.site_photos',

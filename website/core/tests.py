@@ -272,3 +272,23 @@ class AdminToolsTests(TestCase):
                 url = reverse(f"admin:{model._meta.app_label}_{model._meta.model_name}_{kind}")
                 expected = 302 if model._meta.model_name == "sitesetting" else 200  # the single settings row opens its own form
                 self.assertEqual(self.client.get(url).status_code, expected, url)
+
+
+class ResumeLearningTests(TestCase):
+    def test_learner_sees_continue_button_with_next_lesson(self):
+        from courses.models import Course, Enrollment, Lesson
+
+        kid = User.objects.create_user("resumer", password=PASSWORD, role="learner")
+        enrollment = Enrollment.objects.filter(learner=kid).first()
+        if enrollment is None:
+            course = Course.objects.filter(lessons__lesson_type=Lesson.LessonType.LESSON).first()
+            enrollment = Enrollment.objects.create(learner=kid, course=course)
+        lesson = enrollment.course.lessons.filter(lesson_type=Lesson.LessonType.LESSON).first()
+        self.client.force_login(kid)
+        page = self.client.get(reverse("core:home"))
+        self.assertContains(page, "Continue where you left off")
+        self.assertContains(page, lesson.get_absolute_url())
+
+    def test_visitor_sees_signup_not_continue(self):
+        page = self.client.get(reverse("core:home"))
+        self.assertNotContains(page, "Continue where you left off")

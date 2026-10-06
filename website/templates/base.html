@@ -36,6 +36,7 @@
         {% endwith %}
         <ul class="navbar-nav nav-end align-items-lg-center">
           {% if user.is_authenticated %}
+            {% if resume_lesson %}<li class="nav-item"><a class="btn btn-cloud btn-sm" href="{{ resume_lesson.get_absolute_url }}" title="{{ resume_lesson.title }}"><i class="bi bi-play-fill" aria-hidden="true"></i> Continue learning</a></li>{% endif %}
             <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
             <li class="nav-item">
               <form action="{% url 'accounts:logout' %}" method="post" class="d-inline">

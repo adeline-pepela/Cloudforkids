@@ -3,13 +3,16 @@
 {% block title %}Programs{% endblock %}
 {% block content %}
 <section class="container py-5">
-  <div class="text-center mb-5">
+  <div class="text-center mb-4">
     <div class="section-eyebrow">The programme</div>
     <h1 class="section-title">A three-tier cloud literacy pathway for ages 9 to 17</h1>
     <p class="text-secondary mx-auto" style="max-width:680px;">
       From unplugged foundations in upper primary to project-based cloud computing in Senior
       School &mdash; every tier is aligned to Kenya's CBC/CBE curriculum.
     </p>
+    <div class="mx-auto mt-4 mb-3 rounded-4 overflow-hidden shadow-sm" style="max-width:860px;">
+      <img src="{% static 'img/photos/program-pathway.jpg' %}" alt="African students on the cloud literacy pathway from primary to secondary school" class="w-100 d-block" style="max-height:420px; object-fit:cover;">
+    </div>
   </div>
 
   <div class="filter-bar" role="group" aria-label="Filter courses">
@@ -22,16 +25,21 @@
 
   {% for tier in tiers %}
   <div id="{{ tier.slug }}" class="mb-5 tier-section" data-tier="{{ tier.slug }}">
-    <div class="row align-items-center g-4 mb-3">
-      <div class="col-12">
-    <div class="d-flex align-items-center gap-3 mb-3">
-      <span class="fs-1"><i class="bi bi-{{ tier.icon }}" aria-hidden="true"></i></span>
-      <div>
-        <h2 class="mb-0">{{ tier.display_name }} <span class="badge-pill">{{ tier.grade_range }}</span></h2>
-        <p class="text-secondary mb-0">{{ tier.cbc_alignment }}</p>
+    <div class="row align-items-center g-4 mb-4">
+      <div class="col-md-7 col-lg-8">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <span class="fs-1"><i class="bi bi-{{ tier.icon }}" aria-hidden="true"></i></span>
+          <div>
+            <h2 class="mb-0">{{ tier.display_name }} <span class="badge-pill">{{ tier.grade_range }}</span></h2>
+            <p class="text-secondary mb-0">{{ tier.cbc_alignment }}</p>
+          </div>
+        </div>
+        <p class="text-secondary mb-0">{{ tier.description|default:tier.display_summary }}</p>
       </div>
-    </div>
-    <p class="text-secondary">{{ tier.description|default:tier.display_summary }}</p>
+      <div class="col-md-5 col-lg-4">
+        <div class="rounded-4 overflow-hidden shadow-sm">
+          <img src="{% static 'img/photos/tier-'|add:tier.slug|add:'.jpg' %}" alt="{{ tier.display_name }}" class="w-100 d-block" style="aspect-ratio: 4/3; object-fit: cover; max-height: 220px;">
+        </div>
       </div>
     </div>
     <div class="row g-4">

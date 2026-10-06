@@ -1,7 +1,7 @@
 {% extends "accounts/auth_base.html" %}
 {% load static c4k %}
 {% block title %}Sign up{% endblock %}
-{% block photo_url %}{% with p=photos|get_item:"auth-signup" %}{% if p %}{{ p.src }}{% else %}{% static 'img/photos/auth-signup.svg' %}{% endif %}{% endwith %}{% endblock %}
+{% block photo_url %}{% with p=photos|get_item:"auth-signup" %}{% if p %}{{ p.src }}{% else %}{% static 'img/photos/auth-signup.jpg' %}{% endif %}{% endwith %}{% endblock %}
 {% block credit_name %}{% with p=photos|get_item:"auth-signup" %}{% if p %}{{ p.credit_name }}{% else %}{% endif %}{% endwith %}{% endblock %}
 {% block credit_url %}{% with p=photos|get_item:"auth-signup" %}{% if p %}{{ p.credit_url }}{% else %}{% endif %}{% endwith %}{% endblock %}
 {% block photo_title %}Learning is better together{% endblock %}

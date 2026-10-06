@@ -165,3 +165,21 @@ class CourseStructureTests(TestCase):
         exam, action = ensure_exam(course, refresh=True)
         self.assertEqual(action, "refreshed")
         self.assertTrue(parse_questions(exam.content))
+
+
+class DemoStudentsTests(TestCase):
+    def test_seed_and_clear_demo_students(self):
+        from django.core.management import call_command
+
+        from accounts.models import User
+        from courses.models import LearnerBadge
+
+        call_command("seed_demo_students", count=15, verbosity=0)
+        demo = User.objects.filter(email__endswith="@demo.cloudforkids.local")
+        self.assertEqual(demo.count(), 15)
+        self.assertGreater(len({u.learner_profile.tier_id for u in demo}), 1)  # different pathways
+        self.assertTrue(LearnerBadge.objects.filter(learner__in=demo).exists())  # some have badges
+        call_command("seed_demo_students", count=15, verbosity=0)  # re-running adds nothing
+        self.assertEqual(demo.count(), 15)
+        call_command("seed_demo_students", clear=True, verbosity=0)
+        self.assertEqual(User.objects.filter(email__endswith="@demo.cloudforkids.local").count(), 0)
