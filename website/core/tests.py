@@ -292,3 +292,16 @@ class ResumeLearningTests(TestCase):
     def test_visitor_sees_signup_not_continue(self):
         page = self.client.get(reverse("core:home"))
         self.assertNotContains(page, "Continue where you left off")
+
+
+class CsrfFailureTests(TestCase):
+    def test_stale_form_goes_back_with_a_message_and_logout_still_works(self):
+        from django.test import Client
+
+        kid = User.objects.create_user("stale", password=PASSWORD, role="learner")
+        c = Client(enforce_csrf_checks=True)
+        c.force_login(kid)
+        page = c.post(reverse("accounts:login"), {"username": "x", "password": "y"}, HTTP_REFERER="http://testserver/accounts/login/", follow=True)
+        self.assertContains(page, "had expired")
+        c.post(reverse("accounts:logout"))
+        self.assertNotIn("_auth_user_id", c.session)

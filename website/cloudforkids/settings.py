@@ -74,6 +74,7 @@ X_FRAME_OPTIONS = "SAMEORIGIN"
 # Own cookie names: cookies are shared across ports on 127.0.0.1, so another local project (or an older copy of this one)
 # can overwrite a plain "csrftoken"/"sessionid" and cause "CSRF token from POST incorrect".
 CSRF_COOKIE_NAME = "c4k_csrftoken"
+CSRF_FAILURE_VIEW = "core.views.csrf_failed"
 SESSION_COOKIE_NAME = "c4k_sessionid"
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"

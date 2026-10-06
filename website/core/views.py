@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.shortcuts import redirect, render
+from django.urls import reverse
 
 from accounts.models import User
 from courses.models import Course, Lesson, LessonCompletion, Tier
@@ -112,3 +113,19 @@ def legal(request, slug):
     if page is None:
         raise Http404
     return render(request, "core/legal.html", {"page": page})
+
+
+def csrf_failed(request, reason=""):
+    """A form was sent with an out-of-date security token (another tab logged in or out, or the page sat open too long).
+    Instead of a bare 403, take the person back with a friendly note. Signing out always works."""
+    from django.contrib.auth import logout
+    from django.utils.http import url_has_allowed_host_and_scheme
+
+    if request.path == reverse("accounts:logout"):
+        logout(request)
+        return redirect("core:home")
+    messages.warning(request, "That page had expired, probably because you signed in or out in another tab. Please try again.")
+    back = request.META.get("HTTP_REFERER", "")
+    if back and url_has_allowed_host_and_scheme(back, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        return redirect(back)
+    return redirect("core:home")
