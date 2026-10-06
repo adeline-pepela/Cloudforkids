@@ -46,7 +46,7 @@ class SignupTests(TestCase):
         self.assertFalse(User.objects.filter(username="newbie").exists())
 
     def test_age_limits(self):
-        for years in (5, 25):
+        for years in (5, 8, 25):
             response = self.client.post(reverse("accounts:signup"), signup_data(date_of_birth=born(years).isoformat()))
             self.assertEqual(response.status_code, 200)
         self.assertFalse(User.objects.filter(username="newbie").exists())

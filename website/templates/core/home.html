@@ -84,8 +84,8 @@
 </section>
 
 <section class="container py-5">
-  <div class="row g-4">
-    <div class="col-md-6 reveal">
+  <div class="row g-4 justify-content-center">
+    <div class="col-md-8 reveal">
       <a href="{% url 'core:find_path' %}" class="text-decoration-none">
         <div class="tier-card p-4 d-flex gap-3 align-items-center">
           <img src="{% static 'img/nimbus.svg' %}" alt="" class="nimbus nimbus-bob">
@@ -93,18 +93,6 @@
             <h4 class="mb-1">Which tier is right for me?</h4>
             <p class="text-secondary mb-2">Answer three quick questions and get a recommended starting point.</p>
             <span class="fw-bold">Find my tier &rarr;</span>
-          </div>
-        </div>
-      </a>
-    </div>
-    <div class="col-md-6 reveal d1">
-      <a href="{% url 'core:cloud_demo' %}" class="text-decoration-none">
-        <div class="tier-card p-4 d-flex gap-3 align-items-center">
-          <span class="value-icon" style="width:84px;height:84px;font-size:2.4rem;border-radius:24px;flex-shrink:0;"><i class="bi bi-cloud-arrow-up-fill" aria-hidden="true"></i></span>
-          <div>
-            <h4 class="mb-1">See how the cloud works</h4>
-            <p class="text-secondary mb-2">Save a photo to the cloud and watch where it goes. Try it yourself!</p>
-            <span class="fw-bold">Try the demo &rarr;</span>
           </div>
         </div>
       </a>
@@ -181,7 +169,7 @@
     {% for partner in partners %}
     <div class="col-6 col-md-4 col-lg-2 reveal">
       <div class="partner-card p-3 text-center h-100">
-        <div class="fs-3 mb-1"><i class="bi bi-globe2" aria-hidden="true"></i></div>
+        {% if partner.logo_src %}<img src="{{ partner.logo_src }}" alt="{{ partner.name }}" class="partner-logo" loading="lazy">{% else %}<div class="fs-3 mb-1"><i class="bi bi-globe2" aria-hidden="true"></i></div>{% endif %}
         <p class="small fw-bold mb-0">{{ partner.name }}</p>
       </div>
     </div>

@@ -1,9 +1,9 @@
 {% extends "accounts/auth_base.html" %}
-{% load c4k %}
+{% load static c4k %}
 {% block title %}Waiting for your parent{% endblock %}
-{% block photo_url %}{% with p=photos|get_item:"auth-reset" %}{% if p %}{{ p.src }}{% else %}https://images.unsplash.com/photo-1567057419565-4349c49d8a04?auto=format&fit=crop&w=1400&q=75{% endif %}{% endwith %}{% endblock %}
-{% block credit_name %}{% with p=photos|get_item:"auth-reset" %}{% if p %}{{ p.credit_name }}{% else %}Annie Spratt{% endif %}{% endwith %}{% endblock %}
-{% block credit_url %}{% with p=photos|get_item:"auth-reset" %}{% if p %}{{ p.credit_url }}{% else %}https://unsplash.com/photos/OIuCXxx08yg{% endif %}{% endwith %}{% endblock %}
+{% block photo_url %}{% with p=photos|get_item:"auth-reset" %}{% if p %}{{ p.src }}{% else %}{% static 'img/photos/auth-reset.svg' %}{% endif %}{% endwith %}{% endblock %}
+{% block credit_name %}{% with p=photos|get_item:"auth-reset" %}{% if p %}{{ p.credit_name }}{% else %}{% endif %}{% endwith %}{% endblock %}
+{% block credit_url %}{% with p=photos|get_item:"auth-reset" %}{% if p %}{{ p.credit_url }}{% else %}{% endif %}{% endwith %}{% endblock %}
 {% block photo_title %}One more step: a grown-up says yes{% endblock %}
 {% block photo_points %}
 <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i>We emailed your parent or guardian</li>

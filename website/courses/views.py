@@ -12,7 +12,7 @@ from .quiz import attempt, parse_questions, public_html, quiz_status, record_res
 
 
 def programs(request):
-    tiers = Tier.objects.prefetch_related("courses").all()
+    tiers = Tier.objects.exclude(slug="explorer").prefetch_related("courses__lessons")
     return render(request, "courses/programs.html", {"tiers": tiers})
 
 

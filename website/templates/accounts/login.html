@@ -1,9 +1,9 @@
 {% extends "accounts/auth_base.html" %}
-{% load c4k %}
+{% load static c4k %}
 {% block title %}Log in{% endblock %}
-{% block photo_url %}{% with p=photos|get_item:"auth-login" %}{% if p %}{{ p.src }}{% else %}https://images.unsplash.com/photo-1632215861513-130b66fe97f4?auto=format&fit=crop&w=1400&q=75{% endif %}{% endwith %}{% endblock %}
-{% block credit_name %}{% with p=photos|get_item:"auth-login" %}{% if p %}{{ p.credit_name }}{% else %}Emmanuel Ikwuegbu{% endif %}{% endwith %}{% endblock %}
-{% block credit_url %}{% with p=photos|get_item:"auth-login" %}{% if p %}{{ p.credit_url }}{% else %}https://unsplash.com/photos/VC6MGt9ZoBA{% endif %}{% endwith %}{% endblock %}
+{% block photo_url %}{% with p=photos|get_item:"auth-login" %}{% if p %}{{ p.src }}{% else %}{% static 'img/photos/auth-login.svg' %}{% endif %}{% endwith %}{% endblock %}
+{% block credit_name %}{% with p=photos|get_item:"auth-login" %}{% if p %}{{ p.credit_name }}{% else %}{% endif %}{% endwith %}{% endblock %}
+{% block credit_url %}{% with p=photos|get_item:"auth-login" %}{% if p %}{{ p.credit_url }}{% else %}{% endif %}{% endwith %}{% endblock %}
 {% block photo_title %}Pick up right where you left off{% endblock %}
 {% block photo_points %}
 <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Continue your lessons and quizzes</li>

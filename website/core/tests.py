@@ -68,8 +68,8 @@ class LanguageSwitchTests(TestCase):
 
     def test_every_page_renders_in_kiswahili(self):
         self.switch("sw")
-        for name in ("core:home", "core:about", "core:contact", "core:impact", "core:partners", "core:curriculum", "courses:programs",
-                     "core:find_path", "core:cloud_demo", "accounts:login", "accounts:signup", "core:terms", "core:privacy"):
+        for name in ("core:home", "core:about", "core:contact", "core:impact", "core:partners", "courses:programs",
+                     "core:find_path", "accounts:login", "accounts:signup", "core:terms", "core:privacy"):
             self.assertEqual(self.client.get(reverse(name)).status_code, 200, name)
 
     def test_learner_area_in_kiswahili(self):

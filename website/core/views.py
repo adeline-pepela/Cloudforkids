@@ -33,8 +33,13 @@ def grade_span(tiers):
     return f"Grade {min(numbers)} to Grade {max(numbers)}" if numbers else ""
 
 
+def public_tiers():
+    """Learners are 9 to 17, so the Grade 1-3 Explorer tier is not offered publicly."""
+    return Tier.objects.exclude(slug="explorer")
+
+
 def home(request):
-    tiers = Tier.objects.all()
+    tiers = public_tiers()
     partners = Partner.objects.all()[:6]
     stats = ImpactStat.objects.filter(where=ImpactStat.Where.HOME)
     testimonials = Testimonial.objects.filter(published=True)
@@ -46,11 +51,7 @@ def home(request):
 
 
 def find_path(request):
-    return render(request, "core/find_path.html", {"tiers": Tier.objects.all()})
-
-
-def cloud_demo(request):
-    return render(request, "core/cloud_demo.html")
+    return render(request, "core/find_path.html", {"tiers": public_tiers()})
 
 
 def about(request):
@@ -59,7 +60,7 @@ def about(request):
         "core/about.html",
         {
             "stats": ImpactStat.objects.filter(where=ImpactStat.Where.ABOUT),
-            "tiers": Tier.objects.all(),
+            "tiers": public_tiers(),
             "teach": _cards(InfoCard.Section.TEACH),
             "different": _cards(InfoCard.Section.DIFFERENT),
             "audience": _cards(InfoCard.Section.AUDIENCE),
@@ -71,8 +72,7 @@ def about(request):
 
 
 def curriculum(request):
-    tiers = Tier.objects.prefetch_related("courses__lessons")
-    return render(request, "core/curriculum.html", {"tiers": tiers})
+    return redirect("courses:programs")
 
 
 def partners(request):

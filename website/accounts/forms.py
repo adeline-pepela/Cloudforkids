@@ -111,7 +111,7 @@ from django.utils import timezone
 
 from .models import ParentalConsent
 
-MIN_AGE, MAX_AGE, CONSENT_AGE = 7, 17, 13
+MIN_AGE, MAX_AGE, CONSENT_AGE = 9, 17, 13
 
 
 def age_on(born, today=None):

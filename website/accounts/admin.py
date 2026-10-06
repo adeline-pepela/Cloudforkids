@@ -66,6 +66,14 @@ class ClassroomAdmin(admin.ModelAdmin):
             kwargs["queryset"] = User.objects.filter(role=User.Role.FACILITATOR)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        for name in ("parent", "child"):  # just a dropdown: no add/change/view icons beside it
+            widget = form.base_fields[name].widget
+            for flag in ("can_add_related", "can_change_related", "can_delete_related", "can_view_related"):
+                setattr(widget, flag, False)
+        return form
+
     @admin.display(description="Learners")
     def member_count(self, obj):
         return obj.memberships.count()
@@ -81,7 +89,24 @@ class AssignmentAdmin(admin.ModelAdmin):
 class ParentLinkAdmin(admin.ModelAdmin):
     list_display = ("parent", "child", "created_at")
     search_fields = ("parent__username", "child__username")
-    raw_id_fields = ("parent", "child")
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """Plain dropdowns: only parents in the first, only learners in the second."""
+        if db_field.name in ("parent", "child"):
+            role = User.Role.PARENT if db_field.name == "parent" else User.Role.LEARNER
+            kwargs["queryset"] = User.objects.filter(role=role).order_by("first_name", "username")
+            field = super().formfield_for_foreignkey(db_field, request, **kwargs)
+            field.label_from_instance = lambda u: f"{u.get_full_name() or u.username} ({u.username})"
+            return field
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        for name in ("parent", "child"):  # just a dropdown: no add/change/view icons beside it
+            widget = form.base_fields[name].widget
+            for flag in ("can_add_related", "can_change_related", "can_delete_related", "can_view_related"):
+                setattr(widget, flag, False)
+        return form
 
 
 @admin.register(ParentalConsent)

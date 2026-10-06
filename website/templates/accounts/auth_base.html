@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% load static %}
 {% comment %}
-Split layout for login, sign up and password reset: a photo panel (Unsplash) beside the form.
-Blocks: photo_url, photo_title, photo_points, credit_name, credit_url, auth_form.
+Split layout for login, sign up and password reset: an illustration panel beside the form.
+Blocks: photo_url, photo_title, photo_points, auth_form.
 If the photo cannot load, the panel falls back to the sky-blue gradient.
 {% endcomment %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'css/auth.css' %}">{% endblock %}
@@ -14,7 +14,6 @@ If the photo cannot load, the panel falls back to the sky-blue gradient.
       <h2>{% block photo_title %}{% endblock %}</h2>
       <ul class="auth-points">{% block photo_points %}{% endblock %}</ul>
     </div>
-    <a class="auth-credit" href="{% block credit_url %}https://unsplash.com{% endblock %}" target="_blank" rel="noopener">Photo by {% block credit_name %}Unsplash{% endblock %} on Unsplash</a>
   </aside>
   <div class="auth-panel">
     <div class="auth-card">

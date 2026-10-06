@@ -5,8 +5,8 @@ and for the titles of the original tiers, courses and lessons. Applied by the mi
 CONTENT = {
     # site settings (home page)
     "Kenya's first cloud-literacy programme for kids": "Mpango wa kwanza wa Kenya wa elimu ya wingu kwa watoto",
-    "Cloud for Kids teaches children aged 7-17 how data, the internet, and the cloud actually work, through school clubs, after-school hubs, and holiday bootcamps aligned to Kenya's CBC/CBE curriculum.":
-        "Cloud for Kids huwafundisha watoto wa miaka 7-17 jinsi data, intaneti na wingu vinavyofanya kazi kweli, kupitia klabu za shule, vituo vya baada ya shule na kambi za likizo zinazoendana na mtaala wa CBC/CBE wa Kenya.",
+    "Cloud for Kids teaches children aged 9-17 how data, the internet, and the cloud actually work, through school clubs, after-school hubs, and holiday bootcamps aligned to Kenya's CBC/CBE curriculum.":
+        "Cloud for Kids huwafundisha watoto wa miaka 9-17 jinsi data, intaneti na wingu vinavyofanya kazi kweli, kupitia klabu za shule, vituo vya baada ya shule na kambi za likizo zinazoendana na mtaala wa CBC/CBE wa Kenya.",
     "Explorer, Foundational, Intermediate, Advanced: a 4-tier pathway from Grade 1 to Grade 12.": "Mgunduzi, Msingi, Kati, Juu: njia ya ngazi 4 kuanzia Darasa la 1 hadi la 12.",
     "Kenya's digital economy is growing faster than its cloud skills": "Uchumi wa kidijitali wa Kenya unakua kwa kasi kuliko ujuzi wa wingu",
     "Why now?": "Kwa nini sasa?",
@@ -14,8 +14,8 @@ CONTENT = {
         "AWS, Microsoft, Samsung na Konza Technopolis tayari wanawekeza katika mfumo wa ujuzi wa kidijitali wa Kenya. Cloud for Kids huunganisha watoto wa umri wa shule moja kwa moja na mkondo huo.",
     # about
     "Building Kenya's next generation of cloud-ready digital innovators": "Kujenga kizazi kijacho cha wabunifu wa kidijitali wa Kenya walio tayari kwa wingu",
-    "Cloud for Kids is a cloud computing literacy programme for children aged 7 to 17, taught through school partnerships and after-school learning hubs and aligned to Kenya's CBC/CBE curriculum.":
-        "Cloud for Kids ni mpango wa elimu ya kompyuta ya wingu kwa watoto wa miaka 7 hadi 17, unaofundishwa kupitia ushirikiano na shule na vituo vya kujifunza baada ya shule, na unaendana na mtaala wa CBC/CBE wa Kenya.",
+    "Cloud for Kids is a cloud computing literacy programme for children aged 9 to 17, taught through school partnerships and after-school learning hubs and aligned to Kenya's CBC/CBE curriculum.":
+        "Cloud for Kids ni mpango wa elimu ya kompyuta ya wingu kwa watoto wa miaka 9 hadi 17, unaofundishwa kupitia ushirikiano na shule na vituo vya kujifunza baada ya shule, na unaendana na mtaala wa CBC/CBE wa Kenya.",
     "Closing the skills gap at the source": "Kuziba pengo la ujuzi tangu mwanzo",
     "To close Kenya's cloud skills gap at the source by building genuine cloud literacy into childhood education, not just adult retraining.":
         "Kuziba pengo la ujuzi wa wingu la Kenya tangu mwanzo kwa kujenga elimu ya kweli ya wingu katika elimu ya utotoni, si mafunzo ya watu wazima tu.",

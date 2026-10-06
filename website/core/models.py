@@ -13,6 +13,21 @@ class Partner(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def logo_src(self):
+        """The uploaded logo, else static/img/partners/<name-as-slug>.(svg|png|jpg|webp) if that file exists."""
+        if self.logo:
+            return self.logo.url
+        from django.contrib.staticfiles import finders
+        from django.templatetags.static import static
+        from django.utils.text import slugify
+
+        for ext in ("svg", "png", "jpg", "webp"):
+            path = f"img/partners/{slugify(self.name)}.{ext}"
+            if finders.find(path):
+                return static(path)
+        return ""
+
 
 class ContactMessage(models.Model):
     class Role(models.TextChoices):
@@ -71,7 +86,7 @@ class SiteSetting(models.Model):
     hero_title_accent = models.CharField(max_length=60, default="cloud-ready", help_text="Highlighted word(s)")
     hero_title_end = models.CharField(max_length=60, default="by 2030.")
     hero_lead = models.TextField(default=(
-        "Cloud for Kids teaches children aged 7-17 how data, the internet, and the cloud actually work, "
+        "Cloud for Kids teaches children aged 9-17 how data, the internet, and the cloud actually work, "
         "through school clubs, after-school hubs, and holiday bootcamps aligned to Kenya's CBC/CBE curriculum."))
     hero_note = models.CharField(max_length=200, blank=True, default="Foundational, Intermediate, Advanced: a 3-tier pathway from Grade 4 to Grade 12.")
     gap_title = models.CharField(max_length=200, default="Kenya's digital economy is growing faster than its cloud skills")
@@ -82,7 +97,7 @@ class SiteSetting(models.Model):
     # About page
     about_title = models.CharField(max_length=200, default="Building Kenya's next generation of cloud-ready digital innovators")
     about_lead = models.TextField(default=(
-        "Cloud for Kids is a cloud computing literacy programme for children aged 7 to 17, taught through school "
+        "Cloud for Kids is a cloud computing literacy programme for children aged 9 to 17, taught through school "
         "partnerships and after-school learning hubs and aligned to Kenya's CBC/CBE curriculum."))
     story_title = models.CharField(max_length=200, default="Closing the skills gap at the source")
     story_text = models.TextField(default="", help_text="Separate paragraphs with a blank line")

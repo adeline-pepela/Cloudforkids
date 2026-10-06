@@ -1,9 +1,9 @@
 {% extends "accounts/auth_base.html" %}
-{% load c4k %}
+{% load static c4k %}
 {% block title %}Sign up{% endblock %}
-{% block photo_url %}{% with p=photos|get_item:"auth-signup" %}{% if p %}{{ p.src }}{% else %}https://images.unsplash.com/photo-1655720348590-c739c860beed?auto=format&fit=crop&w=1400&q=75{% endif %}{% endwith %}{% endblock %}
-{% block credit_name %}{% with p=photos|get_item:"auth-signup" %}{% if p %}{{ p.credit_name }}{% else %}Iwaria Inc.{% endif %}{% endwith %}{% endblock %}
-{% block credit_url %}{% with p=photos|get_item:"auth-signup" %}{% if p %}{{ p.credit_url }}{% else %}https://unsplash.com/photos/vWqBjWbc_H4{% endif %}{% endwith %}{% endblock %}
+{% block photo_url %}{% with p=photos|get_item:"auth-signup" %}{% if p %}{{ p.src }}{% else %}{% static 'img/photos/auth-signup.svg' %}{% endif %}{% endwith %}{% endblock %}
+{% block credit_name %}{% with p=photos|get_item:"auth-signup" %}{% if p %}{{ p.credit_name }}{% else %}{% endif %}{% endwith %}{% endblock %}
+{% block credit_url %}{% with p=photos|get_item:"auth-signup" %}{% if p %}{{ p.credit_url }}{% else %}{% endif %}{% endwith %}{% endblock %}
 {% block photo_title %}Learning is better together{% endblock %}
 {% block photo_points %}
 <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Free lessons, quizzes and module exams</li>
@@ -14,7 +14,7 @@
 {% block auth_form %}
 <div class="section-eyebrow">Join Cloud for Kids</div>
 <h1>Create your free account</h1>
-<p class="lead-sm">For learners aged 7&ndash;17, parents or guardians, and facilitators.</p>
+<p class="lead-sm">For learners aged 9&ndash;17, parents or guardians, and facilitators.</p>
 
 <form method="post" novalidate>
   {% csrf_token %}
@@ -52,7 +52,7 @@
     <div class="col-12" id="dob-box">
       <label class="form-label fw-bold" for="{{ form.date_of_birth.id_for_label }}">Date of birth</label>
       {{ form.date_of_birth }}{{ form.date_of_birth.errors }}
-      <div class="form-text">Learners are 7 to 17 years old. We use this to keep younger children safe.</div>
+      <div class="form-text">Learners are 9 to 17 years old. We use this to keep younger children safe.</div>
     </div>
     <div class="col-12" id="consent-box" {% if not form.parent_email.errors and not form.parent_name.errors %}hidden{% endif %}>
       <div class="auth-note mb-3"><i class="bi bi-shield-check" aria-hidden="true"></i><span><strong>Under 13?</strong> We email a parent or guardian to approve the account before you can log in. It takes them a minute.</span></div>

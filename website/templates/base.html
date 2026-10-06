@@ -25,19 +25,19 @@
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="mainNav">
-        <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
-          <li class="nav-item"><a class="nav-link" href="{% url 'core:home' %}">Home</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'courses:programs' %}">Programs</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'core:cloud_demo' %}">Cloud demo</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'core:curriculum' %}">Curriculum Fit</a></li>
-          <!-- <li class="nav-item"><a class="nav-link" href="{% url 'core:partners' %}">Partners</a></li> -->
-          <li class="nav-item"><a class="nav-link" href="{% url 'core:impact' %}">Impact</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'core:about' %}">About</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'core:contact' %}">Contact</a></li>
-          <li class="nav-item ms-lg-2">{% include "partials/lang_switch.html" %}</li>
+        {% with route=request.resolver_match.view_name %}
+        <ul class="navbar-nav nav-main ms-lg-auto align-items-lg-center">
+          <li class="nav-item"><a class="nav-link{% if route == 'core:home' %} active{% endif %}" href="{% url 'core:home' %}">Home</a></li>
+          <li class="nav-item"><a class="nav-link{% if route == 'core:about' %} active{% endif %}" href="{% url 'core:about' %}">About</a></li>
+          <li class="nav-item"><a class="nav-link{% if route == 'courses:programs' or route == 'courses:course_detail' %} active{% endif %}" href="{% url 'courses:programs' %}">Programs</a></li>
+          <li class="nav-item"><a class="nav-link{% if route == 'core:impact' %} active{% endif %}" href="{% url 'core:impact' %}">Impact</a></li>
+          <li class="nav-item"><a class="nav-link{% if route == 'core:contact' %} active{% endif %}" href="{% url 'core:contact' %}">Contact</a></li>
+        </ul>
+        {% endwith %}
+        <ul class="navbar-nav nav-end align-items-lg-center">
           {% if user.is_authenticated %}
             <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
-            <li class="nav-item ms-lg-2">
+            <li class="nav-item">
               <form action="{% url 'accounts:logout' %}" method="post" class="d-inline">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-outline-cloud btn-sm">Log out</button>
@@ -45,8 +45,9 @@
             </li>
           {% else %}
             <li class="nav-item"><a class="nav-link" href="{% url 'accounts:login' %}">Log in</a></li>
-            <li class="nav-item ms-lg-2"><a class="btn btn-cloud btn-sm" href="{% url 'accounts:signup' %}">Sign up free</a></li>
+            <li class="nav-item"><a class="btn btn-cloud btn-sm" href="{% url 'accounts:signup' %}">Sign up free</a></li>
           {% endif %}
+          <li class="nav-item nav-lang">{% include "partials/lang_switch.html" %}</li>
         </ul>
       </div>
     </div>
@@ -78,7 +79,6 @@
           <h6>Explore</h6>
           <ul class="list-unstyled">
             <li><a href="{% url 'courses:programs' %}">Programs</a></li>
-            <li><a href="{% url 'core:curriculum' %}">Curriculum Fit</a></li>
             <li><a href="{% url 'core:impact' %}">Impact</a></li>
           </ul>
         </div>

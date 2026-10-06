@@ -5,7 +5,7 @@
 <section class="container py-5">
   <div class="text-center mb-5">
     <div class="section-eyebrow">The programme</div>
-    <h1 class="section-title">A three-tier cloud literacy pathway</h1>
+    <h1 class="section-title">A three-tier cloud literacy pathway for ages 9 to 17</h1>
     <p class="text-secondary mx-auto" style="max-width:680px;">
       From unplugged foundations in upper primary to project-based cloud computing in Senior
       School &mdash; every tier is aligned to Kenya's CBC/CBE curriculum.
@@ -23,10 +23,7 @@
   {% for tier in tiers %}
   <div id="{{ tier.slug }}" class="mb-5 tier-section" data-tier="{{ tier.slug }}">
     <div class="row align-items-center g-4 mb-3">
-      <div class="col-md-4 {% if forloop.counter|divisibleby:2 %}order-md-2{% endif %}">
-        <div class="rounded-4 overflow-hidden shadow-sm">{% include "partials/slot.html" with name="program-"|add:tier.slug icon="bi-stars" tone="sky" alt=tier.display_name cls="" %}</div>
-      </div>
-      <div class="col-md-8">
+      <div class="col-12">
     <div class="d-flex align-items-center gap-3 mb-3">
       <span class="fs-1"><i class="bi bi-{{ tier.icon }}" aria-hidden="true"></i></span>
       <div>
@@ -44,16 +41,66 @@
           <span class="course-icon"><i class="bi bi-{{ course.icon }}" aria-hidden="true"></i></span>
           <h5>{{ course.display_title }}</h5>
           <p class="text-secondary small">{{ course.display_summary }}</p>
-          <p class="small fw-bold text-secondary">{{ course.lesson_count }} lesson{{ course.lesson_count|pluralize }}</p>
+          <p class="small fw-bold text-secondary">{{ course.lesson_count }} lesson{{ course.lesson_count|pluralize }}{% if course.total_duration_minutes %} &middot; {{ course.total_duration_minutes }} min{% endif %}{% if course.exam %} &middot; exam included{% endif %}</p>
           <a href="{{ course.get_absolute_url }}" class="btn btn-outline-cloud btn-sm">View course</a>
         </div>
       </div>
       {% endfor %}
     </div>
   </div>
-  {% empty %}
- 
   {% endfor %}
+</section>
+
+<section class="container pb-5" id="curriculum">
+  <div class="text-center mb-4">
+    <div class="section-eyebrow">CBC / CBE alignment</div>
+    <h2 class="section-title">Mapped to Kenya's Competency-Based Curriculum</h2>
+    <p class="text-secondary mx-auto" style="max-width:680px;">
+      Digital Literacy is one of seven core CBC competencies. Cloud for Kids plugs into the recognised curricular anchors at every stage
+      as complementary enrichment, not a replacement for formal curriculum delivery. In April 2025 CBC was rebranded Competency-Based Education (CBE).
+    </p>
+  </div>
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead><tr><th>Tier</th><th>Grade range</th><th>CBC / CBE anchor</th><th>Focus</th></tr></thead>
+      <tbody>
+        {% for tier in tiers %}
+        <tr>
+          <td><span class="fs-4 me-2"><i class="bi bi-{{ tier.icon }}" aria-hidden="true"></i></span><strong>{{ tier.display_name }}</strong></td>
+          <td>{{ tier.grade_range }}</td>
+          <td>{{ tier.cbc_alignment }}</td>
+          <td class="text-secondary">{{ tier.display_summary }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="container pb-5" id="dashboards">
+  <div class="text-center mb-4">
+    <div class="section-eyebrow">Dashboards</div>
+    <h2 class="section-title">A dashboard for everyone involved</h2>
+    <p class="text-secondary mx-auto" style="max-width:680px;">Every account gets its own space once signed in, so learning is easy to follow at home and in class.</p>
+  </div>
+  <div class="row g-4">
+    <div class="col-md-4"><div class="tier-card p-4 h-100">
+      <div class="value-icon"><i class="bi bi-rocket-takeoff-fill" aria-hidden="true"></i></div>
+      <h5>Learner dashboard</h5>
+      <p class="text-secondary small mb-0">Your recommended tier, courses in progress, lessons completed, quiz scores, badges and hands-on labs, all in one place.</p>
+    </div></div>
+    <div class="col-md-4"><div class="tier-card p-4 h-100">
+      <div class="value-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></div>
+      <h5>Parent dashboard</h5>
+      <p class="text-secondary small mb-0">Approve your child's account, follow their progress and results, and message their teachers.</p>
+    </div></div>
+    <div class="col-md-4"><div class="tier-card p-4 h-100">
+      <div class="value-icon"><i class="bi bi-easel2-fill" aria-hidden="true"></i></div>
+      <h5>Teacher dashboard</h5>
+      <p class="text-secondary small mb-0">Set up classrooms, see how every learner is doing, and use the curriculum map to plan lessons.</p>
+    </div></div>
+  </div>
+  <div class="text-center mt-4"><a href="{% url 'accounts:signup' %}" class="btn btn-cloud btn-lg">Sign up free</a></div>
 </section>
 <script>
 (function () {
