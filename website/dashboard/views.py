@@ -1,9 +1,14 @@
+import calendar
+from collections import defaultdict
+from datetime import date, timedelta
+
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from accounts.models import ClassSession
 from courses.badges import check_and_award_badges
 from courses.tiers import suggested_tier
 from courses.models import Badge, Course, Enrollment, Lesson, Tier
@@ -30,6 +35,24 @@ def _teacher_tasks(user, enrollments):
             })
     tasks.sort(key=lambda t: (t["a"].due_date is None, t["a"].due_date))
     return tasks
+
+
+def _upcoming_sessions(user, limit=None):
+    """Sessions from now on (or still running) in the classes the learner has joined."""
+    rows = ClassSession.objects.filter(
+        classroom__memberships__learner=user, classroom__archived=False, starts_at__gte=timezone.now() - timedelta(hours=2)
+    ).select_related("classroom__facilitator")
+    return list(rows[:limit] if limit else rows)
+
+
+def _month_grid(year, month, events, today):
+    """Weeks (Monday first) of day cells for one month, each with the events that fall on it."""
+    weeks = []
+    for week in calendar.Calendar(firstweekday=0).monthdatescalendar(year, month):
+        weeks.append([
+            {"date": d, "in_month": d.month == month, "today": d == today, "events": events.get(d, [])} for d in week
+        ])
+    return weeks
 
 
 def _enrollments(user):
@@ -103,6 +126,7 @@ def home(request):
         request,
         "learner/home.html",
         {
+            "next_sessions": _upcoming_sessions(user, 3),
             "stats": stats,
             "enrollments": enrollments,
             "continue_lesson": _next_lesson_on_path(steps, enrollments),
@@ -115,6 +139,66 @@ def home(request):
             "next_badges": next_badges,
             "teacher_tasks": _teacher_tasks(user, enrollments),
             "nav": "home",
+        },
+    )
+
+
+@login_required
+def my_classes(request):
+    """Every class the learner joined: teacher, venue, upcoming sessions, due dates and a month calendar."""
+    user = request.user
+    if user.role != "learner":
+        return redirect("dashboard:home")
+    today = timezone.localdate()
+    try:
+        year, month = (int(x) for x in request.GET.get("m", "").split("-"))
+        date(year, month, 1)
+    except (ValueError, TypeError):
+        year, month = today.year, today.month
+    memberships = list(
+        user.class_memberships.filter(classroom__archived=False).select_related("classroom__facilitator", "classroom__tier")
+    )
+    classrooms = [m.classroom for m in memberships]
+    tasks = _teacher_tasks(user, _enrollments(user))
+
+    first = date(year, month, 1)
+    start = first - timedelta(days=first.weekday())
+    end = start + timedelta(days=42)
+    events = defaultdict(list)
+    for ses in ClassSession.objects.filter(classroom__in=classrooms).select_related("classroom"):
+        local = timezone.localtime(ses.starts_at)
+        if start <= local.date() < end:
+            events[local.date()].append({"kind": "session", "label": ses.display_title, "time": local, "ses": ses})
+    for t in tasks:
+        if t["a"].due_date and start <= t["a"].due_date < end:
+            events[t["a"].due_date].append({"kind": "due", "label": f"Due: {t['a'].course.display_title}", "time": None, "ses": None})
+    for day in events.values():
+        day.sort(key=lambda e: (e["time"] is not None, e["time"].timestamp() if e["time"] else 0))
+
+    upcoming = _upcoming_sessions(user)
+    by_class = defaultdict(list)
+    for ses in upcoming:
+        by_class[ses.classroom_id].append(ses)
+    tasks_by_class = defaultdict(list)
+    for t in tasks:
+        tasks_by_class[t["classroom"].pk].append(t)
+    cards = [
+        {
+            "classroom": m.classroom, "joined": m.joined_at, "classmates": m.classroom.memberships.count() - 1,
+            "sessions": by_class[m.classroom_id][:4], "tasks": tasks_by_class[m.classroom_id],
+        }
+        for m in memberships
+    ]
+    prev_month = (first - timedelta(days=1)).replace(day=1)
+    next_month = (first + timedelta(days=32)).replace(day=1)
+    return render(
+        request,
+        "learner/classes.html",
+        {
+            "stats": learner_stats(user), "cards": cards, "upcoming": upcoming[:8],
+            "weeks": _month_grid(year, month, events, today), "month_label": first.strftime("%B %Y"),
+            "prev_month": prev_month.strftime("%Y-%m"), "next_month": next_month.strftime("%Y-%m"),
+            "is_this_month": (year, month) == (today.year, today.month), "nav": "classes",
         },
     )
 

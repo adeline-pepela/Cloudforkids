@@ -17,6 +17,25 @@
         {% if is_complete %}&middot; <span class="text-success fw-bold">Completed</span>{% endif %}
       </p>
 
+      {% if lesson.has_video %}
+      <div class="my-4" aria-label="Lesson video">
+        {% if lesson.youtube_embed_url %}
+        <div class="lesson-video ratio ratio-16x9">
+          <iframe src="{{ lesson.youtube_embed_url }}" title="{{ lesson.display_title }} (video)" loading="lazy"
+                  allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+        </div>
+        {% endif %}
+        {% if lesson.video_file %}
+        <div class="lesson-video">
+          <video controls preload="metadata" playsinline controlslist="nodownload" src="{{ lesson.video_file.url }}">
+            Your browser cannot play this video.
+          </video>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
       <div class="tier-card p-4 my-4" style="height:auto;">
         {{ content_html|safe }}
       </div>

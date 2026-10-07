@@ -24,6 +24,23 @@
   </div>
 </div>
 
+{% if next_sessions %}
+<div class="l-card mb-4" style="height:auto;">
+  <h3><i class="bi bi-calendar-event-fill text-primary" aria-hidden="true"></i> Coming up in my classes</h3>
+  {% for ses in next_sessions %}
+  <div class="tc-task">
+    <i class="bi bi-easel2-fill big" aria-hidden="true"></i>
+    <div class="flex-grow-1">
+      <strong>{{ ses.display_title }}</strong>
+      <small>{{ ses.starts_at|date:"l j M" }}, {{ ses.starts_at|time:"H:i" }} to {{ ses.ends_at|time:"H:i" }}{% if ses.where %} &middot; {{ ses.where }}{% endif %}</small>
+    </div>
+    {% if ses.link %}<a href="{{ ses.link }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-cloud">Join online</a>{% endif %}
+  </div>
+  {% endfor %}
+  <a href="{% url 'dashboard:classes' %}" class="fw-bold text-decoration-none small">Open my classes and calendar &rarr;</a>
+</div>
+{% endif %}
+
 {% if teacher_tasks %}
 <div class="l-card mb-4" style="height:auto;">
   <h3><i class="bi bi-clipboard-check-fill text-success" aria-hidden="true"></i> From your teacher</h3>

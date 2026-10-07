@@ -147,15 +147,43 @@ class MessagingTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertFalse(Message.objects.exists())
 
-    def test_learner_can_read_but_not_send_or_compose(self):
+    def test_learner_reads_and_answers_the_teacher(self):
         self.send()
         self.client.force_login(self.kid)
-        inbox = self.client.get(reverse("messaging:inbox"))
-        self.assertContains(inbox, "Hello")
+        self.assertContains(self.client.get(reverse("messaging:inbox")), "Hello")
         message = Message.objects.get(recipient=self.kid)
         self.client.post(reverse("messaging:reply", args=[message.pk]), {"body": "hi teacher"})
-        self.assertEqual(Message.objects.filter(sender=self.kid).count(), 0)
-        self.assertRedirects(self.client.get(reverse("messaging:compose")), reverse("messaging:inbox"), fetch_redirect_response=False)
+        reply = Message.objects.get(sender=self.kid)
+        self.assertEqual((reply.recipient, reply.reply_to), (self.teacher, message))
+        self.client.force_login(self.teacher)  # the whole conversation shows on one page, and the teacher can answer back
+        page = self.client.get(reverse("messaging:detail", args=[reply.pk]))
+        self.assertContains(page, "hi teacher")
+        self.assertContains(page, "Please read lesson 2.")
+        self.client.post(reverse("messaging:reply", args=[reply.pk]), {"body": "Well done"})
+        self.assertTrue(Message.objects.filter(sender=self.teacher, recipient=self.kid, body="Well done").exists())
+
+    def test_learner_writes_to_teacher_and_classmate_in_the_same_class_only(self):
+        buddy, stranger = make("buddy"), make("stranger")
+        ClassMembership.objects.create(classroom=self.classroom, learner=buddy)
+        self.client.force_login(self.kid)
+        self.assertContains(self.client.get(reverse("messaging:compose")), "Buddy")
+        for person in (self.teacher, buddy):
+            self.client.post(reverse("messaging:compose"), {"to": person.pk, "subject": "Hi", "body": "Can you help?"})
+            self.assertTrue(Message.objects.filter(sender=self.kid, recipient=person).exists())
+        self.client.post(reverse("messaging:compose"), {"to": stranger.pk, "subject": "Hi", "body": "Hello"})
+        self.assertFalse(Message.objects.filter(recipient=stranger).exists())
+        self.client.force_login(buddy)  # the classmate can read it and answer
+        message = Message.objects.get(recipient=buddy)
+        self.assertContains(self.client.get(reverse("messaging:inbox")), "Hi")
+        self.client.post(reverse("messaging:reply", args=[message.pk]), {"body": "Sure!"})
+        self.assertTrue(Message.objects.filter(sender=buddy, recipient=self.kid).exists())
+
+    def test_learner_without_a_class_has_nobody_to_message(self):
+        loner = make("loner")
+        self.client.force_login(loner)
+        self.assertContains(self.client.get(reverse("messaging:compose")), "joined a class")
+        self.client.post(reverse("messaging:compose"), {"to": self.teacher.pk, "subject": "Hi", "body": "Hello"})
+        self.assertFalse(Message.objects.filter(sender=loner).exists())
 
     def test_parent_replies_and_teacher_sees_it(self):
         self.send(to=str(self.kid.pk))

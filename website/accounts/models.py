@@ -102,6 +102,8 @@ class Classroom(models.Model):
         help_text="The programme tier this class follows (progress is measured against it)",
     )
     school_name = models.CharField(max_length=150, blank=True)
+    location = models.CharField(max_length=150, blank=True, help_text="Where the class meets, e.g. Computer lab, Room 4")
+    meeting_link = models.URLField(blank=True, help_text="Optional link for online sessions (Google Meet, Zoom, Teams)")
     join_code = models.CharField(max_length=8, unique=True, editable=False)
     archived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -119,6 +121,42 @@ class Classroom(models.Model):
                 code = new_family_code()
             self.join_code = code
         super().save(*args, **kwargs)
+
+
+class ClassSession(models.Model):
+    """One scheduled meeting of a class. Learners in the class see it in their calendar."""
+
+    classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE, related_name="sessions")
+    title = models.CharField(max_length=150, blank=True, help_text="e.g. Intro to cloud storage. Leave blank to use the class name")
+    starts_at = models.DateTimeField()
+    duration_minutes = models.PositiveSmallIntegerField(default=60)
+    location = models.CharField(max_length=150, blank=True, help_text="Leave blank to use the class venue")
+    meeting_link = models.URLField(blank=True, help_text="Leave blank to use the class link")
+    notes = models.CharField(max_length=300, blank=True, help_text="e.g. Bring your laptop")
+
+    class Meta:
+        ordering = ["starts_at"]
+
+    def __str__(self):
+        return f"{self.classroom.name}: {self.starts_at:%Y-%m-%d %H:%M}"
+
+    @property
+    def display_title(self):
+        return self.title or self.classroom.name
+
+    @property
+    def ends_at(self):
+        from datetime import timedelta
+
+        return self.starts_at + timedelta(minutes=self.duration_minutes)
+
+    @property
+    def where(self):
+        return self.location or self.classroom.location
+
+    @property
+    def link(self):
+        return self.meeting_link or self.classroom.meeting_link
 
 
 class ClassMembership(models.Model):

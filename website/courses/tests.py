@@ -22,6 +22,7 @@ class QuizServerSideTests(TestCase):
 
     def setUp(self):
         self.client.force_login(self.user)
+        self.client.get(self.url("lesson_detail"))  # opening the page starts an attempt
 
     def url(self, name, lesson=None):
         lesson = lesson or self.lesson
@@ -70,7 +71,7 @@ class QuizServerSideTests(TestCase):
     def test_bad_requests_rejected(self):
         self.assertEqual(self.post("quiz_check", {"q": 99, "choice": 0}).status_code, 400)
         self.assertEqual(self.post("quiz_check", {"q": 0}).status_code, 400)
-        self.assertEqual(self.post("quiz_grade", {"answers": [0]}).status_code, 400)
+        self.assertEqual(self.post("quiz_grade", {"answers": [0]}).status_code, 400)  # must be {question id: choice}
 
     def test_cannot_finish_without_answering(self):
         self.assertEqual(self.post("quiz_finish").status_code, 400)
@@ -115,11 +116,14 @@ class QuizServerSideTests(TestCase):
     def test_exam_is_graded_on_the_server(self):
         exam = self.course.exam
         questions = parse_questions(exam.content)
-        wrong = [(q["correct"] + 1) % 4 for q in questions]
+        self.client.get(self.url("lesson_detail", exam))
+        wrong = {str(i): (q["correct"] + 1) % 4 for i, q in enumerate(questions)}
         failed = self.post("quiz_grade", {"answers": wrong}, lesson=exam).json()
         self.assertFalse(failed["passed"])
         self.assertEqual(len(failed["results"]), len(questions))
-        passed = self.post("quiz_grade", {"answers": [q["correct"] for q in questions]}, lesson=exam).json()
+        self.assertEqual(self.post("quiz_grade", {"answers": wrong}, lesson=exam).status_code, 409)  # one grading per attempt
+        self.client.get(self.url("lesson_detail", exam))  # trying again deals a fresh attempt
+        passed = self.post("quiz_grade", {"answers": {str(i): q["correct"] for i, q in enumerate(questions)}}, lesson=exam).json()
         self.assertTrue(passed["passed"])
         self.assertTrue(QuizResult.objects.get(learner=self.user, lesson=exam).passed)
 
@@ -183,3 +187,115 @@ class DemoStudentsTests(TestCase):
         self.assertEqual(demo.count(), 15)
         call_command("seed_demo_students", clear=True, verbosity=0)
         self.assertEqual(User.objects.filter(email__endswith="@demo.cloudforkids.local").count(), 0)
+
+
+class QuizAttemptTests(TestCase):
+    """Every attempt deals the questions again: a new order, a new option order, and a new draw from a bigger pool."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user("again", password="pw-12345-Zq", role="learner")
+        cls.course = Course.objects.get(slug="what-is-the-cloud-really")
+        cls.exam = cls.course.exam
+
+    def setUp(self):
+        self.client.force_login(self.user)
+
+    def qids(self, lesson):
+        import re
+
+        html = self.client.get(lesson.get_absolute_url()).content.decode()
+        return [int(q) for q in re.findall(r'data-qid="(\d+)"', html)]
+
+    def test_exam_questions_come_in_a_different_order_each_attempt(self):
+        count = len(parse_questions(self.exam.content))
+        orders = [self.qids(self.exam) for _ in range(4)]
+        for order in orders:
+            self.assertEqual(sorted(order), list(range(count)))
+        for earlier, later in zip(orders, orders[1:]):
+            self.assertNotEqual(earlier, later)
+
+    def test_bigger_pool_draws_a_different_set_each_time(self):
+        lesson = self.course.lessons.get(slug="data-storage-basics")
+        pool = len(parse_questions(lesson.content))
+        lesson.quiz_size = pool - 1
+        lesson.save()
+        first, second = self.qids(lesson), self.qids(lesson)
+        self.assertEqual((len(first), len(second)), (pool - 1, pool - 1))
+        self.assertNotEqual(sorted(first), sorted(second))
+        total, _, _ = __import__("courses.quiz", fromlist=["quiz_status"]).quiz_status(self.user, lesson)
+        self.assertEqual(total, pool - 1)
+
+    def test_answering_a_question_that_was_not_dealt_is_refused(self):
+        lesson = self.course.lessons.get(slug="data-storage-basics")
+        lesson.quiz_size = 1
+        lesson.save()
+        dealt = self.qids(lesson)[0]
+        other = next(q for q in range(len(parse_questions(lesson.content))) if q != dealt)
+        url = reverse("courses:quiz_check", args=[lesson.course.slug, lesson.slug])
+        post = lambda q: self.client.post(url, json.dumps({"q": q, "choice": 0}), content_type="application/json")
+        self.assertEqual(post(other).status_code, 400)
+        self.assertEqual(post(dealt).status_code, 200)
+
+    def test_quiz_cannot_be_checked_before_the_page_dealt_it(self):
+        lesson = self.course.lessons.get(slug="data-storage-basics")
+        url = reverse("courses:quiz_check", args=[lesson.course.slug, lesson.slug])
+        response = self.client.post(url, json.dumps({"q": 0, "choice": 0}), content_type="application/json")
+        self.assertEqual(response.status_code, 409)
+
+
+class LessonVideoTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user("viewer", password="pw-12345-Zq", role="learner")
+        cls.lesson = Course.objects.get(slug="what-is-the-cloud-really").lessons.get(slug="data-storage-basics")
+
+    def test_youtube_addresses_are_understood(self):
+        from .video import youtube_id
+
+        vid = "dQw4w9WgXcQ"
+        for url in (f"https://www.youtube.com/watch?v={vid}", f"https://youtu.be/{vid}?t=4", f"https://www.youtube.com/embed/{vid}",
+                    f"https://m.youtube.com/watch?feature=share&v={vid}", f"https://www.youtube.com/shorts/{vid}"):
+            self.assertEqual(youtube_id(url), vid, url)
+        for url in ("", "https://example.com/watch?v=" + vid, "https://youtube.com.evil.io/watch?v=" + vid, "https://www.youtube.com/watch?v=short", "javascript:alert(1)"):
+            self.assertEqual(youtube_id(url), "", url)
+
+    def test_bad_link_is_refused_by_the_form(self):
+        from django.core.exceptions import ValidationError
+
+        self.lesson.video_url = "https://example.com/video"
+        with self.assertRaises(ValidationError):
+            self.lesson.full_clean()
+
+    def test_lesson_page_shows_the_video(self):
+        self.client.force_login(self.user)
+        url = self.lesson.get_absolute_url()
+        self.assertNotContains(self.client.get(url), "youtube-nocookie")
+        self.lesson.video_url = "https://youtu.be/dQw4w9WgXcQ"
+        self.lesson.save()
+        self.assertContains(self.client.get(url), "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ")
+
+    def test_uploaded_video_plays_with_byte_ranges(self):
+        import shutil
+        import tempfile
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from django.test import override_settings
+
+        root = tempfile.mkdtemp()
+        try:
+            with override_settings(MEDIA_ROOT=root):
+                self.lesson.video_file = SimpleUploadedFile("clip.mp4", b"0123456789", content_type="video/mp4")
+                self.lesson.save()
+                self.client.force_login(self.user)
+                page = self.client.get(self.lesson.get_absolute_url())
+                self.assertContains(page, "<video")
+                media = self.lesson.video_file.url
+                self.assertEqual(b"".join(self.client.get(media).streaming_content), b"0123456789")
+                part = self.client.get(media, HTTP_RANGE="bytes=2-5")
+                self.assertEqual((part.status_code, part["Content-Range"]), (206, "bytes 2-5/10"))
+                self.assertEqual(b"".join(part.streaming_content), b"2345")
+                self.assertEqual(self.client.get(media, HTTP_RANGE="bytes=50-").status_code, 416)
+                self.assertEqual(self.client.get("/media/../settings.py").status_code, 404)
+        finally:
+            shutil.rmtree(root, ignore_errors=True)

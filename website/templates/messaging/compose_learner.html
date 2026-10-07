@@ -1,0 +1,41 @@
+{% extends base_tpl %}
+{% block title %}New message{% endblock %}
+{% block content %}
+<h1 class="l-title">New message</h1>
+<p class="l-sub">Write to your teacher or a classmate from your classes.</p>
+{% if not teachers and not classmates %}
+<div class="l-card text-center py-5" style="height:auto;">
+  <p class="text-secondary">You can message your teacher and classmates once you have joined a class.</p>
+  <a href="{% url 'dashboard:classes' %}" class="btn btn-cloud">Join a class</a>
+</div>
+{% else %}
+<div class="row"><div class="col-lg-8">
+  <div class="l-card" style="height:auto;">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label fw-bold" for="msg-to">To</label>
+        <select name="to" id="msg-to" class="form-select form-select-lg" required>
+          <option value="">Choose who to write to</option>
+          {% if teachers %}
+          <optgroup label="My teachers">
+            {% for t in teachers %}<option value="{{ t.pk }}" {% if selected == t.pk|stringformat:"s" %}selected{% endif %}>{{ t.get_full_name|default:t.username }} (teacher)</option>{% endfor %}
+          </optgroup>
+          {% endif %}
+          {% if classmates %}
+          <optgroup label="My classmates">
+            {% for p in classmates %}<option value="{{ p.pk }}" {% if selected == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.get_full_name|default:p.username }}</option>{% endfor %}
+          </optgroup>
+          {% endif %}
+        </select>
+      </div>
+      <div class="mb-3"><label class="form-label fw-bold" for="{{ form.subject.id_for_label }}">Subject</label>{{ form.subject }}{{ form.subject.errors }}</div>
+      <div class="mb-3"><label class="form-label fw-bold" for="{{ form.body.id_for_label }}">Message</label>{{ form.body }}{{ form.body.errors }}</div>
+      <p class="small text-secondary"><i class="bi bi-shield-check" aria-hidden="true"></i> You can only write to people in your classes. Be kind, and never share your password or where you live.</p>
+      <button type="submit" class="btn btn-cloud btn-big"><i class="bi bi-send-fill" aria-hidden="true"></i> Send</button>
+      <a href="{% url 'messaging:inbox' %}" class="btn btn-outline-cloud btn-big">Cancel</a>
+    </form>
+  </div>
+</div></div>
+{% endif %}
+{% endblock %}

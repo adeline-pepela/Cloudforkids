@@ -27,7 +27,7 @@
       </div>
       <div class="mb-3"><label class="form-label fw-bold" for="{{ form.subject.id_for_label }}">Subject</label>{{ form.subject }}{{ form.subject.errors }}</div>
       <div class="mb-3"><label class="form-label fw-bold" for="{{ form.body.id_for_label }}">Message</label>{{ form.body }}{{ form.body.errors }}</div>
-      <p class="small text-secondary"><i class="bi bi-shield-check" aria-hidden="true"></i> Learners can read messages but cannot reply. Parents can reply to you. An email copy is sent to anyone who has email notifications on.</p>
+      <p class="small text-secondary"><i class="bi bi-shield-check" aria-hidden="true"></i> Learners and parents can reply to you. An email copy is sent to anyone who has email notifications on.</p>
       <button type="submit" class="btn btn-cloud btn-big"><i class="bi bi-send-fill" aria-hidden="true"></i> Send</button>
       <a href="{% url 'messaging:inbox' %}" class="btn btn-outline-cloud btn-big">Cancel</a>
     </form>

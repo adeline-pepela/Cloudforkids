@@ -1,0 +1,123 @@
+{% extends "learner/base.html" %}
+{% block title %}My Classes{% endblock %}
+{% block content %}
+<h1 class="l-title">My Classes</h1>
+<p class="l-sub">Your teacher's classes, when they meet, and what to finish before the next session.</p>
+
+{% for card in cards %}
+{% with c=card.classroom %}
+<div class="l-card mb-4" style="height:auto;">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+    <div>
+      <h3 class="mb-1"><i class="bi bi-easel2-fill text-primary" aria-hidden="true"></i> {{ c.name }}</h3>
+      <div class="cls-meta">
+        <span><i class="bi bi-person-badge-fill" aria-hidden="true"></i> Teacher: <strong>{{ c.facilitator.get_full_name|default:c.facilitator.username }}</strong></span>
+        {% if c.tier %}<span><i class="bi bi-signpost-split-fill" aria-hidden="true"></i> {{ c.tier.display_name }}</span>{% endif %}
+        {% if c.school_name %}<span><i class="bi bi-building-fill" aria-hidden="true"></i> {{ c.school_name }}</span>{% endif %}
+        {% if c.location %}<span><i class="bi bi-geo-alt-fill" aria-hidden="true"></i> {{ c.location }}</span>{% endif %}
+        <span><i class="bi bi-people-fill" aria-hidden="true"></i> {{ card.classmates }} classmate{{ card.classmates|pluralize }}</span>
+      </div>
+      {% if c.description %}<p class="small text-secondary mt-2 mb-0">{{ c.description }}</p>{% endif %}
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      {% if c.meeting_link %}<a href="{{ c.meeting_link }}" target="_blank" rel="noopener noreferrer" class="btn btn-cloud"><i class="bi bi-camera-video-fill" aria-hidden="true"></i> Join online</a>{% endif %}
+      <a href="{% url 'messaging:compose' %}?to={{ c.facilitator_id }}" class="btn btn-outline-cloud"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i> Message teacher</a>
+      <form method="post" action="{% url 'accounts:leave_class' c.pk %}" onsubmit="return confirm('Leave this class?');">{% csrf_token %}<button type="submit" class="btn btn-link text-secondary">Leave</button></form>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-1">
+    <div class="col-lg-6">
+      <h6 class="fw-bold"><i class="bi bi-clock-fill text-primary" aria-hidden="true"></i> Next sessions</h6>
+      {% for ses in card.sessions %}
+      <div class="cls-ses">
+        <div class="cls-date"><b>{{ ses.starts_at|date:"j" }}</b><span>{{ ses.starts_at|date:"M" }}</span></div>
+        <div class="flex-grow-1">
+          <strong>{{ ses.starts_at|date:"l" }}, {{ ses.starts_at|time:"H:i" }} to {{ ses.ends_at|time:"H:i" }}</strong>
+          <small>{% if ses.title %}{{ ses.title }}{% endif %}{% if ses.where %}{% if ses.title %} &middot; {% endif %}{{ ses.where }}{% endif %}{% if ses.notes %} &middot; {{ ses.notes }}{% endif %}</small>
+        </div>
+        {% if ses.link %}<a href="{{ ses.link }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-cloud">Join</a>{% endif %}
+      </div>
+      {% empty %}
+      <p class="small text-secondary">Your teacher has not scheduled a session yet. It will show up here as soon as they do.</p>
+      {% endfor %}
+    </div>
+    <div class="col-lg-6">
+      <h6 class="fw-bold"><i class="bi bi-clipboard-check-fill text-success" aria-hidden="true"></i> Work from your teacher</h6>
+      {% for t in card.tasks %}
+      <a class="tc-task" href="{{ t.a.course.get_absolute_url }}">
+        <i class="bi bi-{{ t.a.course.icon }} big" aria-hidden="true"></i>
+        <div class="flex-grow-1">
+          <strong>{{ t.a.course.display_title }}</strong>
+          <small>{% if t.a.due_date %}{% if t.overdue %}<span class="text-danger fw-bold">was due {{ t.a.due_date|date:"j M" }}</span>{% elif t.days_left == 0 %}<strong>due today</strong>{% else %}due {{ t.a.due_date|date:"j M" }} ({{ t.days_left }} day{{ t.days_left|pluralize }} left){% endif %}{% else %}No due date{% endif %}{% if t.a.note %} &middot; {{ t.a.note }}{% endif %}</small>
+          <span class="fm-bar mt-1"><span style="width: {{ t.percent }}%"></span></span>
+        </div>
+        <b>{{ t.percent }}%</b>
+      </a>
+      {% empty %}
+      <p class="small text-secondary">Nothing assigned right now.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endwith %}
+{% empty %}
+<div class="l-card mb-4 text-center py-4" style="height:auto;">
+  <i class="bi bi-easel2 fs-1 text-primary" aria-hidden="true"></i>
+  <h3 class="mt-2">You have not joined a class yet</h3>
+  <p class="text-secondary">Your teacher gives you a class code. Type it below to join. Then the class schedule, assignments and your teacher's messages appear here.</p>
+</div>
+{% endfor %}
+
+<div class="l-card mb-4" style="height:auto;">
+  <h3><i class="bi bi-box-arrow-in-right text-primary" aria-hidden="true"></i> Join a class</h3>
+  <form method="post" action="{% url 'accounts:join_class' %}" class="d-flex flex-wrap gap-2">
+    {% csrf_token %}
+    <input type="text" name="code" class="form-control form-control-lg text-uppercase" style="max-width:220px;letter-spacing:.2em;font-weight:800;" maxlength="8" placeholder="CLASS CODE" autocomplete="off" required aria-label="Class code">
+    <button type="submit" class="btn btn-cloud btn-big"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Join class</button>
+  </form>
+</div>
+
+{% if cards %}
+<div class="l-card mb-4" style="height:auto;">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+    <h3 class="mb-0"><i class="bi bi-calendar3 text-primary" aria-hidden="true"></i> {{ month_label }}</h3>
+    <div class="btn-group" role="group" aria-label="Change month">
+      <a class="btn btn-sm btn-outline-cloud" href="?m={{ prev_month }}" aria-label="Previous month"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
+      {% if not is_this_month %}<a class="btn btn-sm btn-outline-cloud" href="{% url 'dashboard:classes' %}">Today</a>{% endif %}
+      <a class="btn btn-sm btn-outline-cloud" href="?m={{ next_month }}" aria-label="Next month"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+    </div>
+  </div>
+  <div class="cal-legend small mb-2"><span class="cal-chip session">Class session</span> <span class="cal-chip due">Due date</span></div>
+  <div class="cal-scroll">
+    <div class="cal" role="grid" aria-label="{{ month_label }} calendar">
+      <div class="cal-head">Mon</div><div class="cal-head">Tue</div><div class="cal-head">Wed</div><div class="cal-head">Thu</div><div class="cal-head">Fri</div><div class="cal-head">Sat</div><div class="cal-head">Sun</div>
+      {% for week in weeks %}{% for day in week %}
+      <div class="cal-day{% if not day.in_month %} off{% endif %}{% if day.today %} today{% endif %}" role="gridcell">
+        <span class="cal-num">{{ day.date.day }}</span>
+        {% for ev in day.events %}
+        <span class="cal-chip {{ ev.kind }}" title="{{ ev.label }}{% if ev.ses %} ({{ ev.ses.classroom.name }}{% if ev.ses.where %}, {{ ev.ses.where }}{% endif %}){% endif %}">{% if ev.time %}{{ ev.time|time:"H:i" }} {% endif %}{{ ev.label }}</span>
+        {% endfor %}
+      </div>
+      {% endfor %}{% endfor %}
+    </div>
+  </div>
+</div>
+
+{% if upcoming %}
+<div class="l-card mb-4" style="height:auto;">
+  <h3><i class="bi bi-list-check text-primary" aria-hidden="true"></i> All upcoming sessions</h3>
+  {% for ses in upcoming %}
+  <div class="cls-ses">
+    <div class="cls-date"><b>{{ ses.starts_at|date:"j" }}</b><span>{{ ses.starts_at|date:"M" }}</span></div>
+    <div class="flex-grow-1">
+      <strong>{{ ses.display_title }}</strong>
+      <small>{{ ses.starts_at|date:"l" }}, {{ ses.starts_at|time:"H:i" }} to {{ ses.ends_at|time:"H:i" }} &middot; {{ ses.classroom.name }}{% if ses.where %} &middot; {{ ses.where }}{% endif %}{% if ses.notes %} &middot; {{ ses.notes }}{% endif %}</small>
+    </div>
+    {% if ses.link %}<a href="{{ ses.link }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-cloud">Join</a>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

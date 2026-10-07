@@ -343,3 +343,69 @@ class LegalAndUnsubscribeTests(TestCase):
         user.refresh_from_db()
         self.assertFalse(user.email_notifications)
         self.assertEqual(self.client.get(reverse("accounts:unsubscribe", args=["garbage"])).status_code, 404)
+
+
+class ClassScheduleTests(TestCase):
+    def setUp(self):
+        self.teacher = User.objects.create_user("tr", password="pw-12345-Zq", role="facilitator")
+        self.kid = User.objects.create_user("pupil", password="pw-12345-Zq", role="learner")
+        self.other = User.objects.create_user("outsider", password="pw-12345-Zq", role="learner")
+        self.classroom = Classroom.objects.create(facilitator=self.teacher, name="Cloud Club", location="Lab 2", meeting_link="https://meet.example.com/club")
+
+    def add_session(self, **extra):
+        from datetime import date, timedelta
+
+        self.client.force_login(self.teacher)
+        data = {"date": (date.today() + timedelta(days=3)).isoformat(), "time": "14:30", "duration_minutes": 60, "repeat_weeks": 3, "title": "Storage"}
+        data.update(extra)
+        return self.client.post(reverse("teach:session_add", args=[self.classroom.pk]), data)
+
+    def test_teacher_adds_a_weekly_run_of_sessions(self):
+        from .models import ClassSession
+
+        self.assertRedirects(self.add_session(), reverse("teach:class", args=[self.classroom.pk]))
+        sessions = list(ClassSession.objects.filter(classroom=self.classroom))
+        self.assertEqual(len(sessions), 3)
+        self.assertEqual(sessions[1].starts_at - sessions[0].starts_at, __import__("datetime").timedelta(weeks=1))
+        self.assertEqual(sessions[0].where, "Lab 2")  # falls back to the class venue
+        self.assertEqual(sessions[0].link, "https://meet.example.com/club")
+
+    def test_past_date_is_refused(self):
+        from .models import ClassSession
+
+        self.add_session(date="2020-01-01")
+        self.assertFalse(ClassSession.objects.exists())
+
+    def test_only_the_owner_can_schedule(self):
+        from .models import ClassSession
+
+        rival = User.objects.create_user("rival", password="pw-12345-Zq", role="facilitator")
+        self.client.force_login(rival)
+        response = self.client.post(reverse("teach:session_add", args=[self.classroom.pk]), {"date": "2099-01-01", "time": "10:00", "duration_minutes": 60, "repeat_weeks": 1})
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(ClassSession.objects.exists())
+
+    def test_joining_shows_the_schedule_to_the_learner_only(self):
+        self.add_session()
+        self.client.force_login(self.kid)
+        joined = self.client.post(reverse("accounts:join_class"), {"code": self.classroom.join_code})
+        self.assertRedirects(joined, reverse("dashboard:classes"))
+        page = self.client.get(reverse("dashboard:classes"))
+        for text in ("Cloud Club", "Lab 2", "Storage", "14:30", "https://meet.example.com/club", "Message teacher"):
+            self.assertContains(page, text)
+        self.assertContains(self.client.get(reverse("dashboard:home")), "Coming up in my classes")
+        self.client.force_login(self.other)
+        self.assertNotContains(self.client.get(reverse("dashboard:classes")), "Storage")
+
+    def test_calendar_month_navigation_and_due_dates(self):
+        from datetime import date, timedelta
+
+        from courses.models import Course
+
+        ClassMembership.objects.create(classroom=self.classroom, learner=self.kid)
+        due = date.today() + timedelta(days=2)
+        Assignment.objects.create(classroom=self.classroom, course=Course.objects.first(), due_date=due)
+        self.client.force_login(self.kid)
+        page = self.client.get(reverse("dashboard:classes") + f"?m={due:%Y-%m}")
+        self.assertContains(page, "Due: ")
+        self.assertEqual(self.client.get(reverse("dashboard:classes") + "?m=garbage").status_code, 200)

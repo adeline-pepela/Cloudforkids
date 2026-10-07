@@ -168,3 +168,25 @@
 .msg-row strong { display: block; } .msg-row small { color: #6B7280; }
 .msg-body { white-space: pre-wrap; line-height: 1.7; }
 [data-bs-theme="dark"] .msg-row { background: #1b2a40; } [data-bs-theme="dark"] .msg-row.unread { background: #12304a; }
+
+/* ---------- My Classes: schedule and month calendar ---------- */
+.cls-meta { display: flex; flex-wrap: wrap; gap: .4rem 1rem; font-size: .9rem; color: #5B6B7B; }
+.cls-ses { display: flex; align-items: center; gap: .8rem; padding: 10px 12px; border-radius: 14px; background: #EAF7FF; margin-bottom: 8px; }
+[data-bs-theme="dark"] .cls-ses { background: #1b2a40; }
+.cls-ses strong { display: block; } .cls-ses small { color: #6B7280; }
+.cls-date { min-width: 48px; text-align: center; background: #fff; border-radius: 12px; padding: 4px 6px; line-height: 1.1; box-shadow: 0 1px 4px rgba(15, 23, 42, .08); }
+[data-bs-theme="dark"] .cls-date { background: #0f1a2b; }
+.cls-date b { display: block; font-size: 1.3rem; } .cls-date span { font-size: .72rem; text-transform: uppercase; font-weight: 700; color: #0D7FBF; }
+.cal-scroll { overflow-x: auto; }
+.cal { display: grid; grid-template-columns: repeat(7, minmax(92px, 1fr)); gap: 4px; min-width: 660px; }
+.cal-head { text-align: center; font-weight: 800; font-size: .8rem; color: #5B6B7B; padding: 4px 0; }
+.cal-day { min-height: 92px; border-radius: 12px; background: #F3F8FC; padding: 4px 6px; display: flex; flex-direction: column; gap: 3px; }
+[data-bs-theme="dark"] .cal-day { background: #1b2a40; }
+.cal-day.off { opacity: .45; }
+.cal-day.today { outline: 2px solid #0EA5E9; background: #E3F4FF; }
+[data-bs-theme="dark"] .cal-day.today { background: #123049; }
+.cal-num { font-weight: 800; font-size: .8rem; }
+.cal-chip { display: block; font-size: .72rem; line-height: 1.25; font-weight: 700; padding: 2px 6px; border-radius: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-chip.session { background: #0EA5E9; color: #fff; }
+.cal-chip.due { background: #FFD66B; color: #5B3B00; }
+.cal-legend .cal-chip { display: inline-block; }

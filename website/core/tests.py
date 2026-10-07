@@ -119,6 +119,7 @@ class ExplorerTierTests(TestCase):
         self.client.post(reverse("set_language"), {"language": "sw", "next": "/"})
         lesson = Lesson.objects.get(slug="what-is-a-computer")
         questions = parse_questions(lesson.content_sw)
+        self.client.get(lesson.get_absolute_url())
         for i, q in enumerate(questions):
             reply = self.client.post(reverse("courses:quiz_check", args=[lesson.course.slug, lesson.slug]),
                                      json.dumps({"q": i, "choice": q["correct"]}), content_type="application/json").json()
@@ -174,7 +175,9 @@ class SiteContentTests(TestCase):
         ImpactStat.objects.create(where="home", value="123%", label="made-up stat label", order=99)
         InfoCard.objects.create(section="teach", icon="star", title="Brand new value", text="text", order=99)
         self.assertContains(self.client.get(reverse("core:home")), "super-cloudy")
-        self.assertContains(self.client.get(reverse("core:home")), "made-up stat label")
+        home = self.client.get(reverse("core:home")).content.decode()
+        self.assertNotIn("made-up stat label", home)  # the gap statistics and the partner strip are not on the home page
+        self.assertNotIn("Built in partnership", home)
         self.assertContains(self.client.get(reverse("core:about")), "Brand new value")
 
     def test_site_settings_is_a_single_row(self):

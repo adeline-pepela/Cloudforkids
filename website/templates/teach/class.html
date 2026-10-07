@@ -11,6 +11,8 @@
       <span><i class="bi bi-signpost-split-fill" aria-hidden="true"></i> {{ c.tier.display_name|default:"All tiers" }}</span>
       {% if c.school_name %}<span><i class="bi bi-building-fill" aria-hidden="true"></i> {{ c.school_name }}</span>{% endif %}
       {% if c.description %}<span><i class="bi bi-info-circle-fill" aria-hidden="true"></i> {{ c.description }}</span>{% endif %}
+      {% if c.location %}<span><i class="bi bi-geo-alt-fill" aria-hidden="true"></i> {{ c.location }}</span>{% endif %}
+      {% if c.meeting_link %}<span><i class="bi bi-camera-video-fill" aria-hidden="true"></i> Online class link set</span>{% endif %}
       {% if c.archived %}<span class="text-danger fw-bold">Archived</span>{% endif %}
     </div>
   </div>
@@ -32,6 +34,43 @@
     <div class="pf-code-val" id="tc-code">{{ c.join_code }}</div>
     <button type="button" class="btn btn-outline-cloud no-print" id="tc-copy" aria-label="Copy join code"><i class="bi bi-clipboard-fill" aria-hidden="true"></i> Copy</button>
   </div>
+</div>
+
+<!-- Schedule -->
+<div class="l-card mb-4" style="height:auto;">
+  <h3><i class="bi bi-calendar-event-fill text-primary" aria-hidden="true"></i> Class schedule</h3>
+  <p class="text-secondary small">Sessions you add here appear in the calendar of every learner in {{ c.name }}. Times are Kenyan time.</p>
+  {% for ses in upcoming %}
+  <div class="fm-row ok">
+    <div>
+      <strong>{{ ses.starts_at|date:"D j M Y" }}, {{ ses.starts_at|time:"H:i" }} to {{ ses.ends_at|time:"H:i" }}{% if ses.title %} &middot; {{ ses.title }}{% endif %}</strong>
+      <small>{% if ses.where %}<i class="bi bi-geo-alt-fill" aria-hidden="true"></i> {{ ses.where }}{% endif %}{% if ses.link %} &middot; <a href="{{ ses.link }}" target="_blank" rel="noopener noreferrer">Online link</a>{% endif %}{% if ses.notes %} &middot; {{ ses.notes }}{% endif %}</small>
+    </div>
+    <form method="post" action="{% url 'teach:session_delete' c.pk ses.pk %}" class="no-print">{% csrf_token %}<button class="btn btn-link btn-sm text-secondary p-0" aria-label="Remove session"><i class="bi bi-trash3" aria-hidden="true"></i></button></form>
+  </div>
+  {% empty %}
+  <p class="fm-empty"><i class="bi bi-calendar-plus" aria-hidden="true"></i> No upcoming sessions. Add the first one below.</p>
+  {% endfor %}
+  {% if past_count %}<p class="small text-secondary mt-2 mb-0">{{ past_count }} earlier session{{ past_count|pluralize }} not shown.</p>{% endif %}
+  <details class="mt-3 no-print"{% if session_form.errors %} open{% endif %}>
+    <summary class="btn btn-cloud"><i class="bi bi-plus-circle-fill" aria-hidden="true"></i> Add a session</summary>
+    <form method="post" action="{% url 'teach:session_add' c.pk %}" class="tc-assign mt-3">
+      {% csrf_token %}
+      {% if session_form.errors %}<div class="alert alert-danger rounded-4 py-2">Please check the highlighted fields.</div>{% endif %}
+      <div class="row g-2">
+        <div class="col-md-3"><label class="form-label small fw-bold" for="{{ session_form.date.id_for_label }}">Date</label>{{ session_form.date }}{{ session_form.date.errors }}</div>
+        <div class="col-md-3"><label class="form-label small fw-bold" for="{{ session_form.time.id_for_label }}">Start time</label>{{ session_form.time }}{{ session_form.time.errors }}</div>
+        <div class="col-md-3"><label class="form-label small fw-bold" for="{{ session_form.duration_minutes.id_for_label }}">Length (minutes)</label>{{ session_form.duration_minutes }}{{ session_form.duration_minutes.errors }}</div>
+        <div class="col-md-3"><label class="form-label small fw-bold" for="{{ session_form.repeat_weeks.id_for_label }}">Weekly sessions</label>{{ session_form.repeat_weeks }}{{ session_form.repeat_weeks.errors }}</div>
+        <div class="col-md-6"><label class="form-label small fw-bold" for="{{ session_form.title.id_for_label }}">Topic</label>{{ session_form.title }}</div>
+        <div class="col-md-6"><label class="form-label small fw-bold" for="{{ session_form.notes.id_for_label }}">Notes for learners</label>{{ session_form.notes }}</div>
+        <div class="col-md-6"><label class="form-label small fw-bold" for="{{ session_form.location.id_for_label }}">Room or place</label>{{ session_form.location }}</div>
+        <div class="col-md-6"><label class="form-label small fw-bold" for="{{ session_form.meeting_link.id_for_label }}">Online link</label>{{ session_form.meeting_link }}{{ session_form.meeting_link.errors }}</div>
+      </div>
+      <p class="form-text">To meet every week, set the number of weekly sessions. The first one uses the date you pick and the rest follow on the same weekday and time.</p>
+      <button type="submit" class="btn btn-cloud"><i class="bi bi-calendar-check-fill" aria-hidden="true"></i> Add to calendar</button>
+    </form>
+  </details>
 </div>
 
 <div class="fm-kpis">

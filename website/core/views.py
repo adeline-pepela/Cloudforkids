@@ -41,13 +41,11 @@ def public_tiers():
 
 def home(request):
     tiers = public_tiers()
-    partners = Partner.objects.all()[:6]
-    stats = ImpactStat.objects.filter(where=ImpactStat.Where.HOME)
     testimonials = Testimonial.objects.filter(published=True)
     return render(
         request,
         "core/home.html",
-        {"tiers": tiers, "grade_span": grade_span(tiers), "partners": partners, "stats": stats, "testimonials": testimonials, "live": live_numbers()},
+        {"tiers": tiers, "grade_span": grade_span(tiers), "testimonials": testimonials, "live": live_numbers()},
     )
 
 

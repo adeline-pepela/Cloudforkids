@@ -3,9 +3,9 @@ URL configuration for cloudforkids project.
 """
 from django.contrib import admin
 from core import admin_tools
-from django.urls import include, path
+from django.urls import include, path, re_path
 from django.conf import settings
-from django.conf.urls.static import static
+from core.media import serve_media
 
 urlpatterns = [
     path('i18n/', include('django.conf.urls.i18n')),
@@ -17,8 +17,6 @@ urlpatterns = [
     path('family/', include('dashboard.family_urls')),
     path('dashboard/', include('dashboard.urls')),
     path('learn/', include('courses.urls')),
+    re_path(r'^%s(?P<path>.*)$' % settings.MEDIA_URL.lstrip('/'), serve_media),
     path('', include('core.urls')),
 ]
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

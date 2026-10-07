@@ -2,23 +2,23 @@
 {% block title %}{{ message.subject }}{% endblock %}
 {% block content %}
 <a href="{% url 'messaging:inbox' %}" class="text-decoration-none fw-bold small"><i class="bi bi-arrow-left" aria-hidden="true"></i> All messages</a>
-<div class="l-card mt-2 mb-3" style="height:auto;">
-  <h1 class="l-title mb-1" style="font-size:1.5rem;">{{ message.subject }}</h1>
-  <p class="small text-secondary">From <strong>{{ message.sender.get_full_name|default:message.sender.username }}</strong> to <strong>{{ message.recipient.get_full_name|default:message.recipient.username }}</strong>{% if message.classroom %} &middot; {{ message.classroom.name }}{% endif %} &middot; {{ message.created_at|date:"j M Y, H:i" }}</p>
-  <div class="msg-body">{{ message.body }}</div>
-</div>
+<h1 class="l-title mt-2 mb-1" style="font-size:1.5rem;">{{ message.subject }}</h1>
+<p class="small text-secondary mb-3">Conversation with <strong>{{ other.get_full_name|default:other.username }}</strong>{% if message.classroom %} &middot; {{ message.classroom.name }}{% endif %}</p>
 
-{% for r in thread %}
-<div class="l-card mb-3" style="height:auto;border-left:6px solid #7C5CFF;">
-  <p class="small text-secondary mb-2">{{ r.sender.get_full_name|default:r.sender.username }} replied &middot; {{ r.created_at|date:"j M, H:i" }}</p>
-  <div class="msg-body">{{ r.body }}</div>
+{% for m in thread %}
+<div class="l-card mb-3" style="height:auto;{% if m.sender_id != user.pk %}border-left:6px solid #7C5CFF;{% endif %}">
+  <p class="small text-secondary mb-2">
+    {% if m.sender_id == user.pk %}You{% else %}<strong>{{ m.sender.get_full_name|default:m.sender.username }}</strong>{% endif %}
+    &middot; {{ m.created_at|date:"j M Y, H:i" }}
+  </p>
+  <div class="msg-body">{{ m.body }}</div>
 </div>
 {% endfor %}
 
 {% if can_reply %}
 <div class="l-card" style="height:auto;">
   <h3><i class="bi bi-reply-fill text-primary" aria-hidden="true"></i> Reply</h3>
-  <form method="post" action="{% url 'messaging:reply' message.pk %}">
+  <form method="post" action="{% url 'messaging:reply' last.pk %}">
     {% csrf_token %}
     <div class="mb-3">{{ form.body }}</div>
     <button type="submit" class="btn btn-cloud btn-big"><i class="bi bi-send-fill" aria-hidden="true"></i> Send reply</button>

@@ -18,6 +18,9 @@ SW = {
     "examPass": "Hongera, umefaulu mtihani huu wa kozi! Telemka chini uweke kama umekamilika.",
     "examFail": "Unahitaji {0}% kufaulu. Pitia maswali hapa chini, rudia masomo usiyoyajua vizuri, kisha ujaribu tena.",
     "answeredExam": "Umejibu {0} kati ya {1}",
+    "stale": "Maswali haya yalipakiwa upya kwenye kichupo kingine. Pakia ukurasa upya ili uendelee.",
+    "tryAgain": "Jaribu tena na maswali mapya",
+    "noCopy": "Kunakili na kubandika kumezimwa wakati wa maswali.",
 }
 
 

@@ -63,6 +63,13 @@ class LessonAdmin(admin.ModelAdmin):
     search_fields = ("title", "summary", "course__title")
     list_select_related = ("course",)
     prepopulated_fields = {"slug": ("title",)}
+    fieldsets = (
+        (None, {"fields": ("course", "title", "slug", "summary", "lesson_type", "order", "duration_minutes")}),
+        ("Video", {"fields": ("video_url", "video_file"), "description": "Add a YouTube link, upload a video file, or both. Learners watch it at the top of the lesson."}),
+        ("Lesson page", {"fields": ("content",)}),
+        ("Quiz", {"fields": ("pass_score_percent", "quiz_size")}),
+        ("Kiswahili", {"classes": ("collapse",), "fields": ("title_sw", "summary_sw", "content_sw")}),
+    )
 
 
 @admin.register(Enrollment)

@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
 from core import notify
 
-from .models import Assignment, ClassMembership, Classroom, LearnerProfile, Message, ParentalConsent, ParentLink, User
+from .models import Assignment, ClassMembership, Classroom, ClassSession, LearnerProfile, Message, ParentalConsent, ParentLink, User
 
 
 @admin.register(User)
@@ -53,13 +53,18 @@ class AssignmentInline(admin.TabularInline):
     extra = 0
 
 
+class SessionInline(admin.TabularInline):
+    model = ClassSession
+    extra = 0
+
+
 @admin.register(Classroom)
 class ClassroomAdmin(admin.ModelAdmin):
     list_display = ("name", "facilitator", "tier", "school_name", "join_code", "member_count", "archived")
     list_filter = ("tier", "archived")
     search_fields = ("name", "school_name", "facilitator__username", "join_code")
     readonly_fields = ("join_code",)
-    inlines = [MembershipInline, AssignmentInline]
+    inlines = [MembershipInline, SessionInline, AssignmentInline]
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "facilitator":

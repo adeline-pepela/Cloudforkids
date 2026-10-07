@@ -30,7 +30,10 @@
     outOf: "{0} out of {1} correct",
     examPass: "Great job, you passed this module exam! Scroll down and mark it complete.",
     examFail: "You need {0}% to pass. Review the questions below, revisit the lessons you are unsure about, then try again.",
-    answeredExam: "Answered {0} of {1}"
+    answeredExam: "Answered {0} of {1}",
+    stale: "This quiz was refreshed in another tab. Reload the page to continue.",
+    tryAgain: "Try again with fresh questions",
+    noCopy: "Copying and pasting are turned off during quizzes."
   };
   function T(key) {
     var text = (window.C4K_T && window.C4K_T[key]) || EN[key] || key;
@@ -54,6 +57,29 @@
     }).then(function (r) { return r.json().then(function (d) { d.__status = r.status; return d; }); });
   }
   function idx(btn) { return parseInt(btn.getAttribute("data-index"), 10); }
+  function qid(question) { return parseInt(question.getAttribute("data-qid"), 10); }
+
+  /* ---------- no copy and paste while answering ---------- */
+  var ZONES = ".quiz-side, .exam-form, .mcq-block";
+  function inQuiz(node) {
+    var el = node && (node.nodeType === 1 ? node : node.parentElement);
+    return !!(el && el.closest && el.closest(ZONES));
+  }
+  function lockQuiz() {
+    function block(e) {
+      var sel = window.getSelection && window.getSelection();
+      if (inQuiz(e.target) || (sel && (inQuiz(sel.anchorNode) || inQuiz(sel.focusNode)))) {
+        e.preventDefault();
+        if (e.type !== "contextmenu" && statusEl && !statusEl.classList.contains("show")) info(T("noCopy"));
+      }
+    }
+    ["copy", "cut", "paste", "contextmenu", "dragstart", "selectstart"].forEach(function (name) {
+      document.addEventListener(name, block, true);
+    });
+    document.addEventListener("keydown", function (e) {
+      if ((e.ctrlKey || e.metaKey) && /^[acvxp]$/i.test(e.key) && (inQuiz(e.target) || inQuiz(document.activeElement))) e.preventDefault();
+    }, true);
+  }
 
   /* ---------- status panel + unlock button (lesson page) ---------- */
   var statusEl, retryWrap, completeBtn, hintEl;
@@ -106,7 +132,8 @@
   function setupPractice(questions) {
     var queue = Promise.resolve();  // answers go to the server one at a time, so none is lost if a child taps quickly
     var finishing = false;
-    questions.forEach(function (question, qi) {
+    questions.forEach(function (question) {
+      var qi = qid(question);
       question.querySelectorAll(".mcq-option").forEach(function (btn) {
         btn.addEventListener("click", function () {
           if (question.classList.contains("is-answered") || question.getAttribute("data-pending")) return;
@@ -118,7 +145,7 @@
               question.removeAttribute("data-pending");
               if (d.error) {
                 question.querySelectorAll(".mcq-option").forEach(function (b) { b.disabled = false; });
-                showStatus(false, T("checkFailed"));
+                showStatus(false, T(d.stale ? "stale" : "checkFailed"));
                 return;
               }
               markAnswered(question, d);
@@ -128,7 +155,7 @@
               finishing = true;
               return post(cfg.dataset.finishUrl).then(function (f) {
                 finishing = false;
-                if (f.error) { showStatus(false, T("saveFailed")); return; }
+                if (f.error) { showStatus(false, T(f.stale ? "stale" : "saveFailed")); return; }
                 onFinished(f, false);
               });
             });
@@ -142,18 +169,9 @@
       });
     });
 
+    /* Trying again reloads the page: the server then deals a new set of questions in a new order. */
     var retry = document.getElementById("quiz-retry");
-    if (retry) retry.addEventListener("click", function () {
-      post(cfg.dataset.resetUrl).then(function () {
-        questions.forEach(function (q) {
-          q.classList.remove("is-answered"); q.removeAttribute("data-chosen"); q.removeAttribute("data-right");
-          var ex = q.querySelector(".mcq-explain"); if (ex) ex.remove();
-          q.querySelectorAll(".mcq-option").forEach(function (o) { o.disabled = false; o.classList.remove("is-correct", "is-incorrect", "is-selected"); });
-        });
-        if (retryWrap) retryWrap.classList.add("d-none");
-        if (statusEl) statusEl.className = "quiz-status";
-      });
-    });
+    if (retry) retry.addEventListener("click", function () { window.location.reload(); });
   }
 
   /* ---------- module exam: pick answers, then the server grades them all ---------- */
@@ -183,17 +201,23 @@
     var submit = form.querySelector(".exam-submit-btn");
     if (!submit) return;
     submit.addEventListener("click", function () {
-      var answers = [];
+      var answers = {};
       questions.forEach(function (q) {
         var v = q.getAttribute("data-chosen-pending");
-        answers.push(v === null ? -1 : parseInt(v, 10));
+        answers[qid(q)] = v === null ? -1 : parseInt(v, 10);
       });
       submit.disabled = true;
       post(cfg.dataset.gradeUrl, { answers: answers }).then(function (d) {
-        if (d.error) { submit.disabled = false; showStatus(false, T("gradeFailed")); return; }
+        if (d.error) {
+          submit.disabled = !!d.stale;
+          var box0 = form.querySelector(".exam-result");
+          if (d.stale && box0) { box0.classList.add("show", "fail"); box0.innerHTML = "<p class=\"mb-0\">" + T("stale") + "</p>"; }
+          showStatus(false, T(d.stale ? "stale" : "gradeFailed"));
+          return;
+        }
         var items = [];
         questions.forEach(function (q, i) {
-          var r = d.results[i], chosen = answers[i];
+          var r = d.results[qid(q)], chosen = answers[qid(q)];
           q.querySelectorAll(".mcq-option").forEach(function (b) {
             b.disabled = true;
             if (idx(b) === r.correct_index) b.classList.add("is-correct");
@@ -214,7 +238,10 @@
             "<p class=\"mb-0\">" + (d.passed
               ? "<i class=\"bi bi-trophy-fill\"></i> " + T("examPass")
               : T("examFail", d.needed)) + "</p>" +
+            (d.passed ? "" : "<button type=\"button\" class=\"btn btn-cloud mt-3 exam-retry\">" + T("tryAgain") + "</button>") +
             "<ul class=\"exam-result-list\">" + items.join("") + "</ul>";
+          var again = box.querySelector(".exam-retry");
+          if (again) again.addEventListener("click", function () { window.location.reload(); });
           box.scrollIntoView({ behavior: "smooth", block: "center" });
         }
         if (d.unlocked) unlock();
@@ -231,6 +258,7 @@
     retryWrap = document.getElementById("quiz-retry-wrap");
     completeBtn = document.getElementById("complete-btn");
     hintEl = document.getElementById("quiz-hint");
+    lockQuiz();
 
     if (cfg.dataset.passed === "1") {
       unlock();

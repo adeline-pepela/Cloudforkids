@@ -1,8 +1,12 @@
 """Messages between facilitators, parents and learners.
 
-Learners can read messages but never send them (child safety). Facilitators write to a whole class (learners and
-their linked parents) or to the parents of one learner in their class. Parents and facilitators can reply to each other.
+Facilitators write to a whole class (learners and their linked parents) or to the parents of one learner in their
+class, and can answer any learner in their class. Parents and facilitators can reply to each other. Learners can
+write to their teachers and to classmates, but only to people they share a class with, and a conversation is a thread
+between the same two people.
 """
+
+from datetime import timedelta
 
 from django import forms
 from django.contrib import messages as flash
@@ -13,6 +17,8 @@ from django.views.decorators.http import require_POST
 
 from accounts.models import ClassMembership, Classroom, Message, User
 from core import notify
+
+LEARNER_MESSAGES_PER_HOUR = 20  # a gentle brake on spam between learners
 
 
 def _base(request):
@@ -31,7 +37,37 @@ def _render(request, template, **ctx):
 
 
 def _can_write(user):
-    return user.role in (User.Role.FACILITATOR, User.Role.PARENT) and not user.awaiting_approval
+    return user.role in (User.Role.FACILITATOR, User.Role.PARENT, User.Role.LEARNER) and not user.awaiting_approval
+
+
+def learner_contacts(learner):
+    """The people a learner may write to: the teachers of their classes and the other learners in them.
+    Returns (teachers, classmates, class_for) where class_for maps a person's id to a class they share."""
+    classes = list(
+        Classroom.objects.filter(memberships__learner=learner, archived=False).select_related("facilitator").distinct()
+    )
+    teachers = {c.facilitator_id: c.facilitator for c in classes if c.facilitator.is_active and c.facilitator.is_approved}
+    class_for = {c.facilitator_id: c for c in classes if c.facilitator_id in teachers}
+    classmates = {}
+    for m in ClassMembership.objects.filter(classroom__in=classes).exclude(learner=learner).select_related("learner", "classroom"):
+        if m.learner.is_active and m.learner_id not in classmates:
+            classmates[m.learner_id] = m.learner
+            class_for[m.learner_id] = m.classroom
+    return list(teachers.values()), sorted(classmates.values(), key=lambda u: (u.get_full_name() or u.username).lower()), class_for
+
+
+def can_message(sender, target):
+    """Whether `sender` may write (or reply) to `target`."""
+    if not _can_write(sender) or sender.pk == target.pk or not target.is_active:
+        return False
+    if sender.role == User.Role.LEARNER:
+        teachers, classmates, _ = learner_contacts(sender)
+        return target in teachers or target in classmates
+    if sender.role == User.Role.FACILITATOR:
+        if target.role == User.Role.LEARNER:
+            return ClassMembership.objects.filter(classroom__facilitator=sender, learner=target).exists()
+        return target.role == User.Role.PARENT
+    return target.role == User.Role.FACILITATOR  # parents write back to teachers
 
 
 class ComposeForm(forms.Form):
@@ -47,19 +83,39 @@ def inbox(request):
     else:
         box = "in"
         items = Message.objects.filter(recipient=request.user).select_related("sender", "classroom")
-    return _render(request, "messaging/inbox.html", items=items[:100], box=box, can_write=_can_write(request.user))
+    can_compose = request.user.role == User.Role.FACILITATOR
+    if request.user.role == User.Role.LEARNER:
+        teachers, classmates, _ = learner_contacts(request.user)
+        can_compose = bool(teachers or classmates)
+    return _render(request, "messaging/inbox.html", items=items[:100], box=box, can_write=_can_write(request.user), can_compose=can_compose)
+
+
+def _thread(message):
+    """The whole conversation a message belongs to: its first message and every reply under it, oldest first."""
+    root = message
+    while root.reply_to_id:
+        root = root.reply_to
+    found, frontier = [root], [root.pk]
+    while frontier:
+        children = list(Message.objects.filter(reply_to_id__in=frontier).select_related("sender", "recipient"))
+        found += children
+        frontier = [c.pk for c in children]
+    return sorted(found, key=lambda m: (m.created_at, m.pk))
 
 
 @login_required
 def detail(request, pk):
-    message = get_object_or_404(Message.objects.select_related("sender", "recipient", "classroom"), pk=pk)
+    message = get_object_or_404(Message.objects.select_related("sender", "recipient", "classroom", "reply_to"), pk=pk)
     if request.user not in (message.sender, message.recipient):
         return redirect("messaging:inbox")
-    if message.recipient == request.user and message.read_at is None:
-        message.read_at = timezone.now()
-        message.save(update_fields=["read_at"])
-    thread = Message.objects.filter(reply_to=message).select_related("sender")
-    return _render(request, "messaging/detail.html", message=message, thread=thread, can_reply=_can_write(request.user) and message.sender != request.user and message.sender.role != User.Role.LEARNER, form=ComposeForm())
+    thread = _thread(message)
+    Message.objects.filter(pk__in=[m.pk for m in thread], recipient=request.user, read_at__isnull=True).update(read_at=timezone.now())
+    first = thread[0]
+    other = first.sender if first.recipient_id == request.user.pk else first.recipient
+    return _render(
+        request, "messaging/detail.html", message=first, thread=thread, other=other, last=thread[-1],
+        can_reply=can_message(request.user, other), form=ComposeForm(),
+    )
 
 
 def _deliver(sender, recipient, form, **extra):
@@ -68,24 +124,39 @@ def _deliver(sender, recipient, form, **extra):
     return msg
 
 
+def _too_many(user):
+    if user.role != User.Role.LEARNER:
+        return False
+    since = timezone.now() - timedelta(hours=1)
+    return Message.objects.filter(sender=user, created_at__gte=since).count() >= LEARNER_MESSAGES_PER_HOUR
+
+
 @login_required
 @require_POST
 def reply(request, pk):
-    original = get_object_or_404(Message, pk=pk, recipient=request.user)
+    original = get_object_or_404(Message.objects.select_related("sender", "recipient"), pk=pk)
+    if request.user not in (original.sender, original.recipient):
+        return redirect("messaging:inbox")
+    other = original.sender if original.recipient_id == request.user.pk else original.recipient
     subject = original.subject if original.subject.lower().startswith("re:") else f"Re: {original.subject}"
     form = ComposeForm({"subject": subject[:150], "body": request.POST.get("body", "")})
-    if not _can_write(request.user) or not form.is_valid():
-        flash.error(request, "Please write a message.")
+    if not can_message(request.user, other) or not form.is_valid():
+        flash.error(request, "Please write a message." if form.errors else "You cannot reply to this person.")
         return redirect("messaging:detail", pk=pk)
-    _deliver(request.user, original.sender, form, reply_to=original, classroom=original.classroom, about_learner=original.about_learner)
+    if _too_many(request.user):
+        flash.error(request, "You have sent a lot of messages. Please wait a little before sending more.")
+        return redirect("messaging:detail", pk=pk)
+    _deliver(request.user, other, form, reply_to=original, classroom=original.classroom, about_learner=original.about_learner)
     flash.success(request, "Reply sent.")
     return redirect("messaging:detail", pk=pk)
 
 
 @login_required
 def compose(request):
-    """Facilitators only: message a whole class, or the parents of one learner."""
+    """Facilitators message a whole class or the parents of one learner. Learners message a teacher or a classmate."""
     user = request.user
+    if user.role == User.Role.LEARNER:
+        return _compose_learner(request)
     if user.role != User.Role.FACILITATOR or user.awaiting_approval:
         return redirect("messaging:inbox")
     classes = list(user.classrooms.filter(archived=False))
@@ -114,3 +185,23 @@ def compose(request):
             return redirect("messaging:inbox")
     members = ClassMembership.objects.filter(classroom__in=classes).select_related("learner", "classroom")
     return _render(request, "messaging/compose.html", form=form, classes=classes, members=members, initial_class=initial_class)
+
+
+def _compose_learner(request):
+    user = request.user
+    teachers, classmates, class_for = learner_contacts(user)
+    form = ComposeForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        target = next((p for p in teachers + classmates if str(p.pk) == request.POST.get("to")), None)
+        if target is None:
+            flash.error(request, "Choose a teacher or a classmate from your classes.")
+        elif _too_many(user):
+            flash.error(request, "You have sent a lot of messages. Please wait a little before sending more.")
+        else:
+            _deliver(user, target, form, classroom=class_for.get(target.pk))
+            flash.success(request, f"Message sent to {target.get_full_name() or target.username}.")
+            return redirect("messaging:inbox")
+    return _render(
+        request, "messaging/compose_learner.html", form=form, teachers=teachers, classmates=classmates,
+        class_for=class_for, selected=request.POST.get("to") or request.GET.get("to", ""),
+    )

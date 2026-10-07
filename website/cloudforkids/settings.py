@@ -167,7 +167,7 @@ LANGUAGE_CODE = 'en'
 LANGUAGES = [('en', 'English'), ('sw', 'Kiswahili')]
 LANGUAGE_COOKIE_AGE = 60 * 60 * 24 * 365
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Nairobi'  # class times are entered and shown in Kenyan time
 
 USE_I18N = True
 

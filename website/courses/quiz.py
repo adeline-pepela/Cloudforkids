@@ -28,10 +28,11 @@ def parse_questions(content):
 
 OPTIONS = re.compile(r'(<div class="mcq-options">)(.*?)(</div>)', re.S)
 BUTTON = re.compile(r"<button.*?</button>", re.S)
+MARK = "<!--quiz-questions-->"
 
 
 def _shuffle_options(body):
-    """The lessons list the right answer first, so show the options in a random order on every page load.
+    """The lessons list the right answer first, so show the options in a random order on every attempt.
     Each button keeps its original data-index, which is what the browser sends back."""
 
     def mix(match):
@@ -42,42 +43,81 @@ def _shuffle_options(body):
     return OPTIONS.sub(mix, body, count=1)
 
 
-def public_html(content, shuffle=True):
-    """The lesson HTML that is safe to send to the browser: no answers, no explanations, options in random order."""
+def public_html(content, qids=None):
+    """The lesson HTML that is safe to send to the browser: no answers, no explanations.
+
+    Only the questions in `qids` are shown (all of them when it is None), in that order, each tagged with its
+    `data-qid` (its position in the lesson), and with the answer options in a random order."""
+    picked, seen = {}, []
 
     def clean(match):
+        qid = len(seen)
+        seen.append(qid)
+        if qids is not None and qid not in qids:
+            return ""
         attrs = CORRECT.sub("", match.group("attrs"))
-        body = _shuffle_options(match.group("body")) if shuffle else match.group("body")
-        return f'<div class="mcq-question"{attrs}>{body}</div>'
+        picked[qid] = f'<div class="mcq-question"{attrs} data-qid="{qid}">{_shuffle_options(match.group("body"))}</div>'
+        return MARK if len(picked) == 1 else ""
 
-    return QUESTION.sub(clean, content or "")
+    html = QUESTION.sub(clean, content or "")
+    order = list(qids) if qids is not None else sorted(picked)
+    return html.replace(MARK, "".join(picked[q] for q in order if q in picked))
 
 
 def quiz_question_count(lesson):
-    """Number of graded multiple-choice questions in a lesson (or exam)."""
+    """Number of multiple-choice questions written into a lesson (or exam): the size of its question pool."""
     return len(parse_questions(lesson.content))
+
+
+def questions_per_attempt(lesson, pool):
+    """How many questions one attempt asks. A lesson can hold a bigger pool and ask only some of it each time."""
+    size = 0 if lesson.is_exam else lesson.quiz_size
+    return size if 0 < size < pool else pool
 
 
 def quiz_status(user, lesson):
     """(total_questions, passed, best_score_percent) for this learner and lesson."""
-    total = quiz_question_count(lesson)
-    if not total:
+    pool = quiz_question_count(lesson)
+    if not pool:
         return 0, True, None
+    total = questions_per_attempt(lesson, pool)
     result = QuizResult.objects.filter(learner=user, lesson=lesson).first()
     return total, bool(result and result.passed), (result.score_percent if result else None)
 
 
-# ---- per-attempt answers, kept in the learner's session (never trusted from the browser) ----
+# ---- per-attempt questions and answers, kept in the learner's session (never trusted from the browser) ----
 
 def _key(lesson):
     return f"quiz-{lesson.pk}"
 
 
+def new_attempt(request, lesson):
+    """Start a fresh attempt: pick the questions and shuffle their order, avoiding the previous attempt's
+    questions and order where there is a choice. Returns the question ids (positions in the lesson) to show."""
+    pool = len(parse_questions(lesson.display_content))
+    size = questions_per_attempt(lesson, pool)
+    previous = (request.session.get(_key(lesson)) or {}).get("qids", [])
+    fresh = [q for q in range(pool) if q not in previous]
+    random.shuffle(fresh)
+    qids = fresh[:size]
+    if len(qids) < size:
+        repeats = [q for q in range(pool) if q in previous]
+        random.shuffle(repeats)
+        qids += repeats[: size - len(qids)]
+    for _ in range(5):
+        random.shuffle(qids)
+        if len(qids) < 2 or qids != previous:
+            break
+    request.session[_key(lesson)] = {"qids": qids, "answers": {}}
+    return qids
+
+
 def attempt(request, lesson):
-    return request.session.setdefault(_key(lesson), {})
+    """The current attempt ({'qids': [...], 'answers': {qid: choice}}), or None if the page has not started one."""
+    return request.session.get(_key(lesson))
 
 
-def reset_attempt(request, lesson):
+def end_attempt(request, lesson):
     request.session.pop(_key(lesson), None)
 
 

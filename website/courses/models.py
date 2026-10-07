@@ -1,7 +1,10 @@
 from django.conf import settings
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.urls import reverse
 from django.utils.translation import get_language
+
+from .video import validate_video_size, youtube_id
 
 
 def in_swahili():
@@ -110,6 +113,18 @@ class Lesson(models.Model):
     pass_score_percent = models.PositiveIntegerField(
         default=70, help_text="Score (%) needed to pass this item's quiz/exam, if it has one"
     )
+    video_url = models.URLField(
+        "YouTube link", blank=True, help_text="Optional. Paste a YouTube link (watch, share or embed address). It is shown at the top of the lesson.",
+    )
+    video_file = models.FileField(
+        "Video file", upload_to="lesson_videos/", blank=True,
+        validators=[FileExtensionValidator(["mp4", "webm", "ogv"]), validate_video_size],
+        help_text="Optional. Upload an MP4 or WebM video (up to 200 MB). Use this or a YouTube link, or both.",
+    )
+    quiz_size = models.PositiveSmallIntegerField(
+        "Questions per attempt", default=0,
+        help_text="0 asks every question each time. If the lesson holds more questions than this number, each attempt asks a different random set of this size.",
+    )
     title_sw = models.CharField("Title (Kiswahili)", max_length=150, blank=True)
     summary_sw = models.CharField("Summary (Kiswahili)", max_length=300, blank=True)
     content_sw = models.TextField(
@@ -149,11 +164,22 @@ class Lesson(models.Model):
         """The Swahili page when the visitor reads Kiswahili and one exists, otherwise the English page."""
         return (self.content_sw if in_swahili() else "") or self.content
 
+    @property
+    def youtube_embed_url(self):
+        vid = youtube_id(self.video_url)
+        return f"https://www.youtube-nocookie.com/embed/{vid}?rel=0" if vid else ""
+
+    @property
+    def has_video(self):
+        return bool(self.youtube_embed_url or self.video_file)
+
     def clean(self):
         from django.core.exceptions import ValidationError
 
         from .quiz import parse_questions
 
+        if self.video_url and not youtube_id(self.video_url):
+            raise ValidationError({"video_url": "That does not look like a YouTube link. Copy the address from the YouTube share button."})
         if self.content_sw:
             english, swahili = parse_questions(self.content), parse_questions(self.content_sw)
             if [q["correct"] for q in english] != [q["correct"] for q in swahili]:

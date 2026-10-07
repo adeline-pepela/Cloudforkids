@@ -175,6 +175,17 @@ body.learner-app { background: #F3FAFF; margin: 0; }
 
 /* ---------- Lesson quiz panel (right-hand side) ---------- */
 .quiz-side { position: sticky; top: 76px; }
+/* Quizzes cannot be copied: no text selection inside them (quiz.js also blocks copy, cut, paste and the right-click menu) */
+.quiz-side, .exam-form, .mcq-block { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+/* The quiz panel scrolls on its own: scrolling the lesson never moves it, and scrolling it never moves the lesson */
+@media (min-width: 1200px) {
+  .quiz-side { max-height: calc(100vh - 92px); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding-right: 2px; }
+  .quiz-side::-webkit-scrollbar { width: 8px; }
+  .quiz-side::-webkit-scrollbar-thumb { background: #C9DDEA; border-radius: 99px; }
+}
+.lesson-video { border-radius: 18px; overflow: hidden; background: #0F172A; box-shadow: 0 8px 24px rgba(15, 23, 42, .12); }
+.lesson-video + .lesson-video { margin-top: 1rem; }
+.lesson-video iframe, .lesson-video video { width: 100%; height: 100%; border: 0; display: block; background: #000; }
 .quiz-side .lesson-section { margin: 0 0 1rem; padding: 0; background: transparent; border: 0; box-shadow: none; }
 .quiz-side .lesson-section > .section-head { display: none; }
 .quiz-side .mcq-question { margin-bottom: 1rem; }

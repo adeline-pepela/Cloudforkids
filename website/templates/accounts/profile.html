@@ -26,6 +26,7 @@
 {% if user.role == "learner" %}
 <div class="l-card mb-4" style="height:auto;">
   <h3><i class="bi bi-easel2-fill text-primary" aria-hidden="true"></i> My classes</h3>
+  {% if memberships %}<p class="small mb-2"><a href="{% url 'dashboard:classes' %}" class="fw-bold text-decoration-none"><i class="bi bi-calendar-event-fill" aria-hidden="true"></i> See my class schedule and calendar</a></p>{% endif %}
   {% for m in memberships %}
   <div class="tc-mine">
     <i class="bi bi-easel2-fill fs-4 text-primary" aria-hidden="true"></i>

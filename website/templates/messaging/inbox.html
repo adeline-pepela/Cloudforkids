@@ -4,9 +4,9 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
   <div>
     <h1 class="l-title mb-0">Messages</h1>
-    <p class="l-sub mb-0">{% if user.role == "learner" %}Messages from your teacher appear here.{% else %}Messages between teachers and families.{% endif %}</p>
+    <p class="l-sub mb-0">{% if user.role == "learner" %}Write to your teacher or a classmate, and read their replies here.{% else %}Messages between teachers, learners and families.{% endif %}</p>
   </div>
-  {% if user.role == "facilitator" %}<a href="{% url 'messaging:compose' %}" class="btn btn-cloud btn-big"><i class="bi bi-pencil-square" aria-hidden="true"></i> New message</a>{% endif %}
+  {% if can_compose %}<a href="{% url 'messaging:compose' %}" class="btn btn-cloud btn-big"><i class="bi bi-pencil-square" aria-hidden="true"></i> New message</a>{% endif %}
 </div>
 
 {% if can_write %}
@@ -27,7 +27,7 @@
     <small class="text-secondary">{{ m.created_at|date:"j M, H:i" }}</small>
   </a>
   {% empty %}
-  <p class="fm-empty"><i class="bi bi-inbox" aria-hidden="true"></i> No messages yet.</p>
+  <p class="fm-empty"><i class="bi bi-inbox" aria-hidden="true"></i> {% if box == "sent" %}You have not sent any messages yet.{% elif user.role == "learner" and not can_compose %}No messages yet. Join a class to message your teacher and classmates.{% else %}No messages yet.{% endif %}</p>
   {% endfor %}
 </div>
 {% endblock %}

@@ -192,7 +192,8 @@ def join_class(request):
         messages.error(request, "We could not find a class with that code. Check it with your teacher and try again.")
     else:
         _, created = ClassMembership.objects.get_or_create(classroom=classroom, learner=request.user)
-        messages.success(request, f"You joined {classroom.name}." if created else f"You are already in {classroom.name}.")
+        messages.success(request, f"You joined {classroom.name}. Your class schedule is below." if created else f"You are already in {classroom.name}.")
+        return redirect("dashboard:classes")
     return redirect("accounts:profile")
 
 
@@ -201,4 +202,4 @@ def join_class(request):
 def leave_class(request, class_id):
     ClassMembership.objects.filter(classroom_id=class_id, learner=request.user).delete()
     messages.success(request, "You left the class.")
-    return redirect("accounts:profile")
+    return redirect("dashboard:classes")
