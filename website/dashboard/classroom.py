@@ -81,7 +81,7 @@ def learner_class_page(classroom, learner):
                 quizzes.append({"lesson": lesson, "course": course, "result": results.get(lesson.pk)})
     quiz_done = sum(1 for q in quizzes if q["result"] and q["result"].passed)
 
-    room = LiveRoom.objects.filter(classroom=classroom).first()
+    room = classroom.live_room
     attended = list(
         LiveAttendance.objects.filter(user=learner, session__room__classroom=classroom, removed=False)
         .select_related("session").order_by("-first_joined_at")[:10]
@@ -94,7 +94,7 @@ def learner_class_page(classroom, learner):
         "assignments_open": sum(1 for a in assignments if not a["done"]),
         "quizzes": quizzes,
         "quiz_done": quiz_done,
-        "upcoming": list(classroom.sessions.filter(starts_at__gte=now - timedelta(hours=2)).select_related("classroom__live_room")[:12]),
+        "upcoming": list(classroom.sessions.filter(starts_at__gte=now - timedelta(hours=2)).select_related("meeting")[:12]),
         "live_room": room,
         "live_now": room.current_session if room else None,
         "attended": attended,

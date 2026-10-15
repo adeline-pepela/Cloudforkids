@@ -11,10 +11,20 @@ from accounts.models import Classroom, new_family_code
 
 
 class LiveRoom(models.Model):
-    """The class's permanent live room. The short link never changes, so a teacher can share it once for the whole term."""
+    """A live room with its own short link. Every class has one main room (its permanent link, shared once for the term);
+    a teacher can also create meetings for later, each with its own link, an optional passcode and its own rules."""
 
-    classroom = models.OneToOneField(Classroom, on_delete=models.CASCADE, related_name="live_room")
+    class Audience(models.TextChoices):
+        CLASS = "class", "Learners in this class"
+        ANYONE = "anyone", "Any Cloud for Kids learner with the link (and the passcode, if set)"
+
+    classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE, related_name="live_rooms")
+    is_main = models.BooleanField(default=True, help_text="The class's permanent room (one per class)")
+    title = models.CharField(max_length=150, blank=True, help_text="Meeting name, e.g. Revision before the exam")
     code = models.CharField(max_length=8, unique=True, editable=False)
+    passcode = models.CharField(max_length=20, blank=True, help_text="Learners type this before joining. Leave blank for none")
+    waiting_room = models.BooleanField(default=False, help_text="The teacher lets each person in")
+    audience = models.CharField(max_length=10, choices=Audience.choices, default=Audience.CLASS)
     # Settings the teacher changes during a class. They apply to everyone in the room straight away.
     chat_enabled = models.BooleanField(default=True, help_text="Learners may send chat messages and reactions")
     open_mic = models.BooleanField(default=False, help_text="Learners may unmute without raising a hand first")
@@ -25,8 +35,22 @@ class LiveRoom(models.Model):
     recording = models.BooleanField(default=False, help_text="The teacher is recording right now")
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["classroom"], condition=models.Q(is_main=True), name="one_main_live_room_per_class"),
+        ]
+
     def __str__(self):
-        return f"Live room for {self.classroom.name}"
+        return f"{self.display_title} ({self.classroom.name})"
+
+    @property
+    def display_title(self):
+        return self.title or ("Live classroom" if self.is_main else "Live meeting")
+
+    def check_passcode(self, attempt):
+        import hmac
+
+        return not self.passcode or hmac.compare_digest(self.passcode.strip().lower(), (attempt or "").strip().lower())
 
     def save(self, *args, **kwargs):
         if not self.code:
@@ -100,6 +124,7 @@ class LiveAttendance(models.Model):
     can_speak = models.BooleanField(default=False, help_text="The teacher let this learner use their microphone")
     removed = models.BooleanField(default=False, help_text="The teacher removed this learner from the class")
     group = models.PositiveSmallIntegerField(default=0, help_text="Breakout group (0 = the main room)")
+    admitted = models.BooleanField(default=True, help_text="False while waiting in the waiting room")
 
     class Meta:
         unique_together = ("session", "user")

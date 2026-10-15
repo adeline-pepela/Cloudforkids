@@ -1,0 +1,73 @@
+{% extends "teach/base.html" %}
+{% block title %}Meetings: {{ classroom.name }}{% endblock %}
+{% block content %}
+<a href="{% url 'teach:class' classroom.pk %}" class="cd-back"><i class="bi bi-arrow-left" aria-hidden="true"></i> {{ classroom.name }}</a>
+<h1 class="l-title">Meetings and links</h1>
+<p class="l-sub">Every live link of {{ classroom.name }}. The class link never changes. Meetings you create (here, or when you schedule a live class) each get a link of their own, and can have a passcode and a waiting room.</p>
+
+{% for row in rows %}
+{% with m=row.room %}
+<div class="l-card mb-3 tc-meeting{% if m.is_main %} main{% endif %}" style="height:auto;">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div class="flex-grow-1" style="min-width:240px;">
+      <h3 class="mb-1">
+        {% if m.is_main %}<i class="bi bi-house-door-fill text-primary" aria-hidden="true"></i> Class link (permanent){% else %}<i class="bi bi-broadcast text-danger" aria-hidden="true"></i> {{ m.display_title }}{% endif %}
+        {% if row.live %}<span class="badge rounded-pill text-bg-danger ms-1">LIVE now</span>{% endif %}
+      </h3>
+      <div class="d-flex align-items-center gap-2 flex-wrap my-2">
+        <code class="tc-link" data-copy="{{ row.url }}">{{ row.url }}</code>
+        <button type="button" class="btn btn-outline-cloud btn-sm tc-copy" data-copy="{{ row.url }}{% if m.passcode %} (passcode: {{ m.passcode }}){% endif %}"><i class="bi bi-clipboard-fill" aria-hidden="true"></i> Copy invite</button>
+      </div>
+      <div class="cls-meta">
+        {% if m.passcode %}<span><i class="bi bi-lock-fill" aria-hidden="true"></i> Passcode <strong>{{ m.passcode }}</strong></span>{% else %}<span><i class="bi bi-unlock" aria-hidden="true"></i> No passcode</span>{% endif %}
+        <span><i class="bi bi-people-fill" aria-hidden="true"></i> {% if m.audience == "anyone" and not m.is_main %}Any learner with the link{% else %}This class only{% endif %}</span>
+        {% if m.waiting_room %}<span><i class="bi bi-door-open-fill" aria-hidden="true"></i> Waiting room</span>{% endif %}
+        <span><i class="bi bi-camera-video{% if not m.student_video %}-off{% endif %}-fill" aria-hidden="true"></i> Learner cameras {% if m.student_video %}allowed{% else %}off{% endif %}</span>
+        <span><i class="bi bi-chat-dots-fill" aria-hidden="true"></i> Chat {% if m.chat_enabled %}on{% else %}off{% endif %}</span>
+        {% if row.next %}<span><i class="bi bi-calendar-event-fill" aria-hidden="true"></i> Next: {{ row.next.starts_at|date:"D j M" }}, {{ row.next.starts_at|time:"H:i" }}</span>{% endif %}
+        {% if row.held %}<span><i class="bi bi-clock-history" aria-hidden="true"></i> Held {{ row.held }} time{{ row.held|pluralize }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      {% if row.live %}
+      <a href="{% url 'live:room' m.code %}" class="btn btn-cloud"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Rejoin</a>
+      {% else %}
+      <form method="post" action="{% url 'live:start_room' m.code %}">{% csrf_token %}<button type="submit" class="btn btn-cloud"><i class="bi bi-broadcast" aria-hidden="true"></i> Start now</button></form>
+      {% endif %}
+      <a href="{% url 'teach:meeting_edit' classroom.pk m.pk %}" class="btn btn-outline-cloud"><i class="bi bi-gear-fill" aria-hidden="true"></i> Settings</a>
+      {% if not m.is_main %}
+      <form method="post" action="{% url 'teach:meeting_delete' classroom.pk m.pk %}" onsubmit="return confirm('Delete this meeting? Its link stops working and its upcoming sessions are removed from the calendar.');">{% csrf_token %}
+        <button type="submit" class="btn btn-link text-danger"><i class="bi bi-trash3" aria-hidden="true"></i> Delete</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endwith %}
+{% endfor %}
+
+<div class="l-card mb-4" style="height:auto;">
+  <h3><i class="bi bi-plus-circle-fill text-success" aria-hidden="true"></i> New meeting link</h3>
+  <p class="small text-secondary">Make a link now and start it whenever you like, for example a revision session or a talk with another class. To put a meeting on learners' calendars, use <strong>Add a session</strong> on the class page and tick "Live online class".</p>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% include "teach/_meeting_fields.html" %}
+    <button type="submit" class="btn btn-cloud"><i class="bi bi-link-45deg" aria-hidden="true"></i> Create the link</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.tc-copy').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    if (!navigator.clipboard) return;
+    navigator.clipboard.writeText(btn.dataset.copy).then(function () {
+      var old = btn.innerHTML;
+      btn.innerHTML = '<i class="bi bi-check2"></i> Copied';
+      setTimeout(function () { btn.innerHTML = old; }, 1800);
+    });
+  });
+});
+</script>
+{% endblock %}

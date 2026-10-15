@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Live: {{ room.classroom.name }} | Cloud for Kids</title>
+  <title>Live: {{ title }} | Cloud for Kids</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><path fill=%22%230ea5e9%22 d=%22M25 75a18 18 0 0 1-1-36 26 26 0 0 1 50-6 21 21 0 0 1 2 42z%22/></svg>">
   <link href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}" rel="stylesheet">
   <link href="{% static 'vendor/fonts/fonts.css' %}" rel="stylesheet">
@@ -17,13 +17,14 @@
 <div class="lv-prejoin" id="lv-prejoin">
   <div class="lv-prejoin-card">
     <div class="lv-prejoin-ico" aria-hidden="true"><i class="bi bi-broadcast"></i></div>
-    <h1>{{ room.classroom.name }}</h1>
+    <h1>{{ title }}</h1>
     {% if role == "host" %}
     <p>You are the teacher. Your camera and microphone switch on when you join. Learners join muted and raise a hand to speak.</p>
     {% else %}
     <p>Your microphone and camera stay off when you join. Raise your hand when you want to speak and your teacher will let you in.</p>
     {% endif %}
     <button type="button" class="lv-btn lv-btn-primary lv-btn-big" id="lv-join"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> {% if role == "host" %}Join as teacher{% else %}Join the class{% endif %}</button>
+    <p class="lv-wait" id="lv-wait" hidden><span class="lv-spin" aria-hidden="true"></span> You are in the waiting room. Your teacher will let you in soon.</p>
     <p class="lv-error" id="lv-join-error" role="alert" hidden></p>
     <a class="lv-link" href="{{ config.exitUrl }}">Not now</a>
   </div>
@@ -44,7 +45,7 @@
   <header class="lv-top">
     <div class="lv-title">
       <span class="lv-live-dot" aria-hidden="true"></span>
-      <strong>{{ room.classroom.name }}</strong>
+      <strong>{{ title }}</strong>
       <span class="lv-timer" id="lv-timer" aria-label="Time since the class started">0:00</span>
     </div>
     <div class="lv-top-actions">
@@ -109,6 +110,11 @@
 
       <div class="lv-pane" data-pane="people">
         {% if role == "host" %}
+        <div class="lv-lobby" id="lv-lobby" hidden>
+          <h2><i class="bi bi-door-open-fill" aria-hidden="true"></i> Waiting to join</h2>
+          <ul class="lv-people" id="lv-lobby-list"></ul>
+          <button type="button" class="lv-btn lv-btn-primary" id="lv-admit-all"><i class="bi bi-check2-all" aria-hidden="true"></i> Let everyone in</button>
+        </div>
         <div class="lv-host-tools">
           <h2>Class controls</h2>
           <label class="lv-switch"><input type="checkbox" data-setting="open_mic"><span></span> Open mic <small>Everyone may unmute without raising a hand</small></label>
@@ -294,6 +300,10 @@
   <span data-k="notHere">Not in class</span>
   <span data-k="nobodyInGroup">nobody yet</span>
   <span data-k="deleteMsg">Delete message</span>
+  <span data-k="admit">Let in</span>
+  <span data-k="deny">Deny</span>
+  <span data-k="isWaiting">is waiting to join</span>
+  <span data-k="notInClass">not in this class</span>
 </div>
 
 <script src="{% static 'vendor/livekit/livekit-client.umd.js' %}"></script>

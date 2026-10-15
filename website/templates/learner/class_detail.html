@@ -95,7 +95,7 @@
     <div class="cls-date"><b>{{ ses.starts_at|date:"j" }}</b><span>{{ ses.starts_at|date:"M" }}</span></div>
     <div class="flex-grow-1">
       <strong>{{ ses.display_title }}</strong>
-      <small>{{ ses.starts_at|date:"l" }}, {{ ses.starts_at|time:"H:i" }} to {{ ses.ends_at|time:"H:i" }}{% if ses.is_live %} &middot; Live online{% elif ses.where %} &middot; {{ ses.where }}{% endif %}{% if ses.notes %} &middot; {{ ses.notes }}{% endif %}</small>
+      <small>{{ ses.starts_at|date:"l" }}, {{ ses.starts_at|time:"H:i" }} to {{ ses.ends_at|time:"H:i" }}{% if ses.is_live %} &middot; Live online{% elif ses.where %} &middot; {{ ses.where }}{% endif %}{% if ses.notes %} &middot; {{ ses.notes }}{% endif %}{% if ses.is_live %}{% with mr=ses.live_room_obj %}{% if mr.passcode %} &middot; <i class="bi bi-lock-fill" aria-hidden="true"></i> Passcode <strong>{{ mr.passcode }}</strong>{% endif %}{% endwith %}{% endif %}</small>
     </div>
     {% if ses.is_live %}<a href="{{ ses.link }}" class="btn btn-sm {% if ses.is_open_now %}btn-danger{% else %}btn-outline-cloud{% endif %}"><i class="bi bi-broadcast" aria-hidden="true"></i> Live class</a>
     {% elif ses.link %}<a href="{{ ses.link }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-cloud">Join</a>{% endif %}

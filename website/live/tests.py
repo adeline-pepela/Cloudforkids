@@ -259,19 +259,38 @@ class ScheduledLiveClassTests(LiveTestBase):
         self.client.post(reverse("teach:session_add", args=[self.classroom.pk]), {
             "title": "Cloud storage", "date": day.isoformat(), "time": "16:00", "duration_minutes": 60,
             "repeat_weeks": 3, "is_live": "on", "meeting_link": "https://meet.example.com/x",
+            "live_link": "own", "passcode": "cloud42", "audience": "class", "chat_enabled": "on",
         })
         sessions = list(self.classroom.sessions.all())
         self.assertEqual(len(sessions), 3)
         self.assertTrue(all(s.is_live and not s.meeting_link for s in sessions))
-        self.assertEqual(sessions[0].link, reverse("live:room", args=[self.room.code]))
+        meeting = sessions[0].meeting
+        self.assertFalse(meeting.is_main)
+        self.assertEqual((meeting.title, meeting.passcode), ("Cloud storage", "cloud42"))
+        self.assertTrue(all(s.meeting_id == meeting.pk for s in sessions))  # one link for the weekly series
+        self.assertNotEqual(meeting.code, self.room.code)
+        self.assertEqual(sessions[0].link, reverse("live:room", args=[meeting.code]))
         self.assertEqual(len(mail.outbox), 1)
-        self.assertIn(f"/r/{self.room.code}/", mail.outbox[0].body)
+        self.assertIn(f"/r/{meeting.code}/", mail.outbox[0].body)
+        self.assertIn("passcode to get in is cloud42", mail.outbox[0].body)
         self.assertIn("every week for 3 weeks", mail.outbox[0].body)
 
         self.login(self.kid)
         page = self.client.get(reverse("dashboard:classes"))
         self.assertContains(page, "cal-chip session live")
-        self.assertContains(page, reverse("live:room", args=[self.room.code]))
+        self.assertContains(page, reverse("live:room", args=[meeting.code]))
+        self.assertContains(page, "cloud42")
+
+    def test_schedule_on_the_class_link(self):
+        self.login(self.teacher)
+        day = timezone.localdate() + timedelta(days=2)
+        self.client.post(reverse("teach:session_add", args=[self.classroom.pk]), {
+            "date": day.isoformat(), "time": "16:00", "duration_minutes": 60, "repeat_weeks": 1, "is_live": "on",
+            "live_link": "class",
+        })
+        ses = self.classroom.sessions.get()
+        self.assertIsNone(ses.meeting)
+        self.assertEqual(ses.link, reverse("live:room", args=[self.room.code]))
 
     def test_start_button_shows_near_start_time(self):
         from accounts.models import ClassSession
@@ -516,3 +535,95 @@ class AfterClassTests(LiveTestBase):
         call_command("send_notifications", "--live", stdout=io.StringIO())
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn(f"/r/{self.room.code}/", mail.outbox[0].body)
+
+
+class MeetingTests(LiveTestBase):
+    def meeting(self, **kw):
+        return LiveRoom.objects.create(classroom=self.classroom, is_main=False, title="Revision", **kw)
+
+    def test_passcode_gate(self):
+        m = self.meeting(passcode="Cloud42")
+        LiveSession.objects.create(room=m, started_by=self.teacher)
+        self.login(self.kid)
+        url = reverse("live:room", args=[m.code])
+        self.assertContains(self.client.get(url), "This meeting has a passcode")
+        self.assertEqual(self.client.post(reverse("live:token", args=[m.code])).status_code, 403)
+        response = self.client.post(reverse("live:unlock", args=[m.code]), {"passcode": "wrong"})
+        self.assertEqual(response["Location"], url + "?wrong=1")
+        self.assertContains(self.client.get(response["Location"]), "That passcode is not right")
+        self.client.post(reverse("live:unlock", args=[m.code]), {"passcode": " cloud42 "})  # case and spaces do not matter
+        self.assertContains(self.client.get(url), "Join the class")
+        self.assertEqual(self.client.post(reverse("live:token", args=[m.code])).status_code, 200)
+        # the teacher never needs it
+        self.login(self.teacher)
+        self.assertNotContains(self.client.get(url), "This meeting has a passcode")
+
+    def test_passcode_tries_are_limited(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        m = self.meeting(passcode="Cloud42")
+        self.login(self.kid)
+        for _ in range(10):
+            self.client.post(reverse("live:unlock", args=[m.code]), {"passcode": "nope"})
+        self.client.post(reverse("live:unlock", args=[m.code]), {"passcode": "Cloud42"})
+        self.assertFalse(self.client.session.get(f"live-pass-{m.pk}"))
+
+    def test_waiting_room(self):
+        m = self.meeting(waiting_room=True)
+        session = LiveSession.objects.create(room=m, started_by=self.teacher)
+        self.login(self.kid)
+        self.assertTrue(self.client.post(reverse("live:token", args=[m.code])).json()["waiting"])
+        self.assertEqual(self.calls("SendData")[0]["destination_identities"], [f"u{self.teacher.pk}"])
+        self.assertEqual(self.client.post(reverse("live:chat", args=[m.code]), {"text": "hi"}).status_code, 403)
+        self.login(self.teacher)
+        waiting = self.client.get(reverse("live:lobby", args=[m.code])).json()["waiting"]
+        self.assertEqual([(w["name"], w["member"]) for w in waiting], [("Amani O.", True)])
+        self.client.post(reverse("live:control", args=[m.code]), {"action": "admit", "identity": f"u{self.kid.pk}"})
+        self.login(self.kid)
+        self.assertIn("token", self.client.post(reverse("live:token", args=[m.code])).json())
+        # denied learners stay out
+        second = User.objects.create_user("zawadi", password=PASSWORD, role="learner")
+        ClassMembership.objects.create(classroom=self.classroom, learner=second)
+        self.login(second)
+        self.client.post(reverse("live:token", args=[m.code]))
+        self.login(self.teacher)
+        self.client.post(reverse("live:control", args=[m.code]), {"action": "deny", "identity": f"u{second.pk}"})
+        self.login(second)
+        self.assertEqual(self.client.post(reverse("live:token", args=[m.code])).status_code, 403)
+        self.assertTrue(LiveAttendance.objects.get(session=session, user=second).removed)
+
+    def test_open_to_any_learner(self):
+        m = self.meeting(audience="anyone")
+        LiveSession.objects.create(room=m, started_by=self.teacher)
+        self.login(self.outsider)
+        self.assertEqual(self.client.post(reverse("live:token", args=[m.code])).status_code, 200)
+        # the class's own link stays class-only
+        self.go_live()
+        self.assertEqual(self.client.post(reverse("live:token", args=[self.room.code])).status_code, 403)
+
+    def test_meetings_page_create_edit_start_delete(self):
+        from accounts.models import ClassSession
+
+        self.login(self.teacher)
+        url = reverse("teach:meetings", args=[self.classroom.pk])
+        self.client.post(url, {"title": "Exam revision", "passcode": "abc", "audience": "class", "chat_enabled": "on"})
+        self.assertFalse(LiveRoom.objects.filter(is_main=False).exists())  # passcode too short
+        self.client.post(url, {"title": "Exam revision", "passcode": "abcd1", "audience": "class", "chat_enabled": "on", "waiting_room": "on"})
+        m = LiveRoom.objects.get(is_main=False)
+        self.assertTrue(m.waiting_room)
+        page = self.client.get(url)
+        self.assertContains(page, f"/r/{m.code}/")
+        self.assertContains(page, "abcd1")
+        self.client.post(reverse("teach:meeting_edit", args=[self.classroom.pk, m.pk]), {"title": "Exam revision", "passcode": "", "audience": "anyone"})
+        m.refresh_from_db()
+        self.assertEqual((m.passcode, m.audience, m.waiting_room), ("", "anyone", False))
+        self.assertRedirects(self.client.post(reverse("live:start_room", args=[m.code])), reverse("live:room", args=[m.code]))
+        self.assertEqual(self.calls("CreateRoom")[0]["name"], m.current_session.livekit_name)
+        self.client.post(reverse("live:control", args=[m.code]), {"action": "end"})
+        ClassSession.objects.create(classroom=self.classroom, starts_at=timezone.now() + timedelta(days=1), is_live=True, meeting=m)
+        self.client.post(reverse("teach:meeting_delete", args=[self.classroom.pk, m.pk]))
+        self.assertFalse(LiveRoom.objects.filter(pk=m.pk).exists())
+        self.assertFalse(ClassSession.objects.exists())
+        # the class link cannot be deleted
+        self.assertEqual(self.client.post(reverse("teach:meeting_delete", args=[self.classroom.pk, self.room.pk])).status_code, 404)

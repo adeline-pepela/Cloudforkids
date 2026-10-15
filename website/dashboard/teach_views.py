@@ -8,6 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -75,6 +76,20 @@ class SessionForm(BootstrapFormMixin, forms.Form):
     meeting_link = forms.URLField(required=False, widget=forms.URLInput(attrs={"placeholder": "Online link (blank = class link)"}))
     notes = forms.CharField(max_length=300, required=False, widget=forms.TextInput(attrs={"placeholder": "e.g. Bring your laptop"}))
     is_live = forms.BooleanField(required=False, label="Live online class on Cloud for Kids")
+    # Live classes only: a meeting of its own (new link, optional passcode) or the class's permanent link
+    live_link = forms.ChoiceField(
+        choices=[("own", "Its own new link"), ("class", "The class's permanent link")], initial="own", required=False,
+        label="Link",
+    )
+    passcode = forms.CharField(max_length=20, required=False, label="Passcode (optional)",
+                               widget=forms.TextInput(attrs={"placeholder": "e.g. cloud42", "autocomplete": "off"}))
+    waiting_room = forms.BooleanField(required=False, label="Waiting room: I let each person in")
+    audience = forms.ChoiceField(choices=LiveRoom.Audience.choices, initial=LiveRoom.Audience.CLASS, required=False, label="Who can join")
+    student_video = forms.BooleanField(required=False, label="Learners may turn on their cameras")
+    chat_enabled = forms.BooleanField(required=False, initial=True, label="Chat and reactions on")
+
+    def clean_passcode(self):
+        return clean_passcode(self.cleaned_data.get("passcode", ""))
 
     def clean_date(self):
         date = self.cleaned_data["date"]
@@ -84,8 +99,17 @@ class SessionForm(BootstrapFormMixin, forms.Form):
 
     def save(self, classroom):
         data = self.cleaned_data
+        meeting = None
         if data["is_live"]:
-            LiveRoom.objects.get_or_create(classroom=classroom)
+            if data["live_link"] == "class":
+                LiveRoom.objects.get_or_create(classroom=classroom, is_main=True)
+            else:
+                meeting = LiveRoom.objects.create(
+                    classroom=classroom, is_main=False, title=data["title"] or f"{classroom.name} live class",
+                    passcode=data["passcode"], waiting_room=data["waiting_room"],
+                    audience=data["audience"] or LiveRoom.Audience.CLASS, student_video=data["student_video"],
+                    chat_enabled=data["chat_enabled"],
+                )
         first = datetime.combine(data["date"], data["time"])
         made = []
         for week in range(data["repeat_weeks"]):
@@ -93,9 +117,33 @@ class SessionForm(BootstrapFormMixin, forms.Form):
             made.append(ClassSession(
                 classroom=classroom, title=data["title"], starts_at=starts, duration_minutes=data["duration_minutes"],
                 location=data["location"], meeting_link="" if data["is_live"] else data["meeting_link"], notes=data["notes"],
-                is_live=data["is_live"],
+                is_live=data["is_live"], meeting=meeting,
             ))
         return ClassSession.objects.bulk_create(made)
+
+
+def clean_passcode(value):
+    value = (value or "").strip()
+    if value and not (4 <= len(value) <= 20 and value.replace("-", "").isalnum()):
+        raise forms.ValidationError("Use 4 to 20 letters or numbers.")
+    return value
+
+
+class MeetingForm(BootstrapFormMixin, forms.ModelForm):
+    """A live meeting with its own link: name, passcode and the rules learners join with."""
+
+    class Meta:
+        model = LiveRoom
+        fields = ["title", "passcode", "waiting_room", "audience", "student_video", "chat_enabled"]
+        labels = {"title": "Meeting name", "waiting_room": "Waiting room: I let each person in",
+                  "student_video": "Learners may turn on their cameras", "chat_enabled": "Chat and reactions on"}
+        widgets = {
+            "title": forms.TextInput(attrs={"placeholder": "e.g. Revision before the exam"}),
+            "passcode": forms.TextInput(attrs={"placeholder": "Leave blank for no passcode", "autocomplete": "off"}),
+        }
+
+    def clean_passcode(self):
+        return clean_passcode(self.cleaned_data.get("passcode", ""))
 
 
 def _classroom(request, class_id):
@@ -203,10 +251,70 @@ def session_add(request, class_id):
         note = ""
         if form.cleaned_data["is_live"]:
             notify.notify_live_scheduled(classroom, made)
-            note = " We emailed the learners and their parents the date and the class link."
+            room = made[0].live_room_obj
+            note = f" Its link is {request.build_absolute_uri(reverse('live_short', args=[room.code]))}"
+            note += f" (passcode {room.passcode})." if room.passcode else "."
+            note += " We emailed the learners and their parents the date and the link."
         messages.success(request, f"Added {len(made)} session{'s' if len(made) != 1 else ''} to the {classroom.name} calendar. Learners in the class can see it now.{note}")
         return redirect("teach:class", class_id=classroom.pk)
     return class_detail(request, class_id, session_form=form)
+
+
+@teacher_only
+def meetings(request, class_id):
+    """Every live link of the class: the permanent class room and the meetings made for later."""
+    classroom = _classroom(request, class_id)
+    form = MeetingForm(request.POST or None, initial={"chat_enabled": True})
+    if request.method == "POST" and form.is_valid():
+        room = form.save(commit=False)
+        room.classroom = classroom
+        room.is_main = False
+        room.title = room.title or "Live meeting"
+        room.save()
+        messages.success(request, f"Meeting created. Share its link: {request.build_absolute_uri(reverse('live_short', args=[room.code]))}")
+        return redirect("teach:meetings", class_id=classroom.pk)
+    LiveRoom.objects.get_or_create(classroom=classroom, is_main=True)
+    now = timezone.now()
+    rows = []
+    for room in classroom.live_rooms.order_by("-is_main", "-created_at"):
+        rows.append({
+            "room": room,
+            "url": request.build_absolute_uri(reverse("live_short", args=[room.code])),
+            "live": room.current_session,
+            "next": room.scheduled.filter(starts_at__gte=now - timedelta(hours=2)).order_by("starts_at").first() if not room.is_main
+            else classroom.sessions.filter(is_live=True, meeting__isnull=True, starts_at__gte=now - timedelta(hours=2)).first(),
+            "held": room.sessions.count(),
+        })
+    return render(request, "teach/meetings.html", _ctx(request, nav="classes", classroom=classroom, rows=rows, form=form))
+
+
+@teacher_only
+def meeting_edit(request, class_id, room_id):
+    classroom = _classroom(request, class_id)
+    room = get_object_or_404(LiveRoom, pk=room_id, classroom=classroom)
+    form = MeetingForm(request.POST or None, instance=room)
+    if room.is_main:
+        del form.fields["audience"]  # the class link is always for the class
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Meeting saved. Changes apply the next time someone joins.")
+        return redirect("teach:meetings", class_id=classroom.pk)
+    return render(request, "teach/meeting_form.html", _ctx(request, nav="classes", classroom=classroom, room=room, form=form))
+
+
+@teacher_only
+@require_POST
+def meeting_delete(request, class_id, room_id):
+    classroom = _classroom(request, class_id)
+    room = get_object_or_404(LiveRoom, pk=room_id, classroom=classroom, is_main=False)
+    if room.current_session:
+        messages.error(request, "This meeting is live right now. End it first.")
+        return redirect("teach:meetings", class_id=classroom.pk)
+    removed = room.scheduled.filter(starts_at__gte=timezone.now()).delete()[0]
+    room.scheduled.update(meeting=None, is_live=False)  # past calendar entries stay as history
+    room.delete()
+    messages.success(request, f"Meeting deleted, with {removed} upcoming session{'s' if removed != 1 else ''}. Its link no longer works.")
+    return redirect("teach:meetings", class_id=classroom.pk)
 
 
 @teacher_only

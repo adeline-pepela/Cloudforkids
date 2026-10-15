@@ -1,0 +1,20 @@
+<div class="row g-3">
+  <div class="col-md-6">
+    <label class="form-label fw-bold" for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>{{ form.title }}{{ form.title.errors }}
+  </div>
+  <div class="col-md-6">
+    <label class="form-label fw-bold" for="{{ form.passcode.id_for_label }}">Passcode</label>{{ form.passcode }}
+    <div class="form-text">4 to 20 letters or numbers. Learners type it before joining.</div>{{ form.passcode.errors }}
+  </div>
+  {% if not room.is_main %}
+  <div class="col-md-6">
+    <label class="form-label fw-bold" for="{{ form.audience.id_for_label }}">Who can join</label>{{ form.audience }}
+    <div class="form-text">"Any learner" lets learners outside this class join with the link. Turn on a passcode or the waiting room too.</div>
+  </div>
+  {% endif %}
+  <div class="col-12 d-flex flex-wrap gap-4">
+    {% for f in form %}{% if f.widget_type == "checkbox" %}
+    <div class="form-check">{{ f }} <label class="form-check-label" for="{{ f.id_for_label }}">{{ f.label }}</label></div>
+    {% endif %}{% endfor %}
+  </div>
+</div>

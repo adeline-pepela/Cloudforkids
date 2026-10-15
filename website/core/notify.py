@@ -187,7 +187,9 @@ def notify_live_scheduled(classroom, sessions):
     first = timezone.localtime(sessions[0].starts_at)
     when = f"{first:%A %d %B} at {first:%H:%M}"
     more = f" It repeats every week for {len(sessions)} weeks." if len(sessions) > 1 else ""
-    url = absolute(reverse("live_short", args=[classroom.live_room.code]))
+    room = sessions[0].live_room_obj
+    url = absolute(reverse("live_short", args=[room.code]))
+    code_line = f" The passcode to get in is {room.passcode}." if room.passcode else ""
     topic = f" ({sessions[0].title})" if sessions[0].title else ""
     sent = 0
     for member in classroom.memberships.select_related("learner"):
@@ -196,7 +198,7 @@ def notify_live_scheduled(classroom, sessions):
             paragraphs = [
                 (f"Your teacher scheduled a live online class for {classroom.name}{topic} on {when} (Kenyan time).{more}" if mine
                  else f"{_name(member.learner)}'s teacher scheduled a live online class for {classroom.name}{topic} on {when} (Kenyan time).{more}"),
-                "Open the link a few minutes early. Learners join with their microphone and camera off and raise a hand to speak.",
+                "Open the link a few minutes early. Learners join with their microphone and camera off and raise a hand to speak." + code_line,
             ]
             sent += send_email(person.email, f"Live class: {classroom.name} on {first:%a %d %b}", "A live class is coming up",
                                paragraphs, cta=("Open the live class", url), user=person, optional=True)

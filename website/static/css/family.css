@@ -235,3 +235,11 @@
 @media (max-width: 575px) {
   .cd-reply, .cd-reply-form { margin-left: 1rem; }
 }
+
+/* Live meetings: options in the schedule form and the meetings page */
+.tc-live-opts { background: #FFF5F5; border: 1px dashed #FDA4AF; border-radius: 16px; padding: .8rem 1rem; margin-top: .3rem; }
+[data-bs-theme="dark"] .tc-live-opts { background: #2A1A20; }
+.tc-link { font-size: .95rem; background: #F1F5F9; border-radius: 10px; padding: .3rem .6rem; word-break: break-all; }
+[data-bs-theme="dark"] .tc-link { background: #1E293B; }
+.tc-meeting.main { border-left: 6px solid #1CA7EC; }
+.tc-meeting:not(.main) { border-left: 6px solid #E11D48; }

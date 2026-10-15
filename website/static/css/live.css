@@ -218,3 +218,11 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   .lv-live-dot, .lv-tile-hand, .lv-float { animation: none; }
   .lv-float { display: none; }
 }
+
+/* Waiting room */
+.lv-wait { color: #FDE68A !important; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: .5rem; margin-top: 1rem; }
+.lv-spin { width: 16px; height: 16px; border-radius: 50%; border: 3px solid rgba(253,230,138,.3); border-top-color: #FDE68A; animation: lv-rot 1s linear infinite; }
+@keyframes lv-rot { to { transform: rotate(360deg); } }
+.lv-lobby { background: #FEF3C7; border-radius: 14px; padding: .7rem; margin-bottom: .8rem; }
+.lv-lobby h2 { color: #92400E !important; margin-top: 0 !important; }
+.lv-lobby .lv-btn { width: 100%; justify-content: center; margin-top: .4rem; }

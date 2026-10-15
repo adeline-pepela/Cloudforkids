@@ -70,13 +70,14 @@ def send_reminders(now=None):
     sessions = ClassSession.objects.filter(
         is_live=True, classroom__archived=False,
         starts_at__gt=now + REMINDER_WINDOW[0], starts_at__lte=now + REMINDER_WINDOW[1],
-    ).select_related("classroom__live_room", "classroom__facilitator")
+    ).select_related("meeting", "classroom__facilitator")
     sent = 0
     for ses in sessions:
-        room = getattr(ses.classroom, "live_room", None)
+        room = ses.live_room_obj
         if room is None:
             continue
         url = notify.absolute(reverse("live_short", args=[room.code]))
+        code_line = f" The passcode is {room.passcode}." if room.passcode else ""
         start = timezone.localtime(ses.starts_at)
         for member in ses.classroom.memberships.select_related("learner"):
             for person in notify.family_recipients(member.learner):
@@ -88,7 +89,7 @@ def send_reminders(now=None):
                     [
                         (f"Your live class for {ses.classroom.name} starts at {start:%H:%M} today." if mine
                          else f"{notify._name(member.learner)}'s live class for {ses.classroom.name} starts at {start:%H:%M} today."),
-                        "Open the link a few minutes early and use headphones if you have them.",
+                        "Open the link a few minutes early and use headphones if you have them." + code_line,
                     ],
                     cta=("Join the live class", url), user=person, optional=True, background=False,
                 )

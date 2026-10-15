@@ -93,9 +93,16 @@ def _role(user, room):
     classroom = room.classroom
     if user.pk == classroom.facilitator_id and user.role == User.Role.FACILITATOR and not user.awaiting_approval:
         return "host"
-    if user.role == User.Role.LEARNER and ClassMembership.objects.filter(classroom=classroom, learner=user).exists():
+    if user.role == User.Role.LEARNER and (
+        (not room.is_main and room.audience == LiveRoom.Audience.ANYONE)
+        or ClassMembership.objects.filter(classroom=classroom, learner=user).exists()
+    ):
         return "learner"
     return None
+
+
+def _passcode_ok(request, room, role):
+    return role == "host" or not room.passcode or request.session.get(f"live-pass-{room.pk}") == room.passcode
 
 
 def _gate(request, room, reason, status=200, **extra):
@@ -144,7 +151,7 @@ def push_settings(room, session):
 
 def live_summary(classroom):
     """For the teacher's class page: the room (made on first visit, so the link can be shared early) and recent classes."""
-    room, _ = LiveRoom.objects.get_or_create(classroom=classroom)
+    room, _ = LiveRoom.objects.get_or_create(classroom=classroom, is_main=True)
     recent = list(
         room.sessions.filter(ended_at__isnull=False).prefetch_related("attendance", "recordings")[:5]
     )
@@ -201,8 +208,21 @@ def short_link(request, code):
 @login_required
 @require_POST
 def start(request, class_id):
+    """Start the class's main live room."""
     classroom = get_object_or_404(Classroom, pk=class_id, facilitator=request.user)
-    room, _ = LiveRoom.objects.get_or_create(classroom=classroom)
+    room, _ = LiveRoom.objects.get_or_create(classroom=classroom, is_main=True)
+    return _start(request, room)
+
+
+@login_required
+@require_POST
+def start_room(request, code):
+    """Start one meeting (or the main room) by its link code."""
+    return _start(request, _room_for_code(code))
+
+
+def _start(request, room):
+    classroom = room.classroom
     if _role(request.user, room) != "host":
         raise Http404
     if not livekit.configured():
@@ -231,6 +251,8 @@ def room_page(request, code):
         return _gate(request, room, "plan_needed", status=402)
     if not livekit.configured():
         return _gate(request, room, "not_set_up")
+    if not _passcode_ok(request, room, role):
+        return _gate(request, room, "passcode", wrong=request.GET.get("wrong") == "1")
     session = room.current_session
     if session is None:
         return _gate(request, room, "host_start" if role == "host" else "waiting")
@@ -240,7 +262,7 @@ def room_page(request, code):
             return _gate(request, room, "removed", status=403)
         if room.locked and attendance is None:
             return _gate(request, room, "locked", status=403)
-    urls = {name: reverse(f"live:{name}", args=[room.code]) for name in ("token", "status", "control", "hand", "chat", "react", "vote", "results")}
+    urls = {name: reverse(f"live:{name}", args=[room.code]) for name in ("token", "status", "control", "hand", "chat", "react", "vote", "results", "lobby")}
     config = {
         "role": role,
         "me": identity(request.user),
@@ -255,7 +277,8 @@ def room_page(request, code):
         config["lessons"] = _lesson_choices(room.classroom)
         config["canRecord"] = livekit.recording_configured()
         config["reportUrl"] = reverse("live:report", args=[session.pk])
-    return render(request, "live/room.html", {"room": room, "session": session, "role": role, "config": config})
+    title = room.classroom.name if room.is_main else room.display_title
+    return render(request, "live/room.html", {"room": room, "session": session, "role": role, "config": config, "title": title})
 
 
 @login_required
@@ -267,6 +290,8 @@ def token(request, code):
         return _json_error("You are not in this class.", 403)
     if role == "learner" and not can_join_live(request.user):
         return _json_error("Live classes need a plan that includes them.", 402)
+    if not _passcode_ok(request, room, role):
+        return _json_error("Type the passcode first.", 403)
     session = room.current_session
     if session is None or not livekit.configured():
         return _json_error("This class is not live right now.", 409)
@@ -277,7 +302,13 @@ def token(request, code):
         if room.locked and attendance is None:
             return _json_error("The teacher has locked this class.", 403)
     if attendance is None:
-        attendance = LiveAttendance.objects.create(session=session, user=request.user, is_host=role == "host")
+        attendance = LiveAttendance.objects.create(
+            session=session, user=request.user, is_host=role == "host", admitted=role == "host" or not room.waiting_room,
+        )
+        if not attendance.admitted:
+            _tell_host_about_lobby(room, session)
+    if not attendance.admitted:
+        return JsonResponse({"ok": True, "waiting": True})
 
     room_name = room_for(session, attendance)
     if role == "host":
@@ -323,6 +354,52 @@ def status(request, code):
     return JsonResponse({"ok": True, "live": session is not None, "settings": json.loads(room.settings_json())})
 
 
+@login_required
+@require_POST
+def unlock(request, code):
+    """Check the meeting passcode. Ten wrong tries lock the learner out of that meeting for 15 minutes."""
+    room = _room_for_code(code)
+    if _role(request.user, room) is None:
+        raise Http404
+    key = f"live-pass-tries-{request.user.pk}-{room.pk}"
+    tries = cache.get(key, 0)
+    if tries >= 10:
+        messages.error(request, "Too many wrong passcodes. Wait 15 minutes, or ask your teacher.")
+        return redirect(reverse("live:room", args=[room.code]) + "?wrong=1")
+    if room.check_passcode(request.POST.get("passcode", "")):
+        request.session[f"live-pass-{room.pk}"] = room.passcode
+        cache.delete(key)
+        return redirect("live:room", code=room.code)
+    cache.set(key, tries + 1, 15 * 60)
+    return redirect(reverse("live:room", args=[room.code]) + "?wrong=1")
+
+
+def _tell_host_about_lobby(room, session):
+    host_att = session.attendance.filter(is_host=True).first()
+    try:
+        livekit.send_data(room_for(session, host_att) if host_att else session.livekit_name, {"type": "lobby"},
+                          to=[identity(room.classroom.facilitator)])
+    except livekit.LiveKitError:
+        pass  # the teacher's page also checks the waiting room every few seconds
+
+
+@login_required
+def lobby(request, code):
+    """For the teacher: who is in the waiting room."""
+    room = _room_for_code(code)
+    if _role(request.user, room) != "host":
+        return _json_error("Only the teacher can see this.", 403)
+    session = room.current_session
+    rows = []
+    if session:
+        members = set(room.classroom.memberships.values_list("learner_id", flat=True))
+        rows = [
+            {"identity": identity(a.user), "name": display_name(a.user), "member": a.user_id in members}
+            for a in session.attendance.filter(admitted=False, removed=False).select_related("user")
+        ]
+    return JsonResponse({"ok": True, "waiting": rows})
+
+
 def _learner_context(request, code):
     """(room, session, attendance) for a learner in a running class, or a JsonResponse error."""
     room = _room_for_code(code)
@@ -333,7 +410,7 @@ def _learner_context(request, code):
     if session is None:
         return _json_error("This class is not live right now.", 409)
     attendance = LiveAttendance.objects.filter(session=session, user=request.user).first()
-    if attendance is None or attendance.removed:
+    if attendance is None or attendance.removed or not attendance.admitted:
         return _json_error("Join the class first.", 403)
     return room, session, attendance, role
 
@@ -536,6 +613,12 @@ def control(request, code):
                 att.can_speak = action == "allow_speak"
                 att.save(update_fields=["can_speak"])
                 livekit.update_participant(name, target, permission=learner_permission(room, att, session), attributes={"hand": ""})
+
+        elif action in ("admit", "deny", "admit_all"):
+            waiting = session.attendance.filter(admitted=False, removed=False, is_host=False)
+            if action != "admit_all":
+                waiting = waiting.filter(user_id=user_id_from(target) or 0)
+            waiting.update(**({"removed": True} if action == "deny" else {"admitted": True}))
 
         elif action == "mute_all":
             session.attendance.filter(is_host=False).update(can_speak=False)

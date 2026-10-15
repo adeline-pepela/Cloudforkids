@@ -44,7 +44,7 @@ def _upcoming_sessions(user, limit=None):
     """Sessions from now on (or still running) in the classes the learner has joined."""
     rows = ClassSession.objects.filter(
         classroom__memberships__learner=user, classroom__archived=False, starts_at__gte=timezone.now() - timedelta(hours=2)
-    ).select_related("classroom__facilitator", "classroom__live_room")
+    ).select_related("classroom__facilitator", "meeting")
     return list(rows[:limit] if limit else rows)
 
 
@@ -169,7 +169,7 @@ def my_classes(request):
     start = first - timedelta(days=first.weekday())
     end = start + timedelta(days=42)
     events = defaultdict(list)
-    for ses in ClassSession.objects.filter(classroom__in=classrooms).select_related("classroom__live_room"):
+    for ses in ClassSession.objects.filter(classroom__in=classrooms).select_related("classroom", "meeting"):
         local = timezone.localtime(ses.starts_at)
         if start <= local.date() < end:
             events[local.date()].append({"kind": "session", "label": ses.display_title, "time": local, "ses": ses})

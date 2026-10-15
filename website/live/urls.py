@@ -18,4 +18,7 @@ urlpatterns = [
     path("<str:code>/vote/", views.vote, name="vote"),
     path("<str:code>/results/", views.results, name="results"),
     path("<str:code>/control/", views.control, name="control"),
+    path("<str:code>/start/", views.start_room, name="start_room"),
+    path("<str:code>/unlock/", views.unlock, name="unlock"),
+    path("<str:code>/lobby/", views.lobby, name="lobby"),
 ]

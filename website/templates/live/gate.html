@@ -9,16 +9,17 @@
 <div class="l-card text-center py-5 mx-auto" style="height:auto;max-width:640px;">
   {% if reason == "waiting" %}
   <div class="lv-gate-ico sky" aria-hidden="true"><i class="bi bi-broadcast"></i></div>
-  <h1 class="l-title">{{ room.classroom.name }}</h1>
+  <h1 class="l-title">{% if room.is_main %}{{ room.classroom.name }}{% else %}{{ room.display_title }}{% endif %}</h1>
   <p class="text-secondary mx-auto" style="max-width:460px;">Your teacher has not started the live class yet. Keep this page open: it opens the class by itself as soon as your teacher starts.</p>
   <p class="small text-secondary" id="lv-wait-note"><span class="spinner-grow spinner-grow-sm text-primary" aria-hidden="true"></span> Waiting for your teacher...</p>
   <a href="{% url 'dashboard:classes' %}" class="btn btn-outline-cloud">Back to My Classes</a>
 
   {% elif reason == "host_start" %}
   <div class="lv-gate-ico grass" aria-hidden="true"><i class="bi bi-camera-video-fill"></i></div>
-  <h1 class="l-title">{{ room.classroom.name }}</h1>
+  <h1 class="l-title">{% if room.is_main %}{{ room.classroom.name }}{% else %}{{ room.display_title }}{% endif %}</h1>
+  {% if room.passcode %}<p class="small text-secondary"><i class="bi bi-lock-fill" aria-hidden="true"></i> Passcode: <strong>{{ room.passcode }}</strong>{% if room.waiting_room %} &middot; waiting room on{% endif %}</p>{% elif room.waiting_room %}<p class="small text-secondary">Waiting room on</p>{% endif %}
   <p class="text-secondary mx-auto" style="max-width:460px;">The live class is not running. Start it and learners who open the class link come straight in, with their microphones off until you let them speak.</p>
-  <form method="post" action="{% url 'live:start' room.classroom.pk %}">{% csrf_token %}
+  <form method="post" action="{% url 'live:start_room' room.code %}">{% csrf_token %}
     <button type="submit" class="btn btn-cloud btn-big"><i class="bi bi-broadcast" aria-hidden="true"></i> Start live class</button>
   </form>
 
@@ -39,6 +40,17 @@
   <h1 class="l-title">The class is locked</h1>
   <p class="text-secondary mx-auto" style="max-width:460px;">Your teacher has closed the door for this live class, so nobody new can join right now. This page tries again by itself if the teacher opens it.</p>
   <a href="{% url 'dashboard:classes' %}" class="btn btn-outline-cloud">Back to My Classes</a>
+
+  {% elif reason == "passcode" %}
+  <div class="lv-gate-ico sky" aria-hidden="true"><i class="bi bi-lock-fill"></i></div>
+  <h1 class="l-title">{{ room.display_title }}</h1>
+  <p class="text-secondary mx-auto" style="max-width:460px;">This meeting has a passcode. Type the passcode your teacher gave you.</p>
+  <form method="post" action="{% url 'live:unlock' room.code %}" class="d-flex flex-wrap justify-content-center gap-2 mx-auto" style="max-width:420px;">
+    {% csrf_token %}
+    <input type="text" name="passcode" class="form-control form-control-lg text-center" style="max-width:240px;" maxlength="20" autocomplete="off" autofocus required aria-label="Passcode" placeholder="Passcode">
+    <button type="submit" class="btn btn-cloud btn-big"><i class="bi bi-unlock-fill" aria-hidden="true"></i> Continue</button>
+  </form>
+  {% if wrong %}<p class="text-danger fw-bold mt-3 mb-0" role="alert">That passcode is not right. Check it and try again.</p>{% endif %}
 
   {% elif reason == "plan_needed" %}
   <div class="lv-gate-ico sun" aria-hidden="true"><i class="bi bi-gem"></i></div>

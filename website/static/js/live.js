@@ -53,8 +53,17 @@
   }
 
   /* ---------- Joining and moving between rooms (breakout groups) ---------- */
-  function connect() {
+  /* With a waiting room, the token request answers "waiting" until the teacher lets this person in. */
+  function getToken() {
     return request('token').then(function (d) {
+      if (!d.waiting) { $('lv-wait').hidden = true; return d; }
+      $('lv-wait').hidden = false;
+      return new Promise(function (resolve) { setTimeout(resolve, 4000); }).then(getToken);
+    });
+  }
+
+  function connect() {
+    return getToken().then(function (d) {
       settings = d.settings || {};
       applyState(d);
       var r = new LK.Room({
@@ -82,8 +91,13 @@
       $('lv-app').hidden = false;
       sync();
       if (myGroup) banner(S('youAreInGroup'));
-      if (isHost) room.localParticipant.enableCameraAndMicrophone().catch(function () { banner(S('noMedia')); }).then(sync);
+      if (isHost) {
+        room.localParticipant.enableCameraAndMicrophone().catch(function () { banner(S('noMedia')); }).then(sync);
+        loadLobby();
+        setInterval(loadLobby, 8000);
+      }
     }).catch(function (e) {
+      $('lv-wait').hidden = true;
       btn.disabled = false;
       err.textContent = (e && e.message && e.message !== 'Failed to fetch') ? e.message : S('joinFailed');
       err.hidden = false;
@@ -218,6 +232,7 @@
         break;
       case 'launch': setLaunch(data.launch); break;
       case 'move': moveRoom(); break;
+      case 'lobby': if (isHost) loadLobby(); break;
     }
   }
 
@@ -673,6 +688,36 @@
       row(S('group') + ' ' + g, names, g);
     }
   }
+
+  /* ---------- Waiting room (teacher) ---------- */
+  var lobbyCount = 0;
+  function loadLobby() {
+    if (!isHost) return;
+    request('lobby', null, 'GET').then(function (d) {
+      var list = $('lv-lobby-list');
+      list.textContent = '';
+      d.waiting.forEach(function (w) {
+        var li = el('li', 'lv-person');
+        li.append(el('span', 'lv-mini', initials(w.name)), el('span', 'lv-person-name', w.name + (w.member ? '' : ' (' + S('notInClass') + ')')));
+        var actions = el('span', 'lv-person-actions');
+        var yes = el('button', 'lv-mini-btn go', S('admit'));
+        yes.onclick = function () { control('admit', { identity: w.identity }).then(loadLobby, function () {}); };
+        var no = el('button', 'lv-mini-btn danger', S('deny'));
+        no.onclick = function () { control('deny', { identity: w.identity }).then(loadLobby, function () {}); };
+        actions.append(yes, no);
+        li.append(actions);
+        list.append(li);
+      });
+      $('lv-lobby').hidden = !d.waiting.length;
+      if (d.waiting.length > lobbyCount) banner(d.waiting[d.waiting.length - 1].name + ' ' + S('isWaiting'));
+      lobbyCount = d.waiting.length;
+      var badge = $('lv-hand-badge');
+      if (d.waiting.length) { badge.hidden = false; badge.textContent = d.waiting.length; }
+    }).catch(function () {});
+  }
+  if ($('lv-admit-all')) $('lv-admit-all').addEventListener('click', function () {
+    control('admit_all').then(loadLobby, function () {});
+  });
 
   /* ---------- Whiteboard ---------- */
   function sendBoard(obj, to) {

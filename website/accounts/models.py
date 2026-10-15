@@ -114,6 +114,13 @@ class Classroom(models.Model):
     class Meta:
         ordering = ["archived", "name"]
 
+    @property
+    def live_room(self):
+        """The class's permanent live room (meetings for later have their own rooms), or None before the first visit."""
+        if not hasattr(self, "_main_live_room"):
+            self._main_live_room = self.live_rooms.filter(is_main=True).first()
+        return self._main_live_room
+
     def __str__(self):
         return f"{self.name} ({self.facilitator})"
 
@@ -136,7 +143,11 @@ class ClassSession(models.Model):
     location = models.CharField(max_length=150, blank=True, help_text="Leave blank to use the class venue")
     meeting_link = models.URLField(blank=True, help_text="Leave blank to use the class link")
     notes = models.CharField(max_length=300, blank=True, help_text="e.g. Bring your laptop")
-    is_live = models.BooleanField(default=False, help_text="Held in the class's live room on Cloud for Kids")
+    is_live = models.BooleanField(default=False, help_text="Held live on Cloud for Kids")
+    meeting = models.ForeignKey(
+        "live.LiveRoom", null=True, blank=True, on_delete=models.SET_NULL, related_name="scheduled",
+        help_text="The meeting room (own link and passcode) for this session. Empty = the class's main live room",
+    )
 
     class Meta:
         ordering = ["starts_at"]
@@ -163,9 +174,13 @@ class ClassSession(models.Model):
         if self.is_live:
             from django.urls import reverse
 
-            room = getattr(self.classroom, "live_room", None)
+            room = self.live_room_obj
             return reverse("live:room", args=[room.code]) if room else ""
         return self.meeting_link or self.classroom.meeting_link
+
+    @property
+    def live_room_obj(self):
+        return (self.meeting or self.classroom.live_room) if self.is_live else None
 
     @property
     def is_open_now(self):

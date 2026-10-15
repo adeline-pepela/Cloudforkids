@@ -57,6 +57,7 @@
         <button type="submit" class="btn btn-cloud btn-big"><i class="bi bi-broadcast" aria-hidden="true"></i> Start live class</button>
       </form>
       {% endif %}
+      <a href="{% url 'teach:meetings' c.pk %}" class="btn btn-outline-cloud btn-big"><i class="bi bi-link-45deg" aria-hidden="true"></i> Meetings and links</a>
     </div>
   </div>
   {% if live.recent %}
@@ -81,12 +82,13 @@
   <div class="fm-row ok">
     <div>
       <strong>{{ ses.starts_at|date:"D j M Y" }}, {{ ses.starts_at|time:"H:i" }} to {{ ses.ends_at|time:"H:i" }}{% if ses.title %} &middot; {{ ses.title }}{% endif %}</strong>
-      <small>{% if ses.is_live %}<span class="badge rounded-pill text-bg-danger"><i class="bi bi-broadcast" aria-hidden="true"></i> Live class</span> {% endif %}{% if ses.where %}<i class="bi bi-geo-alt-fill" aria-hidden="true"></i> {{ ses.where }}{% endif %}{% if ses.link and not ses.is_live %} &middot; <a href="{{ ses.link }}" target="_blank" rel="noopener noreferrer">Online link</a>{% endif %}{% if ses.notes %} &middot; {{ ses.notes }}{% endif %}</small>
+      <small>{% if ses.is_live %}<span class="badge rounded-pill text-bg-danger"><i class="bi bi-broadcast" aria-hidden="true"></i> Live class</span>
+        {% with mr=ses.live_room_obj %}{% if mr %}<a href="{% url 'live_short' mr.code %}" class="fw-bold">/r/{{ mr.code }}</a>{% if mr.passcode %} <i class="bi bi-lock-fill" aria-hidden="true"></i> {{ mr.passcode }}{% endif %}{% if mr.waiting_room %} &middot; waiting room{% endif %}{% if not mr.is_main %} &middot; <a href="{% url 'teach:meeting_edit' c.pk mr.pk %}">settings</a>{% endif %} {% endif %}{% endwith %}{% endif %}{% if ses.where %}<i class="bi bi-geo-alt-fill" aria-hidden="true"></i> {{ ses.where }}{% endif %}{% if ses.link and not ses.is_live %} &middot; <a href="{{ ses.link }}" target="_blank" rel="noopener noreferrer">Online link</a>{% endif %}{% if ses.notes %} &middot; {{ ses.notes }}{% endif %}</small>
     </div>
-    {% if ses.is_live and ses.is_open_now %}
-    {% if live.current %}<a href="{% url 'live:room' live.room.code %}" class="btn btn-cloud btn-sm no-print">Rejoin</a>
-    {% else %}<form method="post" action="{% url 'live:start' c.pk %}" class="no-print">{% csrf_token %}<button type="submit" class="btn btn-cloud btn-sm"><i class="bi bi-broadcast" aria-hidden="true"></i> Start now</button></form>{% endif %}
-    {% endif %}
+    {% if ses.is_live and ses.is_open_now %}{% with mr=ses.live_room_obj %}{% if mr %}
+    {% if mr.current_session %}<a href="{% url 'live:room' mr.code %}" class="btn btn-cloud btn-sm no-print">Rejoin</a>
+    {% else %}<form method="post" action="{% url 'live:start_room' mr.code %}" class="no-print">{% csrf_token %}<button type="submit" class="btn btn-cloud btn-sm"><i class="bi bi-broadcast" aria-hidden="true"></i> Start now</button></form>{% endif %}
+    {% endif %}{% endwith %}{% endif %}
     <form method="post" action="{% url 'teach:session_delete' c.pk ses.pk %}" class="no-print">{% csrf_token %}<button class="btn btn-link btn-sm text-secondary p-0" aria-label="Remove session"><i class="bi bi-trash3" aria-hidden="true"></i></button></form>
   </div>
   {% empty %}
@@ -111,7 +113,22 @@
           <div class="form-check">
             <input type="checkbox" class="form-check-input" name="{{ session_form.is_live.html_name }}" id="{{ session_form.is_live.id_for_label }}"{% if session_form.is_live.value %} checked{% endif %}>
             <label class="form-check-label fw-bold" for="{{ session_form.is_live.id_for_label }}"><i class="bi bi-broadcast text-danger" aria-hidden="true"></i> Live online class on Cloud for Kids</label>
-            <div class="form-text mt-0">Learners join from the class link above, right in their calendar. We email them and their parents the date and link.</div>
+            <div class="form-text mt-0">Learners join from their calendar. We email them and their parents the date and link.</div>
+          </div>
+        </div>
+        <div class="col-12" id="lv-options"{% if not session_form.is_live.value %} hidden{% endif %}>
+          <div class="tc-live-opts">
+            <div class="row g-2">
+              <div class="col-md-4"><label class="form-label small fw-bold" for="{{ session_form.live_link.id_for_label }}">Link</label>{{ session_form.live_link }}</div>
+              <div class="col-md-4 lv-own"><label class="form-label small fw-bold" for="{{ session_form.passcode.id_for_label }}">Passcode (optional)</label>{{ session_form.passcode }}{{ session_form.passcode.errors }}</div>
+              <div class="col-md-4 lv-own"><label class="form-label small fw-bold" for="{{ session_form.audience.id_for_label }}">Who can join</label>{{ session_form.audience }}</div>
+              <div class="col-12 lv-own d-flex flex-wrap gap-3">
+                <div class="form-check"><input type="checkbox" class="form-check-input" name="{{ session_form.waiting_room.html_name }}" id="{{ session_form.waiting_room.id_for_label }}"{% if session_form.waiting_room.value %} checked{% endif %}><label class="form-check-label" for="{{ session_form.waiting_room.id_for_label }}">Waiting room: I let each person in</label></div>
+                <div class="form-check"><input type="checkbox" class="form-check-input" name="{{ session_form.student_video.html_name }}" id="{{ session_form.student_video.id_for_label }}"{% if session_form.student_video.value %} checked{% endif %}><label class="form-check-label" for="{{ session_form.student_video.id_for_label }}">Learners may turn on their cameras</label></div>
+                <div class="form-check"><input type="checkbox" class="form-check-input" name="{{ session_form.chat_enabled.html_name }}" id="{{ session_form.chat_enabled.id_for_label }}"{% if session_form.chat_enabled.value %} checked{% endif %}><label class="form-check-label" for="{{ session_form.chat_enabled.id_for_label }}">Chat and reactions on</label></div>
+              </div>
+            </div>
+            <p class="form-text mb-0">"Its own new link" gives this meeting (and its weekly repeats) a link of its own. Learners always join muted and raise a hand to speak.</p>
           </div>
         </div>
       </div>
@@ -264,6 +281,18 @@
 
 {% block extra_js %}
 <script>
+(function () {
+  var live = document.getElementById('{{ session_form.is_live.id_for_label }}'), opts = document.getElementById('lv-options');
+  var link = document.getElementById('{{ session_form.live_link.id_for_label }}');
+  function update() {
+    if (!live || !opts) return;
+    opts.hidden = !live.checked;
+    opts.querySelectorAll('.lv-own').forEach(function (el) { el.hidden = link && link.value !== 'own'; });
+  }
+  if (live) live.addEventListener('change', update);
+  if (link) link.addEventListener('change', update);
+  update();
+})();
 (function () {
   var lb = document.getElementById('lv-copy'), link = document.getElementById('lv-link');
   if (lb && link) lb.addEventListener('click', function () {
