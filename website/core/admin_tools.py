@@ -235,8 +235,17 @@ def monthly_report(request):
 
 
 def urls():
+    from assistant import settings_views as assistant
+
     wrap = admin.site.admin_view
     return [
+        path("assistant/", wrap(assistant.settings_page), name="assistant_settings"),
+        path("assistant/test/", wrap(assistant.test), name="assistant_test"),
+        path("assistant/models/", wrap(assistant.models), name="assistant_models"),
+        path("assistant/save/", wrap(assistant.save), name="assistant_save"),
+        path("assistant/<int:pk>/retest/", wrap(assistant.retest), name="assistant_retest"),
+        path("assistant/<int:pk>/default/", wrap(assistant.make_default), name="assistant_default"),
+        path("assistant/<int:pk>/remove/", wrap(assistant.remove), name="assistant_remove"),
         path("import-learners/", wrap(import_learners), name="import_learners"),
         path("learners-template.csv", wrap(sample_csv), name="learners_template"),
         path("report/", wrap(monthly_report), name="monthly_report"),

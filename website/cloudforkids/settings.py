@@ -96,6 +96,7 @@ INSTALLED_APPS = [
     'dashboard',
     'billing',
     'live',
+    'assistant',
 ]
 
 MIDDLEWARE = [
@@ -129,6 +130,7 @@ TEMPLATES = [
                 'core.context_processors.language',
                 'core.context_processors.site_photos',
                 'dashboard.context_processors.unread_messages',
+                'assistant.context_processors.assistant',
             ],
         },
     },
@@ -235,6 +237,11 @@ LIVE_RECORDING_ACCESS_KEY = os.environ.get('LIVE_RECORDING_ACCESS_KEY', '').stri
 LIVE_RECORDING_SECRET = os.environ.get('LIVE_RECORDING_SECRET', '').strip()
 LIVE_RECORDING_REGION = os.environ.get('LIVE_RECORDING_REGION', 'auto').strip()
 LIVE_RECORDING_ENDPOINT = os.environ.get('LIVE_RECORDING_ENDPOINT', '').strip()  # e.g. https://<account>.r2.cloudflarestorage.com
+
+# AI assistant for admins and facilitators (Admin > Tools > AI assistant). Provider keys are added there, never in .env.
+# Saved keys are encrypted with ASSISTANT_KEY_SECRET, or SECRET_KEY when it is empty: changing it means adding the keys again.
+ASSISTANT_KEY_SECRET = os.environ.get('ASSISTANT_KEY_SECRET', '').strip()
+ASSISTANT_INLINE = TESTING  # tests run the assistant's loop in the request instead of a background thread
 
 SITE_NAME = 'Cloud for Kids'
 SITE_TAGLINE = "Building Kenya's Cloud-Ready Generation"

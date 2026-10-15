@@ -1,0 +1,267 @@
+{% extends "admin/base_site.html" %}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Home</a> &rsaquo; AI assistant</div>{% endblock %}
+{% block content_title %}<h1>AI assistant</h1>{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+  .as-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+  .as-grid .d-panel { margin-bottom: 0; }
+  .as-wide { grid-column: 1 / -1; }
+  .as-lead { color: var(--body-quiet-color); max-width: 760px; margin: 0 0 18px; }
+  .as-field { margin-bottom: 14px; }
+  .as-field > label { display: block; font-weight: 600; margin-bottom: 5px; }
+  .as-field input[type=text], .as-field input[type=password], .as-field select { width: 100%; max-width: 100%; box-sizing: border-box; }
+  .as-field small { display: block; color: var(--body-quiet-color); margin-top: 4px; font-size: .78rem; }
+  .as-row { display: flex; gap: 8px; align-items: center; }
+  .as-row input { flex: 1; min-width: 0; }
+  .as-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .as-buttons button { border-radius: 999px; padding: 9px 18px; font-weight: 600; cursor: pointer; border: 1px solid var(--border-color);
+    background: var(--c4k-card); color: var(--body-fg); display: inline-flex; align-items: center; gap: .4rem; }
+  .as-buttons button.primary { background: var(--button-bg); border-color: var(--button-bg); color: #fff; }
+  .as-buttons button:disabled { opacity: .5; cursor: not-allowed; }
+  .as-status { margin-top: 12px; padding: 10px 12px; border-radius: 12px; font-size: .85rem; display: none; }
+  .as-status.ok { display: block; background: #E8F8EF; color: #13663B; }
+  .as-status.bad { display: block; background: #FFF0F0; color: #B4232A; }
+  .as-status.wait { display: block; background: var(--darkened-bg); color: var(--body-medium-color); }
+  html[data-theme="dark"] .as-status.ok { background: #12321F; color: #7BE0A5; }
+  html[data-theme="dark"] .as-status.bad { background: #3A1A1F; color: #FF9EA2; }
+  .as-check { display: flex; gap: .6rem; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--hairline-color); }
+  .as-check:last-of-type { border-bottom: 0; }
+  .as-check label { font-weight: 600; }
+  .as-check small { display: block; color: var(--body-quiet-color); font-weight: 400; font-size: .8rem; }
+  .as-check input { margin-top: 4px; }
+  .as-key { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .85rem; }
+  .as-pill { display: inline-block; font-size: .7rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--selected-bg); color: var(--link-fg); }
+  .as-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .as-actions form { margin: 0; }
+  .as-actions button { border-radius: 999px; padding: 5px 12px; font-size: .78rem; cursor: pointer; border: 1px solid var(--border-color); background: var(--c4k-card); color: var(--body-fg); }
+  .as-table-wrap { overflow-x: auto; }
+  .as-status-done { color: #13663B; } .as-status-failed { color: #B4232A; } .as-status-undone, .as-status-declined { color: var(--body-quiet-color); }
+  html[data-theme="dark"] .as-status-done { color: #7BE0A5; } html[data-theme="dark"] .as-status-failed { color: #FF9EA2; }
+  @media (max-width: 960px) { .as-grid { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 640px) {
+    .as-table-wrap .d-table thead { display: none; }
+    .as-table-wrap .d-table tr { display: block; padding: 10px 0; border-bottom: 1px solid var(--hairline-color); }
+    .as-table-wrap .d-table td { display: block; padding: 3px 0; border: 0; }
+    .as-actions { justify-content: flex-start; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<p class="as-lead">The assistant sits on every admin page and in the facilitator portal. It reads the page you are on and works
+  with your own permissions, so a facilitator's assistant can only touch that facilitator's classes. Keys are encrypted on the
+  server and never shown again: only their last four characters appear here.</p>
+
+<div class="as-grid">
+  <section class="d-panel">
+    <h3><i class="bi bi-plug-fill"></i> Add a connection</h3>
+    <div id="as-add" data-test="{% url 'tools:assistant_test' %}" data-models="{% url 'tools:assistant_models' %}" data-save="{% url 'tools:assistant_save' %}">
+      <div class="as-field">
+        <label for="as-provider">Provider</label>
+        <select id="as-provider">
+          {% for key, p in providers.items %}<option value="{{ key }}">{{ p.label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="as-field">
+        <label for="as-key">API key</label>
+        <input type="password" id="as-key" autocomplete="off" spellcheck="false" placeholder="Paste the key">
+        <small id="as-key-hint"></small>
+      </div>
+      <div class="as-field">
+        <label for="as-model">Model</label>
+        <div class="as-row">
+          <input type="text" id="as-model" list="as-model-list" autocomplete="off" spellcheck="false">
+          <datalist id="as-model-list"></datalist>
+          <div class="as-buttons" style="margin:0;"><button type="button" id="as-load"><i class="bi bi-arrow-repeat"></i> Load models</button></div>
+        </div>
+        <small>Pick one, type one, or load the list your key can use. Bigger models follow instructions better; smaller ones are cheaper and faster.</small>
+      </div>
+      <div class="as-field">
+        <label for="as-label">Name in the menu <span style="font-weight:400;color:var(--body-quiet-color);">(optional)</span></label>
+        <input type="text" id="as-label" maxlength="80" placeholder="e.g. Claude Sonnet (main)">
+      </div>
+      <label style="display:flex;gap:.5rem;align-items:center;margin-bottom:6px;"><input type="checkbox" id="as-default"> Make this the default</label>
+      <div class="as-buttons">
+        <button type="button" id="as-test"><i class="bi bi-lightning-charge-fill"></i> Test connection</button>
+        <button type="button" id="as-save" class="primary" disabled title="Test the connection first"><i class="bi bi-check-lg"></i> Save</button>
+      </div>
+      <div class="as-status" id="as-status" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="d-panel">
+    <h3><i class="bi bi-sliders"></i> Who can use it, and how</h3>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      {% for field in form %}
+        {% if field.name == "max_rounds" %}
+        <div class="as-field" style="margin-top:10px;">
+          <label for="{{ field.id_for_label }}">Most steps per request</label>
+          {{ field }}
+          <small>{{ field.help_text }}</small>{{ field.errors }}
+        </div>
+        {% else %}
+        <div class="as-check">{{ field }}<label for="{{ field.id_for_label }}">{{ field.label }}<small>{{ field.help_text }}</small></label></div>
+        {% endif %}
+      {% endfor %}
+      <div class="as-buttons"><button type="submit" class="primary"><i class="bi bi-check-lg"></i> Save settings</button></div>
+    </form>
+  </section>
+
+  <section class="d-panel as-wide">
+    <h3><i class="bi bi-key-fill"></i> Saved connections <small>everyone who can use the assistant picks from these in its model menu</small></h3>
+    {% if connections %}
+    <div class="as-table-wrap">
+    <table class="d-table">
+      <thead><tr><th>Name</th><th>Provider</th><th>Model</th><th>Key</th><th>Last tested</th><th></th></tr></thead>
+      <tbody>
+      {% for c in connections %}
+        <tr>
+          <td><strong>{{ c.display_name }}</strong> {% if c.is_default %}<span class="as-pill">Default</span>{% endif %}</td>
+          <td>{{ c.get_provider_display }}</td>
+          <td><code>{{ c.model }}</code></td>
+          <td class="as-key">••••{{ c.key_last4 }}</td>
+          <td>{{ c.tested_at|date:"j M Y, H:i" }}<br><small style="color:var(--body-quiet-color)">saved by {{ c.saved_by|default:"someone" }}</small></td>
+          <td>
+            <div class="as-actions">
+              <button type="button" data-retest="{% url 'tools:assistant_retest' c.pk %}">Test again</button>
+              {% if not c.is_default %}<form method="post" action="{% url 'tools:assistant_default' c.pk %}">{% csrf_token %}<button type="submit">Make default</button></form>{% endif %}
+              <form method="post" action="{% url 'tools:assistant_remove' c.pk %}" onsubmit="return confirm('Remove this connection? Its key is deleted.');">{% csrf_token %}<button type="submit">Remove</button></form>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="d-empty">No connections yet. Add one on the left: the assistant appears for everyone once there is at least one.</p>
+    {% endif %}
+  </section>
+
+  <section class="d-panel as-wide">
+    <h3><i class="bi bi-journal-text"></i> Recent changes made with the assistant</h3>
+    {% if activity %}
+    <div class="as-table-wrap">
+    <table class="d-table">
+      <thead><tr><th>When</th><th>Who</th><th>What</th><th>Result</th></tr></thead>
+      <tbody>
+      {% for a in activity %}
+        <tr>
+          <td style="white-space:nowrap;">{{ a.created_at|date:"j M, H:i" }}</td>
+          <td>{{ a.user }}</td>
+          <td>{{ a.summary }}</td>
+          <td class="as-status-{{ a.status }}">{{ a.get_status_display }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="d-empty">Nothing yet. Every change the assistant makes or proposes is listed here.</p>
+    {% endif %}
+  </section>
+</div>
+
+{{ providers|json_script:"as-providers" }}
+<script>
+(function () {
+  var providers = JSON.parse(document.getElementById('as-providers').textContent);
+  var box = document.getElementById('as-add');
+  var el = function (id) { return document.getElementById(id); };
+  var provider = el('as-provider'), key = el('as-key'), model = el('as-model'), list = el('as-model-list'),
+      label = el('as-label'), saveBtn = el('as-save'), testBtn = el('as-test'), loadBtn = el('as-load'), status = el('as-status');
+  var token = null;
+
+  function csrf() {
+    var m = document.cookie.match(/(?:^|;\s*)c4k_csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '{{ csrf_token }}';
+  }
+  function post(url, body) {
+    return fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf(), 'Accept': 'application/json' }, body: JSON.stringify(body || {}) })
+      .then(function (r) { return r.json(); })
+      .catch(function () { return { ok: false, error: 'No answer from the server. Check your connection and try again.' }; });
+  }
+  function say(kind, text) { status.className = 'as-status ' + kind; status.textContent = text; }
+  function fillModels(names) {
+    list.innerHTML = '';
+    names.forEach(function (n) { var o = document.createElement('option'); o.value = n; list.appendChild(o); });
+  }
+  function onProvider() {
+    var p = providers[provider.value];
+    el('as-key-hint').textContent = p.hint;
+    fillModels(p.models);
+    model.value = p.models[0];
+    invalidate();
+  }
+  // Any change after a passed test means the test no longer covers what would be saved.
+  function invalidate() {
+    token = null;
+    saveBtn.disabled = true;
+    saveBtn.title = 'Test the connection first';
+    if (status.classList.contains('ok')) status.className = 'as-status';
+  }
+  provider.addEventListener('change', onProvider);
+  [key, model].forEach(function (i) { i.addEventListener('input', invalidate); });
+  onProvider();
+
+  function fields() { return { provider: provider.value, model: model.value.trim(), key: key.value.trim() }; }
+
+  testBtn.addEventListener('click', function () {
+    var f = fields();
+    if (!f.key) { say('bad', 'Paste the API key first.'); key.focus(); return; }
+    if (!f.model) { say('bad', 'Choose or type a model.'); model.focus(); return; }
+    testBtn.disabled = true; invalidate();
+    say('wait', 'Testing ' + f.model + '…');
+    post(box.dataset.test, f).then(function (r) {
+      testBtn.disabled = false;
+      var now = fields();
+      if (now.provider !== f.provider || now.model !== f.model || now.key !== f.key) return; // edited while testing
+      if (r.ok) {
+        token = r.token;
+        saveBtn.disabled = false; saveBtn.title = '';
+        say('ok', 'It works. ' + f.model + ' replied: "' + r.reply + '". You can save it now.');
+      } else say('bad', r.error);
+    });
+  });
+
+  loadBtn.addEventListener('click', function () {
+    var f = fields();
+    if (!f.key) { say('bad', 'Paste the API key first, then load the models it can use.'); key.focus(); return; }
+    loadBtn.disabled = true; say('wait', 'Asking the provider which models this key can use…');
+    post(box.dataset.models, f).then(function (r) {
+      loadBtn.disabled = false;
+      if (!r.ok) { say('bad', r.error); return; }
+      fillModels(r.models.length ? r.models : providers[provider.value].models);
+      say('ok', r.models.length + ' models found. Start typing in the Model box to pick one.');
+      model.focus();
+    });
+  });
+
+  saveBtn.addEventListener('click', function () {
+    if (!token) return;
+    var f = fields();
+    f.token = token; f.label = label.value.trim(); f.make_default = el('as-default').checked;
+    saveBtn.disabled = true; say('wait', 'Saving…');
+    post(box.dataset.save, f).then(function (r) {
+      if (r.ok) { key.value = ''; location.reload(); }
+      else { say('bad', r.error); invalidate(); }
+    });
+  });
+
+  document.querySelectorAll('[data-retest]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      b.disabled = true; b.textContent = 'Testing…';
+      post(b.dataset.retest).then(function (r) {
+        b.disabled = false;
+        b.textContent = r.ok ? 'Works' : 'Failed';
+        b.title = r.ok ? 'Replied: ' + r.reply : r.error;
+        if (!r.ok) alert(r.error);
+      });
+    });
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/assistant.css' %}">
+<button type="button" class="c4ka-fab" id="c4ka-fab" aria-controls="c4ka" aria-expanded="false" title="Assistant (Ctrl + /)">
+  <i class="bi bi-stars" aria-hidden="true"></i><span>Assistant</span>
+</button>
+<section id="c4ka" class="c4ka" role="dialog" aria-label="Cloud for Kids assistant" hidden
+  data-area="{{ assistant_area }}" data-csrf="{{ csrf_token }}"
+  data-state="{% url 'assistant:state' %}" data-send="{% url 'assistant:send' %}"
+  data-thread="{% url 'assistant:thread' 0 %}" data-stop="{% url 'assistant:stop' 0 %}" data-delete="{% url 'assistant:delete' 0 %}"
+  data-decide="{% url 'assistant:decide' 0 %}" data-undo="{% url 'assistant:undo' 0 %}"
+  {% if user.is_superuser %}data-settings="{% url 'tools:assistant_settings' %}"{% endif %}>
+  <header class="c4ka-head">
+    <div class="c4ka-title">
+      <span class="c4ka-ico" aria-hidden="true"><i class="bi bi-stars"></i></span>
+      <div><strong>Assistant</strong><small id="c4ka-mode">{% if assistant_area == "admin" %}Admin console{% else %}Facilitator portal{% endif %}</small></div>
+    </div>
+    <div class="c4ka-head-actions">
+      <button type="button" class="c4ka-btn-icon" id="c4ka-history-btn" title="Past chats" aria-label="Past chats" aria-expanded="false"><i class="bi bi-clock-history" aria-hidden="true"></i></button>
+      <button type="button" class="c4ka-btn-icon" id="c4ka-new" title="New chat" aria-label="New chat"><i class="bi bi-pencil-square" aria-hidden="true"></i></button>
+      <button type="button" class="c4ka-btn-icon" id="c4ka-close" title="Close (Esc)" aria-label="Close the assistant"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+    </div>
+  </header>
+  <div class="c4ka-bar">
+    <label class="c4ka-model"><i class="bi bi-cpu" aria-hidden="true"></i><span class="visually-hidden">Model</span>
+      <select id="c4ka-model" aria-label="AI model"></select>
+    </label>
+    {% if user.is_superuser %}<a class="c4ka-settings" href="{% url 'tools:assistant_settings' %}"><i class="bi bi-gear" aria-hidden="true"></i> Settings</a>{% endif %}
+  </div>
+  <div class="c4ka-threads" id="c4ka-threads" hidden></div>
+  <div class="c4ka-log" id="c4ka-log" aria-live="polite"></div>
+  <form class="c4ka-compose" id="c4ka-form">
+    <textarea id="c4ka-input" rows="1" maxlength="8000" placeholder="Ask about this page, or ask me to do something" aria-label="Message to the assistant"></textarea>
+    <button type="button" class="c4ka-send c4ka-stop" id="c4ka-stop" aria-label="Stop" title="Stop" hidden><i class="bi bi-stop-fill" aria-hidden="true"></i></button>
+    <button type="submit" class="c4ka-send" id="c4ka-send" aria-label="Send" title="Send (Enter)"><i class="bi bi-arrow-up" aria-hidden="true"></i></button>
+  </form>
+  <p class="c4ka-foot" id="c4ka-foot">Reads this page when you send.</p>
+</section>
+<script src="{% static 'js/assistant.js' %}" defer></script>

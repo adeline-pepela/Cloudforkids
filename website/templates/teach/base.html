@@ -12,3 +12,4 @@
 </nav>
 {% endblock %}
 {% block side_tip %}Habari, teacher! Short, regular sessions work best.{% endblock %}
+{% block body_end %}{% if assistant_area %}{% include "assistant/panel.html" %}{% endif %}{% endblock %}

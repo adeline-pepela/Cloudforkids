@@ -20,6 +20,7 @@ urlpatterns = [
     path('learn/', include('courses.urls')),
     path('plans/', include('billing.urls')),
     path('live/', include('live.urls')),
+    path('assistant/', include('assistant.urls')),
     path('r/<str:code>/', live_views.short_link, name='live_short'),
     re_path(r'^%s(?P<path>.*)$' % settings.MEDIA_URL.lstrip('/'), serve_media),
     path('', include('core.urls')),
