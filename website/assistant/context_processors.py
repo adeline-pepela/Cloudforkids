@@ -1,4 +1,10 @@
+import logging
+
+from django.db import DatabaseError
+
 from .access import can_use, has_connection
+
+logger = logging.getLogger(__name__)
 
 
 def assistant(request):
@@ -11,6 +17,11 @@ def assistant(request):
         area = "admin" if user.is_staff else ""
     else:
         area = "teach" if user.role == "facilitator" and user.is_approved else ""
-    if area and can_use(user, area) and (has_connection() or user.is_superuser):
-        return {"assistant_area": area}
-    return {"assistant_area": ""}
+    if not area:
+        return {"assistant_area": ""}
+    try:
+        show = can_use(user, area) and (has_connection() or user.is_superuser)
+    except DatabaseError:  # e.g. the assistant's migration has not run yet: hide the button, keep the page working
+        logger.warning("Assistant tables are missing. Run: python manage.py migrate")
+        return {"assistant_area": ""}
+    return {"assistant_area": area if show else ""}
