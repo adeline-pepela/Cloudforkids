@@ -76,7 +76,7 @@
           <datalist id="as-model-list"></datalist>
           <div class="as-buttons" style="margin:0;"><button type="button" id="as-load"><i class="bi bi-arrow-repeat"></i> Load models</button></div>
         </div>
-        <small>Pick one, type one, or load the list your key can use. Bigger models follow instructions better; smaller ones are cheaper and faster.</small>
+        <small>Once you paste a key, the models it can use load here by themselves, newest first. Bigger models follow instructions better; smaller ones are cheaper and faster.</small>
       </div>
       <div class="as-field">
         <label for="as-label">Name in the menu <span style="font-weight:400;color:var(--body-quiet-color);">(optional)</span></label>
@@ -228,18 +228,36 @@
     });
   });
 
-  loadBtn.addEventListener('click', function () {
+  // Fetch the models this key can use, newest first. Runs by itself once a key is pasted, or from Load models.
+  var loadTimer = null, loadedFor = '';
+  function loadModels(auto) {
     var f = fields();
-    if (!f.key) { say('bad', 'Paste the API key first, then load the models it can use.'); key.focus(); return; }
-    loadBtn.disabled = true; say('wait', 'Asking the provider which models this key can use…');
+    if (!f.key) { if (!auto) { say('bad', 'Paste the API key first, then load the models it can use.'); key.focus(); } return; }
+    var asked = f.provider + '|' + f.key;
+    if (auto && asked === loadedFor) return;
+    loadBtn.disabled = true; say('wait', 'Asking ' + providers[f.provider].label + ' which models this key can use…');
     post(box.dataset.models, f).then(function (r) {
       loadBtn.disabled = false;
+      var now = fields();
+      if (now.provider + '|' + now.key !== asked) return; // changed while loading
       if (!r.ok) { say('bad', r.error); return; }
-      fillModels(r.models.length ? r.models : providers[provider.value].models);
-      say('ok', r.models.length + ' models found. Start typing in the Model box to pick one.');
-      model.focus();
+      loadedFor = asked;
+      if (!r.models.length) { say('bad', 'The key works, but the provider listed no chat models for it. Type a model name instead.'); return; }
+      fillModels(r.models);
+      if (r.models.indexOf(model.value.trim()) === -1) {
+        var picks = providers[f.provider].models.filter(function (m) { return r.models.indexOf(m) !== -1; });
+        model.value = picks[0] || r.models[0];
+        invalidate();
+      }
+      say('ok', r.models.length + ' models available, newest first. Picked ' + model.value + '; choose another in the Model box if you like, then Test connection.');
     });
+  }
+  loadBtn.addEventListener('click', function () { loadedFor = ''; loadModels(false); });
+  key.addEventListener('input', function () {
+    clearTimeout(loadTimer);
+    if (key.value.trim().length >= 20) loadTimer = setTimeout(function () { loadModels(true); }, 700);
   });
+  provider.addEventListener('change', function () { loadedFor = ''; if (key.value.trim().length >= 20) loadModels(true); });
 
   saveBtn.addEventListener('click', function () {
     if (!token) return;

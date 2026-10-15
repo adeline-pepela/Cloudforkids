@@ -1,9 +1,10 @@
 """Talking to AI providers without their SDKs: one normalised request/reply shape and one adapter per wire format.
 
-Three dialects cover the four providers:
+Four dialects cover the four providers:
   anthropic  Claude's Messages API
   gemini     Google's generateContent
-  openai     /chat/completions, which OpenAI and DeepSeek both speak
+  responses  OpenAI's Responses API (its current models call tools only through this one)
+  openai     /chat/completions, which DeepSeek (and most other providers) speak
 
 Normalised history (a list of dicts):
   {"role": "user", "text": ...}
@@ -16,6 +17,7 @@ replayed exactly while the model is unchanged. When the model changes it is drop
 
 import json
 import logging
+import re
 import secrets
 import time
 import urllib.error
@@ -36,18 +38,18 @@ PROVIDERS = {
         "key_hint": "Starts with sk-ant-. Create one at console.anthropic.com > API keys.",
     },
     "openai": {
-        "dialect": "openai", "base": "https://api.openai.com/v1", "label": "OpenAI",
-        "models": ["gpt-5-mini", "gpt-5", "gpt-4.1", "gpt-4.1-mini", "gpt-4o-mini"],
+        "dialect": "responses", "base": "https://api.openai.com/v1", "label": "OpenAI",
+        "models": ["gpt-6.1-sol", "gpt-6-luna", "gpt-6-astra"],
         "key_hint": "Starts with sk-. Create one at platform.openai.com > API keys.",
     },
     "gemini": {
         "dialect": "gemini", "base": "https://generativelanguage.googleapis.com/v1beta", "label": "Gemini (Google)",
-        "models": ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-lite"],
+        "models": ["gemini-3.8-flash", "gemini-4-argon", "gemini-3.6-flash", "gemini-3.5-flash-lite"],
         "key_hint": "Create one at aistudio.google.com > Get API key.",
     },
     "deepseek": {
         "dialect": "openai", "base": "https://api.deepseek.com", "label": "DeepSeek",
-        "models": ["deepseek-chat", "deepseek-reasoner"],
+        "models": ["deepseek-flash", "deepseek-v4-pro"],
         "key_hint": "Starts with sk-. Create one at platform.deepseek.com > API keys.",
     },
 }
@@ -184,6 +186,8 @@ def chat(provider, model, key, system, messages, tools=(), on_delta=None, base=N
         return _anthropic(base, model, key, system, messages, list(tools), throttle, tag)
     if dialect == "gemini":
         return _gemini(base, model, key, system, messages, list(tools), throttle, tag)
+    if dialect == "responses":
+        return _responses(base, model, key, system, messages, list(tools), throttle, tag)
     return _openai(provider, base, model, key, system, messages, list(tools), throttle, tag)
 
 
@@ -196,24 +200,37 @@ def test_connection(provider, model, key):
     return reply.text.strip()[:200] or "(it replied with reasoning only)"
 
 
+def _version_key(model_id):
+    """Sort key that puts higher version numbers first: gemini-4-argon, gemini-3.8-flash, gemini-3.6-flash."""
+    return [(0, int(p)) if p.isdigit() else (1, p) for p in re.split(r"(\d+)", model_id)]
+
+
 def list_models(provider, key):
-    """Model ids the key can use, straight from the provider."""
+    """Chat models the key can use, straight from the provider, newest first."""
     info = PROVIDERS[provider]
     base = info["base"].rstrip("/")
     if info["dialect"] == "anthropic":
-        res = _open(f"{base}/models?limit=100", headers={"x-api-key": key, "anthropic-version": ANTHROPIC_VERSION})
-        ids = [m["id"] for m in json.load(res).get("data", [])]
+        res = _open(f"{base}/models?limit=1000", headers={"x-api-key": key, "anthropic-version": ANTHROPIC_VERSION})
+        dated = [(m.get("created_at") or "", m["id"]) for m in json.load(res).get("data", [])]
     elif info["dialect"] == "gemini":
-        res = _open(f"{base}/models?pageSize=200", headers={"x-goog-api-key": key})
-        ids = [m["name"].split("/", 1)[-1] for m in json.load(res).get("models", [])
-               if "generateContent" in m.get("supportedGenerationMethods", [])]
+        res = _open(f"{base}/models?pageSize=1000", headers={"x-goog-api-key": key})
+        skip = ("embedding", "aqa", "imagen", "veo", "tts", "image", "audio", "live", "robotics", "computer-use")
+        dated = [(0, m["name"].split("/", 1)[-1]) for m in json.load(res).get("models", [])
+                 if "generateContent" in m.get("supportedGenerationMethods", [])
+                 and m["name"].split("/", 1)[-1].startswith("gemini") and not any(x in m["name"] for x in skip)]
     else:
         res = _open(f"{base}/models", headers={"Authorization": f"Bearer {key}"})
-        ids = [m["id"] for m in json.load(res).get("data", [])]
+        dated = [(m.get("created") or 0, m["id"]) for m in json.load(res).get("data", [])]
         if provider == "openai":
-            skip = ("embedding", "whisper", "tts", "dall-e", "image", "audio", "realtime", "moderation", "transcribe", "search")
-            ids = [i for i in ids if (i.startswith(("gpt-", "o1", "o3", "o4", "chatgpt")) and not any(s in i for s in skip))]
-    return sorted(set(ids), reverse=True)
+            skip = ("embedding", "whisper", "tts", "dall-e", "image", "audio", "realtime", "moderation", "transcribe", "search", "codex")
+            dated = [(w, i) for w, i in dated if i.startswith(("gpt-", "o1", "o3", "o4", "chatgpt")) and not any(x in i for x in skip)]
+    when = {}
+    for stamp, model_id in dated:
+        when[model_id] = max(when.get(model_id, stamp), stamp)
+    ordered = sorted(when, key=_version_key, reverse=True)
+    if any(when.values()):  # the provider dates its models: newest release first
+        ordered.sort(key=lambda i: str(when[i]).rjust(30, "0"), reverse=True)
+    return ordered
 
 
 def _last_user_index(messages):
@@ -375,6 +392,78 @@ def _openai(provider, base, model, key, system, messages, tools, throttle, tag):
     return reply
 
 
+# ---------------------------------------------------------------- OpenAI Responses API
+
+def _reasoning_model(model):
+    return model.startswith(("gpt-5", "gpt-6", "gpt-7", "o1", "o3", "o4"))
+
+
+def _responses_input(messages, tag):
+    out = []
+    for m in messages:
+        if m["role"] == "user":
+            out.append({"role": "user", "content": m["text"] or "(empty)"})
+        elif m["role"] == "assistant":
+            raw = m.get("raw") if m.get("model") == tag and isinstance(m.get("raw"), list) else []
+            out.extend(item for item in raw if item.get("type") == "reasoning")  # encrypted reasoning, replayed as given
+            if m.get("text"):
+                out.append({"role": "assistant", "content": m["text"]})
+            for c in m.get("tool_calls") or []:
+                out.append({"type": "function_call", "call_id": c["id"], "name": c["name"], "arguments": json.dumps(c.get("args") or {})})
+        elif m["role"] == "tool":
+            out.append({"type": "function_call_output", "call_id": m["call_id"], "output": m["text"] or "(no output)"})
+    return out
+
+
+def _responses(base, model, key, system, messages, tools, throttle, tag):
+    payload = {"model": model, "instructions": system, "input": _responses_input(messages, tag), "stream": True, "store": False}
+    if tools:
+        payload["tools"] = [{"type": "function", "name": t["name"], "description": t["description"], "parameters": t["parameters"]} for t in tools]
+    if _reasoning_model(model):
+        payload["reasoning"] = {"summary": "auto"}
+        payload["include"] = ["reasoning.encrypted_content"]
+    res = _open(f"{base}/responses", payload, {"Authorization": f"Bearer {key}"})
+    text, reasoning, items, reply = "", "", [], Reply()
+    for event, data in iter_sse(_chunks(res)):
+        try:
+            msg = json.loads(data)
+        except ValueError:
+            continue
+        kind = msg.get("type", event)
+        if kind == "response.output_text.delta":
+            text += msg.get("delta", "")
+        elif kind == "response.reasoning_summary_text.delta":
+            reasoning += msg.get("delta", "")
+        elif kind == "response.reasoning_summary_part.done" and reasoning and not reasoning.endswith("\n\n"):
+            reasoning += "\n\n"
+        elif kind == "response.output_item.done":
+            items.append(msg.get("item") or {})
+        elif kind in ("response.completed", "response.incomplete"):
+            response = msg.get("response") or {}
+            reply.usage = response.get("usage") or {}
+            reply.stop_reason = response.get("status", kind)
+            if kind == "response.incomplete" and not text and not items:
+                reason = (response.get("incomplete_details") or {}).get("reason", "unknown")
+                raise ProviderError(f"The provider stopped before answering ({reason}).")
+        elif kind in ("response.failed", "error"):
+            err = (msg.get("response") or {}).get("error") or msg.get("error") or msg
+            detail = err.get("message", err) if isinstance(err, dict) else err
+            raise ProviderError(f"The provider stopped with an error: {str(detail)[:300]}")
+        throttle(text, reasoning.strip())
+    for item in items:
+        if item.get("type") == "function_call":
+            try:
+                args = json.loads(item.get("arguments") or "{}")
+            except ValueError:
+                args = {}
+            reply.tool_calls.append({"id": item.get("call_id") or new_call_id(), "name": item.get("name", ""),
+                                     "args": args if isinstance(args, dict) else {}})
+    reply.text, reply.reasoning = text, reasoning.strip()
+    reply.raw = [i for i in items if i.get("type") == "reasoning"] or None
+    throttle(reply.text, reply.reasoning, force=True)
+    return reply
+
+
 # ---------------------------------------------------------------- Gemini
 
 def gemini_schema(schema):
@@ -432,7 +521,7 @@ def _gemini(base, model, key, system, messages, tools, throttle, tag):
         payload["tools"] = [{"functionDeclarations": [
             {"name": t["name"], "description": t["description"], "parameters": gemini_schema(t["parameters"])} for t in tools
         ]}]
-    if model.startswith(("gemini-2.5", "gemini-3")):
+    if not model.startswith(("gemini-1", "gemini-2.0", "gemma")):  # 2.5 and later can think
         payload["generationConfig"] = {"thinkingConfig": {"includeThoughts": True}}
     url = f"{base}/models/{urllib.parse.quote(model, safe='-._')}:streamGenerateContent?alt=sse"
     res = _open(url, payload, {"x-goog-api-key": key})

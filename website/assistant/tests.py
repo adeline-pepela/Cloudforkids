@@ -38,6 +38,15 @@ class FakeResponse:
         return False
 
 
+class FakeJSON:
+    def __init__(self, data):
+        self.data = json.dumps(data).encode()
+
+    def read(self, *args):
+        data, self.data = self.data, b""
+        return data
+
+
 def sse(*events):
     return "".join(f"event: {e.get('type', 'message')}\ndata: {json.dumps(e)}\n\n" for e in events)
 
@@ -147,6 +156,45 @@ class ProviderAdapterTests(TestCase):
         contents = sent["payload"]["contents"]
         self.assertEqual([c["role"] for c in contents], ["user", "model", "user"])
         self.assertIn("functionResponse", contents[2]["parts"][0])
+
+    def test_openai_uses_the_responses_api(self):
+        events = [
+            {"type": "response.reasoning_summary_text.delta", "delta": "Checking users."},
+            {"type": "response.output_item.done", "item": {"type": "reasoning", "id": "rs_1", "encrypted_content": "enc"}},
+            {"type": "response.output_text.delta", "delta": "One "},
+            {"type": "response.output_text.delta", "delta": "moment."},
+            {"type": "response.output_item.done", "item": {"type": "function_call", "call_id": "call_9", "name": "search_records",
+                                                           "arguments": '{"type": "accounts.user"}'}},
+            {"type": "response.completed", "response": {"status": "completed", "usage": {"total_tokens": 9}}},
+        ]
+        sent = {}
+
+        def fake_open(url, payload=None, headers=None, method=None):
+            sent.update(url=url, payload=payload)
+            return FakeResponse(sse(*events), size=5)
+
+        with mock.patch.object(providers, "_open", fake_open):
+            reply = providers.chat("openai", "gpt-6.1-sol", "sk-x", "sys", self.history,
+                                   [{"name": "search_records", "description": "d", "parameters": {"type": "object", "properties": {}}}])
+        self.assertTrue(sent["url"].endswith("/v1/responses"))
+        self.assertEqual(sent["payload"]["instructions"], "sys")
+        self.assertEqual(sent["payload"]["tools"][0]["name"], "search_records")
+        self.assertEqual([i.get("type", i.get("role")) for i in sent["payload"]["input"]], ["user", "assistant", "function_call", "function_call_output"])
+        self.assertEqual((reply.text, reply.reasoning), ("One moment.", "Checking users."))
+        self.assertEqual(reply.tool_calls, [{"id": "call_9", "name": "search_records", "args": {"type": "accounts.user"}}])
+        # the encrypted reasoning goes back with the next request on the same model
+        again = providers._responses_input([{"role": "assistant", "text": "", "tool_calls": reply.tool_calls, "raw": reply.raw,
+                                             "model": "openai:gpt-6.1-sol"}], "openai:gpt-6.1-sol")
+        self.assertEqual(again[0]["type"], "reasoning")
+
+    def test_model_lists_come_newest_first(self):
+        gemini = {"models": [{"name": f"models/{n}", "supportedGenerationMethods": ["generateContent"]}
+                             for n in ("gemini-3.6-flash", "gemini-4-argon", "text-embedding-004", "gemini-3.8-flash", "gemini-3.10-flash")]}
+        dated = {"data": [{"id": "deepseek-v4-pro", "created": 1755000000}, {"id": "deepseek-flash", "created": 1757000000}]}
+        with mock.patch.object(providers, "_open", lambda *a, **k: FakeJSON(gemini)):
+            self.assertEqual(providers.list_models("gemini", "k"), ["gemini-4-argon", "gemini-3.10-flash", "gemini-3.8-flash", "gemini-3.6-flash"])
+        with mock.patch.object(providers, "_open", lambda *a, **k: FakeJSON(dated)):
+            self.assertEqual(providers.list_models("deepseek", "k"), ["deepseek-flash", "deepseek-v4-pro"])
 
     def test_errors_are_written_for_people(self):
         self.assertIn("refused the key (401)", providers._explain(401, '{"error": {"message": "invalid x-api-key"}}'))
