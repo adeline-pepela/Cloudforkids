@@ -189,4 +189,6 @@
 .cal-chip { display: block; font-size: .72rem; line-height: 1.25; font-weight: 700; padding: 2px 6px; border-radius: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cal-chip.session { background: #0EA5E9; color: #fff; }
 .cal-chip.due { background: #FFD66B; color: #5B3B00; }
+.cal-chip.session.live { background: #E11D48; }
+.cal-chip.live::before { content: "CF  "; }
 .cal-legend .cal-chip { display: inline-block; }

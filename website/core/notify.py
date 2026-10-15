@@ -180,6 +180,29 @@ def notify_assignment(assignment):
     return sent
 
 
+def notify_live_scheduled(classroom, sessions):
+    """Tell learners in the class (and their parents) about newly scheduled live classes, with the link to join."""
+    if not sessions:
+        return 0
+    first = timezone.localtime(sessions[0].starts_at)
+    when = f"{first:%A %d %B} at {first:%H:%M}"
+    more = f" It repeats every week for {len(sessions)} weeks." if len(sessions) > 1 else ""
+    url = absolute(reverse("live_short", args=[classroom.live_room.code]))
+    topic = f" ({sessions[0].title})" if sessions[0].title else ""
+    sent = 0
+    for member in classroom.memberships.select_related("learner"):
+        for person in family_recipients(member.learner):
+            mine = person.pk == member.learner_id
+            paragraphs = [
+                (f"Your teacher scheduled a live online class for {classroom.name}{topic} on {when} (Kenyan time).{more}" if mine
+                 else f"{_name(member.learner)}'s teacher scheduled a live online class for {classroom.name}{topic} on {when} (Kenyan time).{more}"),
+                "Open the link a few minutes early. Learners join with their microphone and camera off and raise a hand to speak.",
+            ]
+            sent += send_email(person.email, f"Live class: {classroom.name} on {first:%a %d %b}", "A live class is coming up",
+                               paragraphs, cta=("Open the live class", url), user=person, optional=True)
+    return sent
+
+
 def send_message_email(message):
     recipient = message.recipient
     sender = message.sender

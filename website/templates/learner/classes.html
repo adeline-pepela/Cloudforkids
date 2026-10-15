@@ -41,7 +41,8 @@
           <strong>{{ ses.starts_at|date:"l" }}, {{ ses.starts_at|time:"H:i" }} to {{ ses.ends_at|time:"H:i" }}</strong>
           <small>{% if ses.title %}{{ ses.title }}{% endif %}{% if ses.where %}{% if ses.title %} &middot; {% endif %}{{ ses.where }}{% endif %}{% if ses.notes %} &middot; {{ ses.notes }}{% endif %}</small>
         </div>
-        {% if ses.link %}<a href="{{ ses.link }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-cloud">Join</a>{% endif %}
+        {% if ses.is_live %}<a href="{{ ses.link }}" class="btn btn-sm {% if ses.is_open_now %}btn-danger{% else %}btn-outline-cloud{% endif %}"><i class="bi bi-broadcast" aria-hidden="true"></i> Live class</a>
+        {% elif ses.link %}<a href="{{ ses.link }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-cloud">Join</a>{% endif %}
       </div>
       {% empty %}
       <p class="small text-secondary">Your teacher has not scheduled a session yet. It will show up here as soon as they do.</p>
@@ -93,7 +94,7 @@
       <a class="btn btn-sm btn-outline-cloud" href="?m={{ next_month }}" aria-label="Next month"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
     </div>
   </div>
-  <div class="cal-legend small mb-2"><span class="cal-chip session">Class session</span> <span class="cal-chip due">Due date</span></div>
+  <div class="cal-legend small mb-2"><span class="cal-chip session">Class session</span> <span class="cal-chip session live">Live class</span> <span class="cal-chip due">Due date</span></div>
   <div class="cal-scroll">
     <div class="cal" role="grid" aria-label="{{ month_label }} calendar">
       <div class="cal-head">Mon</div><div class="cal-head">Tue</div><div class="cal-head">Wed</div><div class="cal-head">Thu</div><div class="cal-head">Fri</div><div class="cal-head">Sat</div><div class="cal-head">Sun</div>
@@ -101,7 +102,7 @@
       <div class="cal-day{% if not day.in_month %} off{% endif %}{% if day.today %} today{% endif %}" role="gridcell">
         <span class="cal-num">{{ day.date.day }}</span>
         {% for ev in day.events %}
-        <span class="cal-chip {{ ev.kind }}" title="{{ ev.label }}{% if ev.ses %} ({{ ev.ses.classroom.name }}{% if ev.ses.where %}, {{ ev.ses.where }}{% endif %}){% endif %}">{% if ev.time %}{{ ev.time|time:"H:i" }} {% endif %}{{ ev.label }}</span>
+        <span class="cal-chip {{ ev.kind }}{% if ev.ses.is_live %} live{% endif %}" title="{{ ev.label }}{% if ev.ses %} ({{ ev.ses.classroom.name }}{% if ev.ses.where %}, {{ ev.ses.where }}{% endif %}){% endif %}">{% if ev.time %}{{ ev.time|time:"H:i" }} {% endif %}{{ ev.label }}</span>
         {% endfor %}
       </div>
       {% endfor %}{% endfor %}
@@ -119,7 +120,8 @@
       <strong>{{ ses.display_title }}</strong>
       <small>{{ ses.starts_at|date:"l" }}, {{ ses.starts_at|time:"H:i" }} to {{ ses.ends_at|time:"H:i" }} &middot; {{ ses.classroom.name }}{% if ses.where %} &middot; {{ ses.where }}{% endif %}{% if ses.notes %} &middot; {{ ses.notes }}{% endif %}</small>
     </div>
-    {% if ses.link %}<a href="{{ ses.link }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-cloud">Join</a>{% endif %}
+    {% if ses.is_live %}<a href="{{ ses.link }}" class="btn btn-sm {% if ses.is_open_now %}btn-danger{% else %}btn-outline-cloud{% endif %}"><i class="bi bi-broadcast" aria-hidden="true"></i> Live class</a>
+    {% elif ses.link %}<a href="{{ ses.link }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-cloud">Join</a>{% endif %}
   </div>
   {% endfor %}
 </div>

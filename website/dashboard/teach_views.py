@@ -16,6 +16,7 @@ from core import notify
 from core.forms import BootstrapFormMixin
 from courses.models import Tier
 from courses.quiz import quiz_question_count
+from live.models import LiveRoom
 from live.views import live_summary
 
 from .family import child_report
@@ -73,6 +74,7 @@ class SessionForm(BootstrapFormMixin, forms.Form):
     location = forms.CharField(max_length=150, required=False, widget=forms.TextInput(attrs={"placeholder": "Room (blank = class venue)"}))
     meeting_link = forms.URLField(required=False, widget=forms.URLInput(attrs={"placeholder": "Online link (blank = class link)"}))
     notes = forms.CharField(max_length=300, required=False, widget=forms.TextInput(attrs={"placeholder": "e.g. Bring your laptop"}))
+    is_live = forms.BooleanField(required=False, label="Live online class on Cloud for Kids")
 
     def clean_date(self):
         date = self.cleaned_data["date"]
@@ -82,13 +84,16 @@ class SessionForm(BootstrapFormMixin, forms.Form):
 
     def save(self, classroom):
         data = self.cleaned_data
+        if data["is_live"]:
+            LiveRoom.objects.get_or_create(classroom=classroom)
         first = datetime.combine(data["date"], data["time"])
         made = []
         for week in range(data["repeat_weeks"]):
             starts = timezone.make_aware(first + timedelta(weeks=week))
             made.append(ClassSession(
                 classroom=classroom, title=data["title"], starts_at=starts, duration_minutes=data["duration_minutes"],
-                location=data["location"], meeting_link=data["meeting_link"], notes=data["notes"],
+                location=data["location"], meeting_link="" if data["is_live"] else data["meeting_link"], notes=data["notes"],
+                is_live=data["is_live"],
             ))
         return ClassSession.objects.bulk_create(made)
 
@@ -174,7 +179,11 @@ def session_add(request, class_id):
     form = SessionForm(request.POST)
     if form.is_valid():
         made = form.save(classroom)
-        messages.success(request, f"Added {len(made)} session{'s' if len(made) != 1 else ''} to the {classroom.name} calendar. Learners in the class can see it now.")
+        note = ""
+        if form.cleaned_data["is_live"]:
+            notify.notify_live_scheduled(classroom, made)
+            note = " We emailed the learners and their parents the date and the class link."
+        messages.success(request, f"Added {len(made)} session{'s' if len(made) != 1 else ''} to the {classroom.name} calendar. Learners in the class can see it now.{note}")
         return redirect("teach:class", class_id=classroom.pk)
     return class_detail(request, class_id, session_form=form)
 

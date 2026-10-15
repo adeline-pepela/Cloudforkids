@@ -6,6 +6,7 @@ import time
 from datetime import timedelta
 from unittest import mock
 
+from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -246,3 +247,34 @@ class WebhookTests(LiveTestBase):
     def test_unsigned_webhook_is_refused(self):
         response = self.client.post(reverse("live:webhook"), b"{}", content_type="application/json")
         self.assertEqual(response.status_code, 401)
+
+
+class ScheduledLiveClassTests(LiveTestBase):
+    def test_teacher_schedules_weekly_live_classes(self):
+        self.kid.email = "amani@example.com"
+        self.kid.save()
+        self.login(self.teacher)
+        day = timezone.localdate() + timedelta(days=2)
+        self.client.post(reverse("teach:session_add", args=[self.classroom.pk]), {
+            "title": "Cloud storage", "date": day.isoformat(), "time": "16:00", "duration_minutes": 60,
+            "repeat_weeks": 3, "is_live": "on", "meeting_link": "https://meet.example.com/x",
+        })
+        sessions = list(self.classroom.sessions.all())
+        self.assertEqual(len(sessions), 3)
+        self.assertTrue(all(s.is_live and not s.meeting_link for s in sessions))
+        self.assertEqual(sessions[0].link, reverse("live:room", args=[self.room.code]))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(f"/r/{self.room.code}/", mail.outbox[0].body)
+        self.assertIn("every week for 3 weeks", mail.outbox[0].body)
+
+        self.login(self.kid)
+        page = self.client.get(reverse("dashboard:classes"))
+        self.assertContains(page, "cal-chip session live")
+        self.assertContains(page, reverse("live:room", args=[self.room.code]))
+
+    def test_start_button_shows_near_start_time(self):
+        from accounts.models import ClassSession
+
+        ClassSession.objects.create(classroom=self.classroom, starts_at=timezone.now() + timedelta(minutes=10), is_live=True)
+        self.login(self.teacher)
+        self.assertContains(self.client.get(reverse("teach:class", args=[self.classroom.pk])), "Start now")

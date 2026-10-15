@@ -79,8 +79,12 @@
   <div class="fm-row ok">
     <div>
       <strong>{{ ses.starts_at|date:"D j M Y" }}, {{ ses.starts_at|time:"H:i" }} to {{ ses.ends_at|time:"H:i" }}{% if ses.title %} &middot; {{ ses.title }}{% endif %}</strong>
-      <small>{% if ses.where %}<i class="bi bi-geo-alt-fill" aria-hidden="true"></i> {{ ses.where }}{% endif %}{% if ses.link %} &middot; <a href="{{ ses.link }}" target="_blank" rel="noopener noreferrer">Online link</a>{% endif %}{% if ses.notes %} &middot; {{ ses.notes }}{% endif %}</small>
+      <small>{% if ses.is_live %}<span class="badge rounded-pill text-bg-danger"><i class="bi bi-broadcast" aria-hidden="true"></i> Live class</span> {% endif %}{% if ses.where %}<i class="bi bi-geo-alt-fill" aria-hidden="true"></i> {{ ses.where }}{% endif %}{% if ses.link and not ses.is_live %} &middot; <a href="{{ ses.link }}" target="_blank" rel="noopener noreferrer">Online link</a>{% endif %}{% if ses.notes %} &middot; {{ ses.notes }}{% endif %}</small>
     </div>
+    {% if ses.is_live and ses.is_open_now %}
+    {% if live.current %}<a href="{% url 'live:room' live.room.code %}" class="btn btn-cloud btn-sm no-print">Rejoin</a>
+    {% else %}<form method="post" action="{% url 'live:start' c.pk %}" class="no-print">{% csrf_token %}<button type="submit" class="btn btn-cloud btn-sm"><i class="bi bi-broadcast" aria-hidden="true"></i> Start now</button></form>{% endif %}
+    {% endif %}
     <form method="post" action="{% url 'teach:session_delete' c.pk ses.pk %}" class="no-print">{% csrf_token %}<button class="btn btn-link btn-sm text-secondary p-0" aria-label="Remove session"><i class="bi bi-trash3" aria-hidden="true"></i></button></form>
   </div>
   {% empty %}
@@ -101,6 +105,13 @@
         <div class="col-md-6"><label class="form-label small fw-bold" for="{{ session_form.notes.id_for_label }}">Notes for learners</label>{{ session_form.notes }}</div>
         <div class="col-md-6"><label class="form-label small fw-bold" for="{{ session_form.location.id_for_label }}">Room or place</label>{{ session_form.location }}</div>
         <div class="col-md-6"><label class="form-label small fw-bold" for="{{ session_form.meeting_link.id_for_label }}">Online link</label>{{ session_form.meeting_link }}{{ session_form.meeting_link.errors }}</div>
+        <div class="col-12">
+          <div class="form-check">
+            <input type="checkbox" class="form-check-input" name="{{ session_form.is_live.html_name }}" id="{{ session_form.is_live.id_for_label }}"{% if session_form.is_live.value %} checked{% endif %}>
+            <label class="form-check-label fw-bold" for="{{ session_form.is_live.id_for_label }}"><i class="bi bi-broadcast text-danger" aria-hidden="true"></i> Live online class on Cloud for Kids</label>
+            <div class="form-text mt-0">Learners join from the class link above, right in their calendar. We email them and their parents the date and link.</div>
+          </div>
+        </div>
       </div>
       <p class="form-text">To meet every week, set the number of weekly sessions. The first one uses the date you pick and the rest follow on the same weekday and time.</p>
       <button type="submit" class="btn btn-cloud"><i class="bi bi-calendar-check-fill" aria-hidden="true"></i> Add to calendar</button>

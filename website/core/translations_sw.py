@@ -247,4 +247,5 @@ SW = {
     "We could not join the class. Check your internet and try again.": "Hatukuweza kujiunga na darasa. Angalia intaneti yako kisha ujaribu tena.",
     "Reconnecting...": "Inaunganisha upya...", "is sharing their screen": "anaonyesha skrini yake", "Nobody else is here yet.": "Bado hakuna mtu mwingine hapa.",
     "That did not work. Please try again.": "Hilo halikufanikiwa. Tafadhali jaribu tena.",
+    "Start now": "Anza sasa", "Rejoin": "Rudi darasani", "Join live class": "Jiunge na darasa", "Live online class on Cloud for Kids": "Darasa la moja kwa moja kwenye Cloud for Kids",
 }

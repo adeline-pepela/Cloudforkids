@@ -133,6 +133,7 @@ class ClassSession(models.Model):
     location = models.CharField(max_length=150, blank=True, help_text="Leave blank to use the class venue")
     meeting_link = models.URLField(blank=True, help_text="Leave blank to use the class link")
     notes = models.CharField(max_length=300, blank=True, help_text="e.g. Bring your laptop")
+    is_live = models.BooleanField(default=False, help_text="Held in the class's live room on Cloud for Kids")
 
     class Meta:
         ordering = ["starts_at"]
@@ -156,7 +157,21 @@ class ClassSession(models.Model):
 
     @property
     def link(self):
+        if self.is_live:
+            from django.urls import reverse
+
+            room = getattr(self.classroom, "live_room", None)
+            return reverse("live:room", args=[room.code]) if room else ""
         return self.meeting_link or self.classroom.meeting_link
+
+    @property
+    def is_open_now(self):
+        """From 15 minutes before the start until the end: when the teacher can start and learners should join."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        return self.starts_at - timedelta(minutes=15) <= timezone.now() <= self.ends_at
 
 
 class ClassMembership(models.Model):
