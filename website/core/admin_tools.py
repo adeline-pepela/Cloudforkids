@@ -17,6 +17,7 @@ from django.urls import path
 from django.utils import timezone
 
 from accounts.models import ClassMembership, Classroom, LearnerProfile, ParentalConsent, ParentLink, User
+from billing.report import billing_report
 from courses.models import Course, LearnerBadge, Lesson, LessonCompletion, QuizResult, Tier
 from dashboard.models import LabCompletion
 
@@ -239,4 +240,5 @@ def urls():
         path("import-learners/", wrap(import_learners), name="import_learners"),
         path("learners-template.csv", wrap(sample_csv), name="learners_template"),
         path("report/", wrap(monthly_report), name="monthly_report"),
+        path("billing/", wrap(billing_report), name="billing_report"),
     ]

@@ -171,8 +171,11 @@ def child_report(child):
 
     earned = list(child.badges.select_related("badge")[:8])
 
+    from billing.access import current_subscription
+
     return {
         "child": child,
+        "plan_sub": current_subscription(child),
         "profile": profile,
         "tier": tier,
         "name": name,

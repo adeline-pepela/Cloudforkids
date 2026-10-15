@@ -1,0 +1,30 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools %}
+<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+  <div class="module" style="padding:12px 16px;min-width:180px">
+    <small>Collected by M-Pesa on the website</small><br><strong>KES {{ funds.collected|floatformat:"0g" }}</strong>
+  </div>
+  <div class="module" style="padding:12px 16px;min-width:180px">
+    <small>Sent out by payouts</small><br><strong>KES {{ funds.sent|floatformat:"0g" }}</strong>
+  </div>
+  <div class="module" style="padding:12px 16px;min-width:180px">
+    <small>Left</small><br><strong>KES {{ funds.left|floatformat:"0g" }}</strong>
+  </div>
+  <div class="module" style="padding:12px 16px;min-width:220px">
+    <small>M-Pesa balance{% if funds.balance %} ({{ funds.balance.reported_at|date:"d M H:i" }}){% endif %}</small><br>
+    {% if funds.balance %}{% for name, amount in funds.balance.accounts.items %}<strong>{{ name }}: KES {{ amount|floatformat:"2g" }}</strong><br>{% endfor %}
+    {% else %}<strong>Not checked yet</strong>{% endif %}
+  </div>
+</div>
+{% if can_send %}
+<ul class="object-tools">
+  <li>
+    <form method="post" action="{% url 'admin:billing_payout_balance' %}" style="display:inline">{% csrf_token %}
+      <button type="submit" class="button">Check M-Pesa balance</button>
+    </form>
+  </li>
+  <li><a href="{% url 'admin:billing_payout_add' %}" class="addlink">Send money</a></li>
+</ul>
+{% else %}{{ block.super }}{% endif %}
+{% endblock %}

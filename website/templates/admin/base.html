@@ -52,6 +52,7 @@
 
       <div class="c4k-group">Tools</div>
       <a class="c4k-link{% if '/admin/tools/report' in request.path %} active{% endif %}" href="{% url 'tools:monthly_report' %}"><i class="bi bi-bar-chart-line-fill"></i> Monthly report</a>
+      <a class="c4k-link{% if '/admin/tools/billing' in request.path %} active{% endif %}" href="{% url 'tools:billing_report' %}"><i class="bi bi-cash-coin"></i> Billing report</a>
       <a class="c4k-link{% if '/admin/tools/import' in request.path %} active{% endif %}" href="{% url 'tools:import_learners' %}"><i class="bi bi-file-earmark-arrow-up-fill"></i> Import learners</a>
 
       <div class="c4k-group">Site</div>

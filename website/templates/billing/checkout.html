@@ -1,0 +1,93 @@
+{% extends base_template %}
+{% load static humanize %}
+{% block title %}Pay for {{ plan.name }}{% endblock %}
+{% block content %}
+<a href="{% url 'billing:pricing' %}" class="text-decoration-none fw-bold small"><i class="bi bi-arrow-left" aria-hidden="true"></i> All plans</a>
+<h1 class="l-title mt-2">{{ plan.name }} plan</h1>
+<p class="l-sub">KES {{ plan.price_kes|intcomma }} for {{ plan.weeks }} weeks &middot; {{ plan.target_level }}</p>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <form method="post" class="l-card pay-card" style="height:auto;">
+      {% csrf_token %}
+      {% if error %}<div class="alert alert-danger rounded-4">{{ error }}</div>{% endif %}
+
+      {% if for_child %}
+      <label class="form-label fw-bold" for="pay-learner">Who is this plan for?</label>
+      <select class="form-select mb-3" id="pay-learner" name="learner" onchange="location.search='?learner='+this.value+'&promo='+encodeURIComponent(document.getElementById('pay-promo').value)">
+        {% for l in learners %}<option value="{{ l.pk }}"{% if l.pk == learner.pk %} selected{% endif %}>{{ l.get_full_name|default:l.username }}</option>{% endfor %}
+      </select>
+      {% else %}
+      <input type="hidden" name="learner" value="{{ learner.pk }}">
+      {% endif %}
+
+      {% if current %}
+      <div class="plan-note mb-3">
+        <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+        <span>
+          {% if for_child %}{{ learner.first_name|default:learner.username }} is{% else %}You are{% endif %} on <strong>{{ current.plan.name }}</strong> until {{ current.ends_at|date:"j M Y" }}.
+          {% if current.plan.pk == plan.pk %}Paying again adds another {{ plan.weeks }} weeks after that date.
+          {% elif current.plan.order < plan.order %}{{ plan.name }} starts as soon as you pay.
+          {% else %}{{ plan.name }} has fewer features; your {{ current.plan.name }} plan stays in force until it ends.{% endif %}
+        </span>
+      </div>
+      {% endif %}
+
+      <fieldset class="mb-3">
+        <legend class="form-label fw-bold fs-6">How would you like to pay?</legend>
+        <div class="pay-methods">
+          <label class="pay-method is-on">
+            <input type="radio" name="method" value="mpesa" checked>
+            <i class="bi bi-phone-fill" aria-hidden="true"></i>
+            <span><strong>M-Pesa</strong><small>Pay with a prompt on your phone</small></span>
+          </label>
+          <label class="pay-method is-soon" aria-disabled="true">
+            <input type="radio" name="method" value="bank" disabled>
+            <i class="bi bi-bank2" aria-hidden="true"></i>
+            <span><strong>Bank</strong><small>Bank transfer or card</small></span>
+            <span class="soon-badge">Coming soon</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <label class="form-label fw-bold" for="pay-promo"><i class="bi bi-ticket-perforated-fill text-warning" aria-hidden="true"></i> Promo code <span class="fw-normal text-secondary small">(optional)</span></label>
+      <div class="input-group mb-1">
+        <input type="text" class="form-control text-uppercase" id="pay-promo" name="promo" value="{{ promo }}" maxlength="30" autocomplete="off">
+        <button type="submit" name="action" value="apply" class="btn btn-outline-cloud" formnovalidate>Apply</button>
+      </div>
+      {% if q.promo_error %}<p class="small text-danger mb-2">{{ q.promo_error }}</p>
+      {% elif applied and q.promo %}<p class="small text-success mb-2"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Code applied.</p>
+      {% elif applied and promo and not q.promo %}<p class="small text-secondary mb-2">A bigger discount already applies.</p>{% endif %}
+
+      <div class="pay-sum my-3">
+        <div><span>{{ plan.name }} plan, {{ plan.weeks }} weeks</span><span>KES {{ q.list_price|intcomma }}</span></div>
+        {% if q.discount %}<div class="disc"><span>{{ q.note }}</span><span>&minus; KES {{ q.discount|intcomma }}</span></div>{% endif %}
+        <div class="total"><span>To pay</span><span>KES {{ q.amount|intcomma }}</span></div>
+      </div>
+
+      {% if q.amount %}
+      <label class="form-label fw-bold" for="pay-phone"><i class="bi bi-phone-fill text-success" aria-hidden="true"></i> M-Pesa phone number</label>
+      <input type="tel" class="form-control form-control-lg mb-1" id="pay-phone" name="phone" value="{{ phone }}" placeholder="0712 345 678" autocomplete="tel" inputmode="tel" required>
+      <p class="small text-secondary mb-3">We will send a payment prompt to this phone. Enter your M-Pesa PIN there to finish.</p>
+      <button type="submit" class="btn btn-cloud btn-lg w-100"><i class="bi bi-lock-fill" aria-hidden="true"></i> Pay KES {{ q.amount|intcomma }} with M-Pesa</button>
+      {% else %}
+      <button type="submit" class="btn btn-cloud btn-lg w-100"><i class="bi bi-gift-fill" aria-hidden="true"></i> Start the {{ plan.name }} plan for free</button>
+      {% endif %}
+    </form>
+  </div>
+  <div class="col-lg-5">
+    <div class="l-card" style="height:auto;">
+      <h3 class="h5 fw-bold">What's included</h3>
+      <p class="small text-secondary">{{ plan.focus }}</p>
+      <ul class="plan-list small mb-0">
+        <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i> {% if plan.all_courses %}All platform courses{% else %}Courses in your own programme{% endif %}</li>
+        {% if plan.quizzes %}<li><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Unlimited quizzes &amp; module exams</li>{% endif %}
+        {% if plan.labs == 'unlimited' %}<li><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Unlimited cloud sandbox labs</li>{% elif plan.labs == 'guided' %}<li><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Guided hands-on labs</li>{% endif %}
+        {% if plan.ai_assistant %}<li><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Dedicated AI learning assistant</li>{% endif %}
+        <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i> {{ plan.project }}</li>
+        <li><i class="bi bi-award-fill" aria-hidden="true"></i> {{ plan.get_credential_display }}</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -26,6 +26,7 @@
         <div class="flex-grow-1">
           <h3 class="mb-0">{{ r.child.get_full_name|default:r.child.username }}</h3>
           <small class="text-secondary">{{ r.tier.display_name|default:"No tier yet" }} &middot; last active {{ r.last_active_text }}</small>
+          <small class="d-block {% if r.plan_sub %}text-secondary{% else %}text-danger fw-bold{% endif %}"><i class="bi bi-gem" aria-hidden="true"></i> {% if r.plan_sub %}{{ r.plan_sub.plan.name }} plan until {{ r.plan_sub.ends_at|date:"j M" }}{% else %}No plan yet: choose one under Plans &amp; billing{% endif %}</small>
         </div>
         <span class="fm-health {{ r.health.0 }}"><i class="bi {{ r.health.2 }}" aria-hidden="true"></i> {{ r.health.1 }}</span>
       </div>

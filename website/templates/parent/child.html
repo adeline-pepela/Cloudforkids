@@ -20,6 +20,14 @@
   <button type="button" class="btn btn-outline-cloud no-print" onclick="window.print()"><i class="bi bi-printer-fill" aria-hidden="true"></i> Print report</button>
 </div>
 
+{% if viewer != "teacher" %}
+<div class="plan-note mb-3 no-print">
+  <i class="bi bi-gem" aria-hidden="true"></i>
+  <span class="flex-grow-1">{% if r.plan_sub %}<strong>{{ r.plan_sub.plan.name }}</strong> plan, active until {{ r.plan_sub.ends_at|date:"j M Y" }}.{% else %}{{ r.name }} has no plan yet, so lessons are locked.{% endif %}</span>
+  <a href="{% url 'billing:my_plan' %}" class="fw-bold">{% if r.plan_sub %}Renew or upgrade{% else %}Choose a plan{% endif %}</a>
+</div>
+{% endif %}
+
 <!-- Journey 0 to 100 -->
 <div class="l-card fm-journey">
   <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-2">

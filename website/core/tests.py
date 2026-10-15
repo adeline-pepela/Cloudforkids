@@ -7,6 +7,8 @@ from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
 from accounts.models import ClassMembership, Classroom, LearnerProfile, ParentalConsent, User
+from billing.models import Plan
+from billing.services import grant
 from courses.models import Course, Lesson, Tier
 from courses.quiz import parse_questions
 from courses.tiers import suggested_tier
@@ -102,6 +104,7 @@ class ExplorerTierTests(TestCase):
 
     def test_swahili_page_is_served_in_kiswahili(self):
         kid = User.objects.create_user("kid", password=PASSWORD, role="learner")
+        grant(kid, Plan.objects.get(slug="core"))
         self.client.force_login(kid)
         lesson = Lesson.objects.get(slug="what-is-a-computer")
         url = lesson.get_absolute_url()
@@ -115,6 +118,7 @@ class ExplorerTierTests(TestCase):
         import json
 
         kid = User.objects.create_user("kid", password=PASSWORD, role="learner")
+        grant(kid, Plan.objects.get(slug="core"))
         self.client.force_login(kid)
         self.client.post(reverse("set_language"), {"language": "sw", "next": "/"})
         lesson = Lesson.objects.get(slug="what-is-a-computer")

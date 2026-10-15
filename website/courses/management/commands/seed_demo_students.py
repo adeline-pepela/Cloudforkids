@@ -16,6 +16,8 @@ from django.db import transaction
 from django.utils import timezone
 
 from accounts.models import ParentalConsent, User
+from billing.models import Plan
+from billing.services import grant
 from courses.badges import check_and_award_badges
 from courses.models import Course, Enrollment, Lesson, LessonCompletion, QuizResult, Tier
 from dashboard.models import Lab, LabCompletion
@@ -49,6 +51,7 @@ class Command(BaseCommand):
             return
         rng = random.Random(7)
         tiers = {t.slug: t for t in Tier.objects.filter(slug__in=TIERS)}
+        plans = list(Plan.objects.filter(is_active=True))
         if not tiers:
             self.stderr.write("No tiers found. Run the normal seeding first.")
             return
@@ -79,6 +82,8 @@ class Command(BaseCommand):
                 if age < 13:
                     ParentalConsent.objects.create(user=user, parent_name=profile.parent_guardian_name, parent_email=profile.parent_guardian_email,
                                                    status="approved", method="admin", decided_at=timezone.now())
+                if plans:  # a mix of plans, so the plan pages and locks can be demonstrated
+                    grant(user, plans[n % len(plans)], note="Demo learner")
                 self.add_progress(user, tiers[slug], STAGES[n % len(STAGES)], labs, rng)
                 created += 1
         self.stdout.write(self.style.SUCCESS(f"Created {created} demo learners. Password for all: {PASSWORD}  (undo: --clear)"))

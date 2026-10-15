@@ -1,0 +1,19 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}Plans & billing{% endblock %}
+{% block content %}
+<h1 class="l-title">Plans &amp; billing</h1>
+<p class="l-sub">Each child needs their own plan. Pay with M-Pesa and the plan starts straight away.</p>
+{% for r in rows %}
+<section class="mb-5">
+  <h2 class="h4 fw-bold"><i class="bi bi-person-heart text-primary" aria-hidden="true"></i> {{ r.learner.get_full_name|default:r.learner.username }}</h2>
+  {% include "billing/_plan_panel.html" %}
+</section>
+{% empty %}
+<div class="l-card text-center py-5" style="height:auto;">
+  <p class="mb-3">Link your child's account first, then choose a plan for them.</p>
+  <a href="{% url 'family:add' %}" class="btn btn-cloud">Add a child</a>
+  <a href="{% url 'billing:pricing' %}" class="btn btn-outline-cloud">See plans</a>
+</div>
+{% endfor %}
+{% endblock %}

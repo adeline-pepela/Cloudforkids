@@ -9,6 +9,7 @@ from django.contrib.auth.views import (
 from django.core.cache import cache
 from django.http import Http404
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.urls import reverse_lazy
 from django.shortcuts import redirect, render
 
@@ -72,9 +73,17 @@ class CloudForKidsLogoutView(LogoutView):
     next_page = "core:home"
 
 
+def _safe_next(request):
+    """Where to go after signing up (e.g. a plan checkout), if it is a page on this site."""
+    target = request.POST.get("next") or request.GET.get("next") or ""
+    ok = url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}, require_https=request.is_secure())
+    return target if ok else ""
+
+
 def signup(request):
+    next_url = _safe_next(request)
     if request.user.is_authenticated:
-        return redirect("dashboard:home")
+        return redirect(next_url or "dashboard:home")
 
     if request.method == "POST":
         form = SignUpForm(request.POST)
@@ -91,10 +100,10 @@ def signup(request):
                 messages.success(request, "Welcome! Your account is created. We will approve your facilitator access shortly.")
                 return redirect("teach:home")
             messages.success(request, f"Welcome to Cloud for Kids, {user.first_name}! Your account is ready.")
-            return redirect("dashboard:home")
+            return redirect(next_url or "dashboard:home")
     else:
         form = SignUpForm()
-    return render(request, "accounts/signup.html", {"form": form})
+    return render(request, "accounts/signup.html", {"form": form, "next": next_url})
 
 
 def consent_pending(request):

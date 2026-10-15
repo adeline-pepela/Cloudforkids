@@ -1,0 +1,71 @@
+{% extends base_template %}
+{% load static humanize %}
+{% block title %}Payment{% endblock %}
+{% block extra_head %}{{ block.super }}{% if sponsor_view %}<link rel="stylesheet" href="{% static 'css/learner.css' %}">{% endif %}{% endblock %}
+{% block content %}
+<div class="{% if sponsor_view %}container py-5 {% endif %}row justify-content-center mx-auto">
+  <div class="col-lg-7">
+    <div class="l-card pay-status text-center" style="height:auto;" id="pay-status"
+         data-status="{{ payment.status }}" data-check-url="{{ check_url }}">
+      <div class="pay-state" data-show="pending">
+        <div class="pay-ico pending"><i class="bi bi-phone-vibrate-fill" aria-hidden="true"></i></div>
+        <h1 class="l-title">Check your phone</h1>
+        <p class="l-sub mb-2">We sent an M-Pesa prompt for <strong>KES {{ payment.amount|intcomma }}</strong> to <strong>{{ payment.phone }}</strong>.</p>
+        <p class="text-secondary">Enter your M-Pesa PIN to pay for {% if sponsor_view %}{{ learner_name }}{% else %}{{ payment.learner.first_name|default:payment.learner.username }}{% endif %}'s <strong>{{ payment.plan.name }}</strong> plan. This page updates by itself.</p>
+        <div class="spinner-border text-primary my-2" role="status"><span class="visually-hidden">Waiting for M-Pesa</span></div>
+      </div>
+      <div class="pay-state" data-show="paid">
+        <div class="pay-ico paid"><i class="bi bi-check-circle-fill" aria-hidden="true"></i></div>
+        <h1 class="l-title">{% if sponsor_view %}Thank you for your gift!{% else %}Payment received!{% endif %}</h1>
+        <p class="l-sub">{% if sponsor_view %}{{ learner_name }}'s{% else %}The{% endif %} <strong>{{ payment.plan.name }}</strong> plan is active{% if payment.subscription %} until {{ payment.subscription.ends_at|date:"j M Y" }}{% endif %}.{% if payment.mpesa_receipt %} M-Pesa code: <strong>{{ payment.mpesa_receipt }}</strong>.{% endif %}</p>
+        <a href="{{ done_url }}" class="btn btn-cloud btn-lg">{{ done_label }}</a>
+        <a href="{{ receipt_url }}" class="btn btn-outline-cloud btn-lg" target="_blank" rel="noopener"><i class="bi bi-receipt" aria-hidden="true"></i> Receipt</a>
+      </div>
+      <div class="pay-state" data-show="cancelled">
+        <div class="pay-ico failed"><i class="bi bi-x-circle-fill" aria-hidden="true"></i></div>
+        <h1 class="l-title">Payment not finished</h1>
+        <p class="l-sub">The prompt was cancelled or timed out. No money was taken.</p>
+        <a href="{% if retry_url %}{{ retry_url }}{% else %}javascript:history.back(){% endif %}" class="btn btn-cloud btn-lg">Try again</a>
+      </div>
+      <div class="pay-state" data-show="failed">
+        <div class="pay-ico failed"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i></div>
+        <h1 class="l-title">Payment did not go through</h1>
+        <p class="l-sub" id="pay-detail">{{ payment.result_desc|default:"M-Pesa could not complete the payment." }}</p>
+        <a href="{% if retry_url %}{{ retry_url }}{% else %}javascript:history.back(){% endif %}" class="btn btn-cloud btn-lg">Try again</a>
+      </div>
+
+      {% if simulate %}
+      <div class="pay-sim mt-4" data-show="pending">
+        <p class="small text-secondary mb-2"><i class="bi bi-tools" aria-hidden="true"></i> Test mode: M-Pesa is not set up on this computer.</p>
+        <form method="post" action="{{ simulate_url }}" class="d-inline">{% csrf_token %}<input type="hidden" name="outcome" value="paid"><button class="btn btn-sm btn-success">Simulate paid</button></form>
+        <form method="post" action="{{ simulate_url }}" class="d-inline">{% csrf_token %}<input type="hidden" name="outcome" value="cancel"><button class="btn btn-sm btn-outline-secondary">Simulate cancel</button></form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var box = document.getElementById('pay-status');
+  if (!box) return;
+  function show(status) {
+    box.dataset.status = status;
+    box.querySelectorAll('[data-show]').forEach(function (el) { el.hidden = el.dataset.show !== status; });
+  }
+  show(box.dataset.status);
+  if (box.dataset.status !== 'pending') return;
+  var tries = 0;
+  function poll() {
+    tries += 1;
+    fetch(box.dataset.checkUrl, {credentials: 'same-origin'}).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.status === 'pending') { if (tries < 120) setTimeout(poll, 4000); return; }
+      location.reload();  // reload so the receipt and dates come from the server
+    }).catch(function () { if (tries < 120) setTimeout(poll, 6000); });
+  }
+  setTimeout(poll, 4000);
+})();
+</script>
+{% endblock %}

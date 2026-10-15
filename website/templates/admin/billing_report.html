@@ -1,0 +1,98 @@
+{% extends "admin/base_site.html" %}
+{% load static humanize %}
+{% block bodyclass %}dashboard{% endblock %}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Home</a> &rsaquo; Billing report</div>{% endblock %}
+{% block content_title %}{% endblock %}
+{% block coltype %}colDash{% endblock %}
+
+{% block content %}
+<div class="d-hero">
+  <div>
+    <h1>Billing report: {{ start|date:"j M Y" }} to {{ end|date:"j M Y" }}</h1>
+    <p>Money received, plan health, and every payment to tick off against the M-Pesa and bank statements.</p>
+  </div>
+  <div class="d-actions no-print">
+    <a href="?start={{ start|date:'Y-m-d' }}&end={{ end|date:'Y-m-d' }}&format=csv"><i class="bi bi-file-earmark-spreadsheet-fill"></i> Download CSV</a>
+    <a href="{% url 'admin:billing_payment_add' %}"><i class="bi bi-plus-circle-fill"></i> Record a cash / bank payment</a>
+    <a class="alt" href="#" onclick="window.print();return false;"><i class="bi bi-printer-fill"></i> Print</a>
+  </div>
+</div>
+
+<form method="get" class="no-print" style="margin-bottom:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+  <label for="b-start" style="font-weight:600;">From</label> <input type="date" id="b-start" name="start" value="{{ start|date:'Y-m-d' }}">
+  <label for="b-end" style="font-weight:600;">to</label> <input type="date" id="b-end" name="end" value="{{ end|date:'Y-m-d' }}">
+  <button type="submit" class="button">Show</button>
+  {% for label, a, b in presets %}<a href="?start={{ a|date:'Y-m-d' }}&end={{ b|date:'Y-m-d' }}">{{ label }}</a>{% endfor %}
+</form>
+
+<div class="d-cards">
+  <div class="d-card"><span class="ico t-green"><i class="bi bi-cash-coin"></i></span><span class="txt"><span class="num">KES {{ d.revenue|intcomma }}</span><span class="lbl">Received</span><span class="sub">{{ d.payments }} payment{{ d.payments|pluralize }}, average KES {{ d.average|intcomma }}</span></span></div>
+  <div class="d-card"><span class="ico t-orange"><i class="bi bi-ticket-perforated-fill"></i></span><span class="txt"><span class="num">KES {{ d.discounts|intcomma }}</span><span class="lbl">Discounts given</span><span class="sub">promo codes and sibling discounts</span></span></div>
+  <div class="d-card"><span class="ico t-pink"><i class="bi bi-arrow-counterclockwise"></i></span><span class="txt"><span class="num">KES {{ d.refund_total|intcomma }}</span><span class="lbl">Refunded</span><span class="sub">{{ d.refund_n }} refund{{ d.refund_n|pluralize }}</span></span></div>
+  <div class="d-card"><span class="ico t-purple"><i class="bi bi-arrow-up-circle-fill"></i></span><span class="txt"><span class="num">{{ d.upgrades }}</span><span class="lbl">Upgrades</span><span class="sub">moved to a higher plan</span></span></div>
+  <div class="d-card"><span class="ico t-sky"><i class="bi bi-people-fill"></i></span><span class="txt"><span class="num">{{ d.active }}</span><span class="lbl">On a plan now</span><span class="sub">{% for r in d.by_plan_now %}{{ r.plan__name }} {{ r.n }}{% if not forloop.last %} &middot; {% endif %}{% empty %}nobody yet{% endfor %}</span></span></div>
+  <div class="d-card"><span class="ico t-orange"><i class="bi bi-hourglass-split"></i></span><span class="txt"><span class="num">{{ d.expiring }}</span><span class="lbl">Ending within 7 days</span><span class="sub">reminders go out 5 days and 1 day before</span></span></div>
+  <div class="d-card"><span class="ico t-pink"><i class="bi bi-person-dash-fill"></i></span><span class="txt"><span class="num">{{ d.lapsed }}</span><span class="lbl">Lapsed</span><span class="sub">plan ended in the last 30 days, not renewed</span></span></div>
+</div>
+
+<div class="d-grid">
+  <section class="d-panel span-2">
+    <h3>Money received per month <small>last 12 months, by plan</small></h3>
+    <div class="chart-box"><canvas id="ch-revenue" aria-label="Stacked bar chart of revenue per month by plan" role="img"></canvas></div>
+  </section>
+  <section class="d-panel">
+    <h3>By payment method</h3>
+    <table class="d-table"><thead><tr><th>Method</th><th class="num">Payments</th><th class="num">KES</th></tr></thead><tbody>
+      {% for m in d.by_method %}<tr><td>{{ m.label }}</td><td class="num">{{ m.n }}</td><td class="num">{{ m.total|intcomma }}</td></tr>{% empty %}<tr><td colspan="3" class="d-empty">No payments in this period.</td></tr>{% endfor %}
+    </tbody></table>
+    <h3 style="margin-top:18px;">By plan</h3>
+    <table class="d-table"><thead><tr><th>Plan</th><th class="num">Payments</th><th class="num">KES</th></tr></thead><tbody>
+      {% for p in d.by_plan %}<tr><td>{{ p.plan__name }}</td><td class="num">{{ p.n }}</td><td class="num">{{ p.total|intcomma }}</td></tr>{% empty %}<tr><td colspan="3" class="d-empty">-</td></tr>{% endfor %}
+    </tbody></table>
+    {% if d.promos %}
+    <h3 style="margin-top:18px;">Discounts used</h3>
+    <table class="d-table"><thead><tr><th>Discount</th><th class="num">Times</th><th class="num">KES off</th></tr></thead><tbody>
+      {% for p in d.promos %}<tr><td>{{ p.discount_note|default:"-" }}</td><td class="num">{{ p.n }}</td><td class="num">{{ p.total|intcomma }}</td></tr>{% endfor %}
+    </tbody></table>
+    {% endif %}
+  </section>
+
+  <section class="d-panel span-3" style="grid-column:1/-1;">
+    <h3>Payments to reconcile <small>paid or refunded in this period; tick each M-Pesa code or bank reference off the statement</small></h3>
+    <div style="overflow-x:auto;">
+    <table class="d-table"><thead><tr>
+      <th>Paid at</th><th>Receipt</th><th>Status</th><th>Method</th><th>M-Pesa code / ref.</th><th>Phone</th><th>Learner</th><th>Paid by</th><th>Plan</th><th class="num">Discount</th><th class="num">KES</th>
+    </tr></thead><tbody>
+      {% for p in d.rows %}
+      <tr{% if p.status == 'refunded' %} style="color:#C23B3B;"{% endif %}>
+        <td>{{ p.paid_at|date:"j M Y H:i" }}</td>
+        <td><a href="{% url 'admin:billing_payment_change' p.pk %}">{{ p.receipt_number }}</a></td>
+        <td>{{ p.get_status_display }}</td><td>{{ p.get_method_display }}</td>
+        <td>{{ p.mpesa_receipt|default:p.reference|default:"-" }}</td><td>{{ p.phone|default:"-" }}</td>
+        <td>{{ p.learner.get_full_name|default:p.learner.username }}</td><td>{{ p.payer_label }}</td><td>{{ p.plan.name }}</td>
+        <td class="num">{% if p.discount %}{{ p.discount|intcomma }}{% else %}-{% endif %}</td><td class="num">{{ p.amount|intcomma }}</td>
+      </tr>
+      {% empty %}<tr><td colspan="11" class="d-empty">No payments in this period.</td></tr>{% endfor %}
+    </tbody>
+    {% if d.rows %}<tfoot><tr><th colspan="10">Total received (refunds excluded)</th><th class="num">KES {{ d.revenue|intcomma }}</th></tr></tfoot>{% endif %}
+    </table>
+    </div>
+  </section>
+</div>
+
+<script src="{% static 'vendor/chartjs/chart.umd.js' %}"></script>
+{{ d.chart|json_script:"revenue-data" }}
+<script>
+(function () {
+  var data = JSON.parse(document.getElementById('revenue-data').textContent);
+  data.datasets.forEach(function (ds) { ds.borderRadius = 4; });
+  new Chart(document.getElementById('ch-revenue'), {
+    type: 'bar', data: data,
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' },
+      tooltip: { callbacks: { label: function (c) { return c.dataset.label + ': KES ' + c.parsed.y.toLocaleString(); } } } },
+      scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { callback: function (v) { return 'KES ' + v.toLocaleString(); } } } } }
+  });
+})();
+</script>
+<style>@media print { .c4k-side, .c4k-top, .no-print { display: none !important; } }</style>
+{% endblock %}

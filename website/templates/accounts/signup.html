@@ -16,8 +16,10 @@
 <h1>Create your free account</h1>
 <p class="lead-sm">For learners aged 9&ndash;17, parents or guardians, and facilitators.</p>
 
+{% if next %}<div class="alert alert-info rounded-4 small"><i class="bi bi-gem" aria-hidden="true"></i> Create your account first. You will go straight to checkout afterwards.</div>{% endif %}
 <form method="post" novalidate>
   {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
   <label class="form-label fw-bold">I am a...</label>
   <div class="role-grid mb-4">
     {% for value, label in form.fields.role.choices %}
@@ -84,7 +86,7 @@
   {% if form.errors %}<div class="alert alert-danger mt-3 rounded-4 py-2">Please fix the highlighted fields and try again.</div>{% endif %}
   <button type="submit" class="btn btn-cloud btn-lg mt-4 w-100"><i class="bi bi-rocket-takeoff-fill" aria-hidden="true"></i> Create account</button>
 </form>
-<p class="text-center small text-secondary mt-3 mb-0">Already have an account? <a href="{% url 'accounts:login' %}" class="fw-bold">Log in</a></p>
+<p class="text-center small text-secondary mt-3 mb-0">Already have an account? <a href="{% url 'accounts:login' %}{% if next %}?next={{ next|urlencode }}{% endif %}" class="fw-bold">Log in</a></p>
 {% endblock %}
 
 {% block auth_js %}

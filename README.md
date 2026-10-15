@@ -55,6 +55,42 @@ Advanced       3 courses
 - **Badges** are awarded automatically: First Lesson, Rising Cloud, Cloud Champion, Lab Explorer,
   Lab Master, 3-Day and 7-Day Streak, and one Graduate badge per course.
 
+## Plans and billing (`/plans/`)
+
+Every learner needs a paid plan to open lessons. Plans last 4 weeks and are paid with M-Pesa (STK Push).
+Facilitators and admins see everything without a plan. Prices and features are editable in the admin under **Plans**.
+
+| | Starter (KES 2,000) | Core (KES 4,000) | Advanced (KES 6,000) |
+|---|---|---|---|
+| Courses | the learner's own programme | every course | every course |
+| Quizzes and module exams | none: the learner marks lessons done | yes | yes |
+| Practice Labs | none | guided (levels 1-2) | all, including level 3 |
+| Certificate per finished course | Completion | Verified Certificate of Achievement | Honors |
+| AI assistant, live project, Demo Day | - | - | shown as "coming soon" |
+
+- A learner pays for themselves; a parent pays for any linked child (**Plans & billing** in the family portal).
+- Paying for the same plan again adds 4 weeks after the current end date. A higher plan starts at once.
+- On Starter a course is finished when every lesson is marked done; with quizzes the module exam must be passed.
+  Certificates live at `/plans/certificate/<code>/` (printable; strangers only see first name and last initial).
+- **M-Pesa setup**: fill in the `MPESA_*` values (see `.env.example`). Safaricom posts results to
+  `SITE_URL/plans/mpesa/callback/<MPESA_CALLBACK_TOKEN>/`; if the callback is late, the payment page asks Daraja directly.
+  With no M-Pesa keys and `DEBUG=True`, the payment page shows "Simulate paid" buttons for local testing.
+- **Discounts**: promo codes (admin > **Promo codes**: % or KES off, plans, dates, usage limits, once per learner) and an
+  automatic sibling discount (`SIBLING_DISCOUNT_PERCENT`, default 10%) when a parent pays for a child whose sibling is on a plan.
+  Discounts do not stack: the bigger one wins. A 100% code starts the plan without M-Pesa.
+- **Sponsors**: My Plan shows a sponsor link (valid 90 days). A relative or organisation opens it, picks a plan and pays with
+  M-Pesa without an account; they see only the learner's first name and last initial, and get their own receipt by email.
+- **Receipts**: every paid payment has a printable receipt (`C4K-YYYY-NNNNN`) linked from My Plan and the receipt email.
+  Set `BILLING_KRA_PIN` to print your KRA PIN; business contact details come from Site settings.
+- **Renewal reminders**: `python manage.py send_notifications --plans` (in the daily Render cron) emails the learner and
+  linked parents 5 days and 1 day before a plan ends, and on the day it ends. Each is sent once.
+- **Cash / bank payments and refunds**: admin > Payments > Add records money received outside the site and starts the plan.
+  The "Refund" action marks a payment refunded and ends its plan (send the money back in the M-Pesa portal or bank yourself).
+  Payments cannot be deleted.
+- **Billing report** (admin sidebar): money received, discounts, refunds, upgrades, learners on a plan, ending soon and lapsed,
+  12 months of revenue by plan, and every payment with its M-Pesa code or reference to tick off against the statement (CSV too).
+- To give a plan without any payment (e.g. a pilot), add a **Subscription** in the admin.
+
 ## Parent portal (`/family/`)
 
 1. The learner opens **My Profile** and reads the 6-character **family code**.
@@ -206,5 +242,7 @@ If a login or form shows "CSRF verification failed. Origin checking failed", the
 ## Still open before launch
 
 - Legal review of the Terms and Privacy text, and a native-speaker review of the Kiswahili.
+- M-Pesa: go live on the Daraja portal (production keys, Paybill/Till and passkey), then test one real payment end to end.
+- Plan extras not built yet: the AI learning assistant, project submission and Demo Day sign-up.
 - Uploaded files (team and testimonial photos) are stored on the server disk; use object storage (S3, Cloudinary) if your host wipes disks on deploy.
 - Moving the lesson-page images and the remaining lesson bodies to Kiswahili.

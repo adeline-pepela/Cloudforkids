@@ -9,7 +9,18 @@
       <p class="text-secondary lead">{{ course.display_summary }}</p>
       {% if course.description %}<p class="text-secondary">{{ course.description }}</p>{% endif %}
 
-      {% if enrollment %}
+      {% if certificate %}
+        <a class="plan-note mb-3 text-decoration-none" href="{% url 'billing:certificate' certificate.code %}" target="_blank" rel="noopener">
+          <i class="bi bi-award-fill" aria-hidden="true"></i> <span>You earned the <strong>{{ certificate.get_level_display }}</strong> for this course. Open it to print.</span>
+        </a>
+      {% endif %}
+      {% if user.is_authenticated and not can_open %}
+        <div class="plan-note mb-4">
+          <i class="bi bi-lock-fill" aria-hidden="true"></i>
+          <span>{% if user.role == 'parent' %}Learners open this course with a plan. Choose one for your child under Plans &amp; billing.{% else %}Choose a plan to open these lessons. Core and Advanced include every course.{% endif %}</span>
+        </div>
+        <a href="{% if user.role == 'learner' or user.role == 'parent' %}{% url 'billing:my_plan' %}{% else %}{% url 'billing:pricing' %}{% endif %}" class="btn btn-cloud btn-lg mb-4">See plans</a>
+      {% elif enrollment %}
         <div class="mb-3">
           <div class="d-flex justify-content-between small fw-bold mb-1">
             <span>Your progress</span>
@@ -42,7 +53,16 @@
         <p class="text-secondary">Lessons for this course are coming soon.</p>
       {% endfor %}
 
-      {% if exam %}
+      {% if exam and user.is_authenticated and can_open and not quizzes_on %}
+        <h4 class="mt-4">Module Exam</h4>
+        <div class="lesson-row exam-row is-locked">
+          <div>
+            <span class="fw-bold"><i class="bi bi-lock-fill" aria-hidden="true"></i> {{ exam.title }}</span>
+            <p class="text-secondary small mb-0">Quizzes and module exams come with the Core and Advanced plans. On Starter, finish every lesson to earn your Certificate of Completion.</p>
+          </div>
+          <div class="text-end"><a href="{% url 'billing:my_plan' %}" class="small fw-bold">Upgrade</a></div>
+        </div>
+      {% elif exam %}
         <h4 class="mt-4">Module Exam</h4>
         <a href="{{ exam.get_absolute_url }}" class="text-decoration-none text-dark">
           <div class="lesson-row exam-row {% if exam.id in completed_ids %}done{% endif %}">

@@ -131,3 +131,15 @@ def record_result(user, lesson, correct, total):
     result.passed = result.passed or passed  # never un-pass a lesson the learner already passed
     result.save()
     return percent, passed, result.passed
+
+
+EMPTY_QUIZ_SECTION = re.compile(
+    r'<div class="lesson-section">\s*<h5 class="section-head">[^<]*</h5>\s*<div class="mcq-block">\s*</div>\s*</div>', re.S
+)
+EMPTY_BLOCK = re.compile(r'<div class="mcq-block">\s*</div>', re.S)
+
+
+def without_quiz(content):
+    """The lesson HTML with its multiple-choice quiz (and the empty "Quiz Time" section) taken out, for plans without quizzes."""
+    html = QUESTION.sub("", content or "")
+    return EMPTY_BLOCK.sub("", EMPTY_QUIZ_SECTION.sub("", html))

@@ -17,6 +17,7 @@ urlpatterns = [
     path('family/', include('dashboard.family_urls')),
     path('dashboard/', include('dashboard.urls')),
     path('learn/', include('courses.urls')),
+    path('plans/', include('billing.urls')),
     re_path(r'^%s(?P<path>.*)$' % settings.MEDIA_URL.lstrip('/'), serve_media),
     path('', include('core.urls')),
 ]

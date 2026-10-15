@@ -203,6 +203,26 @@ SW = {
     "A {n}-tier pathway, from Grade {n} to Grade {n}": "Njia ya ngazi {n}, kuanzia Darasa la {n} hadi la {n}",
     "Explorer, Foundational, Intermediate, Advanced: a {n}-tier pathway from Grade {n} to Grade {n}.": "Mgunduzi, Msingi, Kati, Juu: njia ya ngazi {n} kuanzia Darasa la {n} hadi la {n}.",
 
+    # ---- plans and billing
+    "Pricing": "Bei", "My Plan": "Mpango Wangu", "Plans &amp; billing": "Mipango na malipo", "Plans &amp; pricing": "Mipango na bei",
+    "Pick the plan that fits your learner": "Chagua mpango unaomfaa mwanafunzi wako", "Most popular": "Unaopendwa zaidi",
+    "Compare every feature": "Linganisha vipengele vyote", "Current plan": "Mpango wa sasa", "Your current plan": "Mpango wako wa sasa",
+    "No active plan": "Hakuna mpango unaotumika", "Choose a plan": "Chagua mpango", "See plans": "Tazama mipango", "All plans": "Mipango yote",
+    "Compare all plans &rarr;": "Linganisha mipango yote &rarr;", "Renew or upgrade": "Fanya upya au pandisha", "Upgrade": "Pandisha",
+    "Best for:": "Inafaa kwa:", "Coming with this plan": "Vinakuja na mpango huu", "Opening soon": "Kinafunguliwa hivi karibuni",
+    "Check your phone": "Angalia simu yako", "Payment received!": "Malipo yamepokelewa!", "Payment not finished": "Malipo hayajakamilika",
+    "Payment did not go through": "Malipo hayakufanikiwa", "Start learning": "Anza kujifunza", "Certificates": "Vyeti", "Payments": "Malipo",
+    "M-Pesa phone number": "Nambari ya simu ya M-Pesa", "Who is this plan for?": "Mpango huu ni wa nani?", "What's included": "Kinachojumuishwa",
+    "Coming soon": "Inakuja hivi karibuni", "How would you like to pay?": "Ungependa kulipa vipi?", "Bank": "Benki",
+    "Bank transfer or card": "Uhamisho wa benki au kadi", "Pay with a prompt on your phone": "Lipa kupitia ombi kwenye simu yako",
+    "Apply": "Tumia", "To pay": "Kiasi cha kulipa", "Receipt": "Risiti", "Sponsor a learner": "Mfadhili mwanafunzi",
+    "Code applied.": "Msimbo umetumika.", "Pay with M-Pesa": "Lipa kwa M-Pesa", "Thank you for your gift!": "Asante kwa zawadi yako!",
+    "Total paid": "Jumla iliyolipwa", "Paid by": "Imelipwa na",
+    "Locked": "Imefungwa", "Demo Day": "Siku ya Maonyesho", "AI learning assistant": "Msaidizi wa AI wa kujifunza",
+    "Certificate of Completion": "Cheti cha Kukamilisha", "Verified Certificate of Achievement": "Cheti Kilichothibitishwa cha Mafanikio",
+    "Honors Certificate of Completion": "Cheti cha Heshima cha Kukamilisha", "Print or save as PDF": "Chapisha au hifadhi kama PDF",
+    "Choose a plan to open these lessons. Core and Advanced include every course.": "Chagua mpango ili kufungua masomo haya. Core na Advanced zinajumuisha kozi zote.",
+
     # ---- patterns with numbers
     "{n} day streak": "{n} siku mfululizo", "{n} days": "siku {n}", "{n} day": "siku {n}", "{n} XP": "{n} XP", "Level {n}": "Kiwango {n}", "{n}% done": "{n}% imekamilika", "{n} min": "dakika {n}",
     "{n} lessons": "masomo {n}", "{n} lesson": "somo {n}", "{n} learners": "wanafunzi {n}", "{n} learner": "mwanafunzi {n}", "{n} items": "vipengele {n}", "{n} of {n}": "{n} kati ya {n}",

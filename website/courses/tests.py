@@ -4,6 +4,8 @@ from django.test import TestCase
 from django.urls import reverse
 
 from accounts.models import User
+from billing.models import Plan
+from billing.services import grant
 
 from .exams import ensure_exam
 from .models import Course, Enrollment, Lesson, LessonCompletion, QuizResult
@@ -16,6 +18,7 @@ class QuizServerSideTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user("quizzer", password="pw-12345-Zq", role="learner")
+        grant(cls.user, Plan.objects.get(slug="core"))
         cls.course = Course.objects.get(slug="what-is-the-cloud-really")
         cls.lesson = cls.course.lessons.get(slug="data-storage-basics")
         cls.questions = parse_questions(cls.lesson.content)
@@ -195,6 +198,7 @@ class QuizAttemptTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user("again", password="pw-12345-Zq", role="learner")
+        grant(cls.user, Plan.objects.get(slug="core"))
         cls.course = Course.objects.get(slug="what-is-the-cloud-really")
         cls.exam = cls.course.exam
 
@@ -248,6 +252,7 @@ class LessonVideoTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user("viewer", password="pw-12345-Zq", role="learner")
+        grant(cls.user, Plan.objects.get(slug="starter"))
         cls.lesson = Course.objects.get(slug="what-is-the-cloud-really").lessons.get(slug="data-storage-basics")
 
     def test_youtube_addresses_are_understood(self):

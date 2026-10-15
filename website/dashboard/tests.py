@@ -7,6 +7,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import ClassMembership, Classroom, Message, NotificationLog, ParentLink, User
+from billing.models import Plan
+from billing.services import grant
 from courses.models import Course, Enrollment, LessonCompletion, QuizResult
 from core import notify
 
@@ -53,6 +55,7 @@ class LearnerStatsTests(TestCase):
 
     def test_lab_completion_awards_xp_once(self):
         kid = make("kid")
+        grant(kid, Plan.objects.get(slug="core"))
         self.client.force_login(kid)
         slug = get_labs()[0]["slug"]
         first = self.client.post(reverse("dashboard:lab_complete", args=[slug])).json()

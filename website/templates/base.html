@@ -12,6 +12,7 @@
   <link href="{% static 'vendor/fonts/fonts.css' %}" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <link rel="stylesheet" href="{% static 'css/extras.css' %}">
+  <link rel="stylesheet" href="{% static 'css/billing.css' %}">
   <script src="{% static 'js/site.js' %}"></script>
   <script>window.C4K_T = {{ js_i18n|safe }};</script>
   {% block extra_head %}{% endblock %}
@@ -30,6 +31,7 @@
           <li class="nav-item"><a class="nav-link{% if route == 'core:home' %} active{% endif %}" href="{% url 'core:home' %}">Home</a></li>
           <li class="nav-item"><a class="nav-link{% if route == 'core:about' %} active{% endif %}" href="{% url 'core:about' %}">About</a></li>
           <li class="nav-item"><a class="nav-link{% if route == 'courses:programs' or route == 'courses:course_detail' %} active{% endif %}" href="{% url 'courses:programs' %}">Programs</a></li>
+          <li class="nav-item"><a class="nav-link{% if route == 'billing:pricing' %} active{% endif %}" href="{% url 'billing:pricing' %}">Pricing</a></li>
           <li class="nav-item"><a class="nav-link{% if route == 'core:impact' %} active{% endif %}" href="{% url 'core:impact' %}">Impact</a></li>
           <li class="nav-item"><a class="nav-link{% if route == 'core:contact' %} active{% endif %}" href="{% url 'core:contact' %}">Contact</a></li>
         </ul>
@@ -80,6 +82,7 @@
           <h6>Explore</h6>
           <ul class="list-unstyled">
             <li><a href="{% url 'courses:programs' %}">Programs</a></li>
+            <li><a href="{% url 'billing:pricing' %}">Pricing</a></li>
             <li><a href="{% url 'core:impact' %}">Impact</a></li>
           </ul>
         </div>

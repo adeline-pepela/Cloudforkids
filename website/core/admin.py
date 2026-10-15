@@ -147,11 +147,12 @@ def _dashboard_data():
     from datetime import timedelta
 
     from django.contrib.admin.models import LogEntry
-    from django.db.models import Count
+    from django.db.models import Count, Sum
     from django.db.models.functions import TruncDate
     from django.utils import timezone
 
     from accounts.models import LearnerProfile, User
+    from billing.models import Payment, Subscription
     from courses.models import Course, Enrollment, Lesson, LessonCompletion
 
     def url(name):
@@ -190,12 +191,16 @@ def _dashboard_data():
         c.n_enroll * c.n_lessons for c in Course.objects.annotate(n_enroll=Count("enrollments", distinct=True), n_lessons=Count("lessons", distinct=True))
     )
 
+    revenue_30 = Payment.objects.filter(status=Payment.Status.PAID, paid_at__gte=now - timedelta(days=30)).aggregate(t=Sum("amount"))["t"] or 0
+    active_plans = Subscription.objects.filter(starts_at__lte=now, ends_at__gt=now).values("learner").distinct().count()
+
     cards = [
         {"label": "Learners", "value": User.objects.filter(role=User.Role.LEARNER).count(), "sub": f"{signups_week} joined this week", "icon": "bi-people-fill", "tone": "t-sky", "url": url("accounts_user") + "?role__exact=learner"},
         {"label": "Enrollments", "value": total_enrollments, "sub": f"{Course.objects.count()} courses available", "icon": "bi-person-check-fill", "tone": "t-grass", "url": url("courses_enrollment")},
         {"label": "Lessons completed", "value": total_completions, "sub": f"{done_week} this week", "icon": "bi-check2-circle", "tone": "t-purple", "url": url("courses_lessoncompletion")},
         {"label": "Avg. course completion", "value": f"{round(total_completions / possible * 100) if possible else 0}%", "sub": f"{total_lessons} lessons in total", "icon": "bi-graph-up-arrow", "tone": "t-sun", "url": url("courses_course")},
         {"label": "Unread messages", "value": unread, "sub": "from the contact form", "icon": "bi-envelope-exclamation-fill", "tone": "t-coral", "url": url("core_contactmessage") + "?handled__exact=0", "alert": True},
+        {"label": "Plan payments (30 days)", "value": f"KES {revenue_30:,}", "sub": f"{active_plans} learners on a plan now", "icon": "bi-cash-coin", "tone": "t-grass", "url": reverse("tools:billing_report")},
         {"label": "Subscribers", "value": NewsletterSubscriber.objects.count(), "sub": "newsletter sign-ups", "icon": "bi-send-fill", "tone": "t-sky", "url": url("core_newslettersubscriber")},
     ]
 

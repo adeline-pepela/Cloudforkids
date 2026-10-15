@@ -1,0 +1,8 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}My Plan{% endblock %}
+{% block content %}
+<h1 class="l-title">My Plan</h1>
+<p class="l-sub">What your plan includes, your certificates and your payments.</p>
+{% include "billing/_plan_panel.html" %}
+{% endblock %}

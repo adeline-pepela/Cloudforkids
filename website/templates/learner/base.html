@@ -10,6 +10,7 @@
   <link href="{% static 'vendor/fonts/fonts.css' %}" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <link rel="stylesheet" href="{% static 'css/extras.css' %}">
+  <link rel="stylesheet" href="{% static 'css/billing.css' %}">
   <link rel="stylesheet" href="{% static 'css/learner.css' %}">
   <link rel="stylesheet" href="{% static 'css/family.css' %}">
   <script src="{% static 'js/site.js' %}"></script>
@@ -33,7 +34,8 @@
       <a class="l-link{% if nav == 'labs' %} active{% endif %}" href="{% url 'dashboard:labs' %}"><i class="bi bi-joystick" aria-hidden="true"></i> Practice Lab</a>
       <a class="l-link{% if nav == 'achievements' %} active{% endif %}" href="{% url 'dashboard:achievements' %}"><i class="bi bi-trophy-fill" aria-hidden="true"></i> Achievements</a>
       <a class="l-link{% if nav == 'messages' %} active{% endif %}" href="{% url 'messaging:inbox' %}"><i class="bi bi-envelope-fill" aria-hidden="true"></i> Messages{% if unread_messages %} <span class="l-badge">{{ unread_messages }}</span>{% endif %}</a>
-  <a class="l-link{% if request.resolver_match.url_name == 'profile' %} active{% endif %}" href="{% url 'accounts:profile' %}"><i class="bi bi-person-circle" aria-hidden="true"></i> My Profile</a>
+      <a class="l-link{% if nav == 'plan' %} active{% endif %}" href="{% url 'billing:my_plan' %}"><i class="bi bi-gem" aria-hidden="true"></i> My Plan</a>
+      <a class="l-link{% if request.resolver_match.url_name == 'profile' %} active{% endif %}" href="{% url 'accounts:profile' %}"><i class="bi bi-person-circle" aria-hidden="true"></i> My Profile</a>
     </nav>
     {% endblock %}
 

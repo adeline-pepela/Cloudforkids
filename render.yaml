@@ -20,6 +20,26 @@ envVarGroups:
         sync: false
       - key: EMAIL_FROM
         sync: false                # e.g. Cloud for Kids <no-reply@cloudforkids.co.ke> (a domain verified in Resend)
+      - key: MPESA_ENV
+        sync: false                # sandbox while testing, production once Safaricom has taken the app live
+      - key: MPESA_CONSUMER_KEY
+        sync: false                # from your Daraja app (developer.safaricom.co.ke)
+      - key: MPESA_CONSUMER_SECRET
+        sync: false
+      - key: MPESA_SHORTCODE
+        sync: false                # Paybill number (or store number for a till)
+      - key: MPESA_PASSKEY
+        sync: false                # Lipa Na M-Pesa Online passkey
+      - key: MPESA_TILL_NUMBER
+        sync: false                # leave empty for a Paybill
+      - key: MPESA_CALLBACK_TOKEN
+        generateValue: true
+      - key: MPESA_ACCOUNT_REFERENCE
+        value: CloudForKids            # the account name on the PIN prompt (12 characters at most)
+      - key: MPESA_INITIATOR_NAME
+        sync: false                # B2C payouts: the API operator's username in the M-Pesa org portal
+      - key: MPESA_SECURITY_CREDENTIAL
+        sync: false                # that operator's password encrypted with Safaricom's production certificate
 
 services:
   - type: web
@@ -36,7 +56,7 @@ services:
         value: 3.11.9
       - fromGroup: cloudforkids-shared
 
-  # Daily reminders for learners who have gone quiet
+  # Daily reminders for learners who have gone quiet, and plan renewal reminders
   - type: cron
     name: cloudforkids-nudges
     runtime: python
@@ -44,7 +64,7 @@ services:
     rootDir: website
     schedule: "0 6 * * *"          # 06:00 UTC = 09:00 in Nairobi
     buildCommand: pip install -r requirements.txt
-    startCommand: python manage.py send_notifications --nudges
+    startCommand: python manage.py send_notifications --nudges --plans
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9

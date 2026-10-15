@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load static humanize %}
+{% block title %}Plans & pricing{% endblock %}
+{% block content %}
+<section class="container py-5">
+  <div class="text-center mb-5">
+    <div class="section-eyebrow">Plans &amp; pricing</div>
+    <h1 class="section-title">Pick the plan that fits your learner</h1>
+    <p class="text-secondary mx-auto" style="max-width:640px;">
+      Every plan runs for 4 weeks and is paid with M-Pesa. Start small with Starter, or go straight to hands-on building.
+    </p>
+  </div>
+
+  <div class="row g-4 justify-content-center">
+    {% for plan in plans %}
+    <div class="col-md-6 col-lg-4">
+      <div class="plan-card plan-{{ plan.slug }}{% if plan.slug == 'core' %} is-popular{% endif %}{% if current and current.pk == plan.pk %} is-current{% endif %}">
+        {% if plan.slug == 'core' %}<span class="plan-ribbon">Most popular</span>{% endif %}
+        <div class="plan-head">
+          <h2 class="plan-name">{{ plan.name }}</h2>
+          {% if plan.tagline %}<span class="plan-tag">{{ plan.tagline }}</span>{% endif %}
+        </div>
+        <div class="plan-price"><span class="cur">KES</span> {{ plan.price_kes|intcomma }} <span class="per">/ {{ plan.weeks }} weeks</span></div>
+        <p class="plan-focus">{{ plan.focus }}</p>
+        <ul class="plan-list">
+          <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i> {% if plan.all_courses %}All platform courses{% else %}Courses in your own programme (videos &amp; reading){% endif %}</li>
+          <li class="{% if not plan.quizzes %}off{% endif %}"><i class="bi {% if plan.quizzes %}bi-check-circle-fill{% else %}bi-x-circle{% endif %}" aria-hidden="true"></i> {% if plan.quizzes %}Unlimited quizzes &amp; module exams{% else %}No quizzes or tests{% endif %}</li>
+          <li class="{% if plan.labs == 'none' %}off{% endif %}"><i class="bi {% if plan.labs == 'none' %}bi-x-circle{% else %}bi-check-circle-fill{% endif %}" aria-hidden="true"></i> {% if plan.labs == 'unlimited' %}Unlimited cloud sandbox labs{% elif plan.labs == 'guided' %}Guided hands-on labs{% else %}No hands-on labs{% endif %}</li>
+          <li class="{% if not plan.ai_assistant %}off{% endif %}"><i class="bi {% if plan.ai_assistant %}bi-check-circle-fill{% else %}bi-x-circle{% endif %}" aria-hidden="true"></i> {% if plan.ai_assistant %}Dedicated AI learning assistant{% else %}No AI assistant{% endif %}</li>
+          <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i> {{ plan.project }}</li>
+          <li><i class="bi bi-award-fill" aria-hidden="true"></i> {{ plan.get_credential_display }}</li>
+        </ul>
+        <p class="plan-best"><strong>Best for:</strong> {{ plan.best_for }}</p>
+        {% if current and current.pk == plan.pk %}
+          <a href="{% url 'billing:my_plan' %}" class="btn btn-outline-cloud w-100">Your current plan</a>
+        {% else %}
+          <a href="{% url 'billing:checkout' plan.slug %}" class="btn btn-cloud w-100">Choose {{ plan.name }}</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <h2 class="h4 text-center mt-5 mb-3">Compare every feature</h2>
+  <div class="table-responsive plan-compare-wrap">
+    <table class="table plan-compare align-middle mb-0">
+      <thead>
+        <tr><th scope="col">Feature</th>{% for plan in plans %}<th scope="col">{{ plan.name }}{% if plan.tagline %} <small>({{ plan.tagline }})</small>{% endif %}</th>{% endfor %}</tr>
+      </thead>
+      <tbody>
+        {% for label, values in rows %}
+        <tr><th scope="row">{{ label }}</th>{% for v in values %}<td>{{ v }}</td>{% endfor %}</tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="row g-3 mt-4 text-secondary small">
+    <div class="col-md-4"><i class="bi bi-phone-fill text-success" aria-hidden="true"></i> Pay with M-Pesa: you get a prompt on your phone, enter your PIN and the plan starts straight away.</div>
+    <div class="col-md-4"><i class="bi bi-arrow-up-circle-fill text-primary" aria-hidden="true"></i> Upgrade any time. A higher plan starts the moment it is paid.</div>
+    <div class="col-md-4"><i class="bi bi-people-fill text-warning" aria-hidden="true"></i> Parents pay for each linked child from the family portal. Every learner needs their own plan.</div>
+  </div>
+</section>
+{% endblock %}

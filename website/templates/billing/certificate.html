@@ -1,0 +1,38 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>{{ cert.get_level_display }} | Cloud for Kids</title>
+  <link href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}" rel="stylesheet">
+  <link href="{% static 'vendor/fonts/fonts.css' %}" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/billing.css' %}">
+</head>
+<body class="cert-page">
+  {% if owner %}
+  <div class="cert-actions">
+    <button type="button" onclick="window.print()"><i class="bi bi-printer-fill" aria-hidden="true"></i> Print or save as PDF</button>
+  </div>
+  {% endif %}
+  <main class="cert cert-{{ cert.level }}">
+    <div class="cert-inner">
+      <div class="cert-brand"><i class="bi bi-cloud-fill" aria-hidden="true"></i> Cloud for Kids</div>
+      <div class="cert-kind">{{ cert.get_level_display }}</div>
+      <p class="cert-small">This certifies that</p>
+      <h1 class="cert-name">{{ name }}</h1>
+      <p class="cert-small">has successfully completed the course</p>
+      <h2 class="cert-course">{{ cert.course.title }}</h2>
+      <p class="cert-small">{{ cert.course.tier.name }} programme &middot; {{ cert.course.tier.grade_range }}</p>
+      {% if cert.level == 'verified' %}<p class="cert-note">Every lesson quiz and the module exam were passed on the platform.</p>
+      {% elif cert.level == 'honors' %}<p class="cert-note">Completed with honours on the Advanced track: every quiz and the module exam passed.</p>{% endif %}
+      <div class="cert-foot">
+        <div><span>Issued</span><strong>{{ cert.issued_at|date:"j F Y" }}</strong></div>
+        <div class="cert-seal"><i class="bi bi-patch-check-fill" aria-hidden="true"></i></div>
+        <div><span>Certificate ID</span><strong>{{ cert.code }}</strong></div>
+      </div>
+      <p class="cert-verify">Check this certificate at {{ request.scheme }}://{{ request.get_host }}{% url 'billing:certificate' cert.code %}</p>
+    </div>
+  </main>
+</body>
+</html>

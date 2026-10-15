@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load static humanize %}
+{% block title %}Sponsor a learner{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex"><link rel="stylesheet" href="{% static 'css/learner.css' %}">{% endblock %}
+{% block content %}
+<section class="container py-5">
+  <div class="text-center mb-4">
+    <div class="section-eyebrow">Sponsor a learner</div>
+    <h1 class="section-title">Give {{ learner_name }} a plan on Cloud for Kids</h1>
+    <p class="text-secondary mx-auto" style="max-width:620px;">
+      {{ learner_name }}'s family shared this page with you. Choose a plan and pay with M-Pesa.
+      The plan starts straight away and you will get a receipt by email. You do not need an account.
+    </p>
+    {% if current %}<p class="small text-secondary">{{ learner_name }} is on the {{ current.plan.name }} plan until {{ current.ends_at|date:"j M Y" }}. A gift of the same plan adds 4 more weeks after that date.</p>{% endif %}
+  </div>
+
+  <form method="post" class="row g-4 justify-content-center">
+    {% csrf_token %}
+    <div class="col-lg-7">
+      <div class="l-card" style="height:auto;">
+        {% if error %}<div class="alert alert-danger rounded-4">{{ error }}</div>{% endif %}
+        <fieldset class="mb-3">
+          <legend class="form-label fw-bold fs-6">Choose a plan</legend>
+          <div class="pay-methods">
+            {% for p in plans %}
+            <label class="pay-method plan-{{ p.slug }}{% if p.pk == chosen.pk %} is-on{% endif %}">
+              <input type="radio" name="plan" value="{{ p.slug }}"{% if p.pk == chosen.pk %} checked{% endif %} onchange="this.form.querySelectorAll('.pay-method').forEach(function(l){l.classList.toggle('is-on', l.querySelector('input').checked)})">
+              <i class="bi bi-gem" aria-hidden="true"></i>
+              <span><strong>{{ p.name }}</strong><small>KES {{ p.price_kes|intcomma }} / {{ p.weeks }} weeks</small></span>
+            </label>
+            {% endfor %}
+          </div>
+          <p class="small mt-2 mb-0"><a href="{% url 'billing:pricing' %}" target="_blank" rel="noopener">What does each plan include?</a></p>
+        </fieldset>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-bold" for="sp-name">Your name</label>
+            <input class="form-control" id="sp-name" name="name" value="{{ form.name }}" maxlength="120" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold" for="sp-email">Your email (for the receipt)</label>
+            <input class="form-control" id="sp-email" name="email" type="email" value="{{ form.email }}" required>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-bold" for="sp-phone"><i class="bi bi-phone-fill text-success" aria-hidden="true"></i> M-Pesa phone number</label>
+            <input class="form-control form-control-lg" id="sp-phone" name="phone" type="tel" value="{{ form.phone }}" placeholder="0712 345 678" inputmode="tel" required>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-bold" for="sp-msg">A message for {{ learner_name }} <span class="fw-normal text-secondary small">(optional)</span></label>
+            <input class="form-control" id="sp-msg" name="message" value="{{ form.message }}" maxlength="300" placeholder="Keep learning, we are proud of you!">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-cloud btn-lg w-100 mt-4"><i class="bi bi-gift-fill" aria-hidden="true"></i> Pay with M-Pesa</button>
+      </div>
+    </div>
+  </form>
+</section>
+{% endblock %}

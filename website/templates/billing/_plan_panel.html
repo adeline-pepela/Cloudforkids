@@ -1,0 +1,87 @@
+{% load humanize %}
+{% with sub=r.sub plan=r.sub.plan %}
+<div class="l-card plan-panel{% if sub %} plan-{{ plan.slug }}{% endif %}" style="height:auto;">
+  {% if sub %}
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+    <div>
+      <div class="plan-tag mb-1">Current plan</div>
+      <h2 class="plan-name mb-0">{{ plan.name }}{% if plan.tagline %} <small class="text-secondary fw-normal">{{ plan.tagline }}</small>{% endif %}</h2>
+      <p class="text-secondary mb-0">Active until <strong>{{ sub.ends_at|date:"j M Y" }}</strong> &middot; {{ sub.days_left }} day{{ sub.days_left|pluralize }} left</p>
+    </div>
+    <a href="{% url 'billing:checkout' plan.slug %}?learner={{ r.learner.pk }}" class="btn btn-outline-cloud">Renew {{ plan.name }}</a>
+  </div>
+  {% if sub.days_left <= 5 %}<div class="plan-note mt-3"><i class="bi bi-hourglass-split" aria-hidden="true"></i> <span>This plan ends soon. Renew to keep learning without a break.</span></div>{% endif %}
+  <div class="row g-2 mt-3 plan-feats">
+    <div class="col-sm-6"><i class="bi bi-journal-check" aria-hidden="true"></i> {% if plan.all_courses %}Every course{% else %}Courses in {{ r.learner.first_name|default:"your" }}{% if r.learner.first_name %}'s{% endif %} own programme{% endif %}</div>
+    <div class="col-sm-6 {% if not plan.quizzes %}off{% endif %}"><i class="bi bi-patch-question-fill" aria-hidden="true"></i> {% if plan.quizzes %}Quizzes &amp; module exams{% else %}No quizzes (mark lessons done yourself){% endif %}</div>
+    <div class="col-sm-6 {% if plan.labs == 'none' %}off{% endif %}"><i class="bi bi-joystick" aria-hidden="true"></i> {% if plan.labs == 'unlimited' %}Every Practice Lab{% elif plan.labs == 'guided' %}Guided Practice Labs (levels 1-2){% else %}No Practice Labs{% endif %}</div>
+    <div class="col-sm-6"><i class="bi bi-award-fill" aria-hidden="true"></i> {{ plan.get_credential_display }}</div>
+  </div>
+  {% if plan.ai_assistant or plan.demo_day or plan.order > 1 %}
+  <h3 class="h6 fw-bold mt-4">Coming with this plan</h3>
+  <div class="row g-2 plan-soon">
+    {% if plan.ai_assistant %}<div class="col-md-4"><div class="soon-tile"><i class="bi bi-robot" aria-hidden="true"></i><strong>AI learning assistant</strong><span>Opening soon</span></div></div>{% endif %}
+    <div class="col-md-4"><div class="soon-tile"><i class="bi bi-rocket-takeoff-fill" aria-hidden="true"></i><strong>{{ plan.project }}</strong><span>Your facilitator will set this up</span></div></div>
+    {% if plan.demo_day %}<div class="col-md-4"><div class="soon-tile"><i class="bi bi-easel2-fill" aria-hidden="true"></i><strong>Demo Day</strong><span>Dates announced soon</span></div></div>{% endif %}
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+      <h2 class="plan-name mb-1">No active plan</h2>
+      <p class="text-secondary mb-0">Choose a plan to open lessons, quizzes and labs. Every plan runs for 4 weeks and is paid with M-Pesa.</p>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if r.upgrades %}
+  <div class="plan-up mt-4">
+    {% for p in r.upgrades %}
+    <a class="plan-up-item plan-{{ p.slug }}" href="{% url 'billing:checkout' p.slug %}?learner={{ r.learner.pk }}">
+      <strong>{% if sub %}Upgrade to {% endif %}{{ p.name }}</strong>
+      <span>KES {{ p.price_kes|intcomma }} / {{ p.weeks }} weeks</span>
+      <small>{{ p.focus }}</small>
+    </a>
+    {% endfor %}
+  </div>
+  <p class="small mt-2 mb-0"><a href="{% url 'billing:pricing' %}">Compare all plans &rarr;</a></p>
+  {% endif %}
+</div>
+
+<div class="l-card mt-4 sponsor-box" style="height:auto;">
+  <h3 class="h6 fw-bold mb-1"><i class="bi bi-gift-fill text-danger" aria-hidden="true"></i> Let someone sponsor {% if r.learner == user %}you{% else %}{{ r.learner.first_name|default:r.learner.username }}{% endif %}</h3>
+  <p class="small text-secondary mb-2">Share this link with a relative, friend or organisation. They can pay for a plan with M-Pesa without an account, and only see the first name and last initial. The link works for 90 days.</p>
+  <div class="input-group">
+    <input type="text" class="form-control" value="{{ r.sponsor_url }}" readonly aria-label="Sponsor link" id="sp-link-{{ r.learner.pk }}">
+    <button type="button" class="btn btn-outline-cloud" onclick="var i=document.getElementById('sp-link-{{ r.learner.pk }}');i.select();navigator.clipboard&&navigator.clipboard.writeText(i.value);this.textContent='Copied!'">Copy</button>
+  </div>
+</div>
+
+{% if r.certificates %}
+<h3 class="h5 fw-bold mt-4">Certificates</h3>
+<div class="row g-3">
+  {% for c in r.certificates %}
+  <div class="col-md-6 col-xl-4">
+    <a class="l-card cert-tile cert-{{ c.level }}" href="{% url 'billing:certificate' c.code %}" target="_blank" rel="noopener">
+      <i class="bi bi-award-fill" aria-hidden="true"></i>
+      <div><strong>{{ c.course.display_title }}</strong><span>{{ c.get_level_display }} &middot; {{ c.issued_at|date:"j M Y" }}</span></div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if r.payments %}
+<h3 class="h5 fw-bold mt-4">Payments</h3>
+<div class="table-responsive l-card p-0" style="height:auto;">
+  <table class="table table-sm mb-0 align-middle pay-table">
+    <thead><tr><th>Date</th><th>Plan</th><th>Amount</th><th>Status</th><th>Paid by</th><th>Receipt</th></tr></thead>
+    <tbody>
+      {% for p in r.payments %}
+      <tr><td>{{ p.created_at|date:"j M Y" }}</td><td>{{ p.plan.name }}</td><td>KES {{ p.amount|intcomma }}</td><td><span class="pay-pill {{ p.status }}">{{ p.get_status_display }}</span></td><td>{{ p.payer_label }}</td><td>{% if p.status == 'paid' or p.status == 'refunded' %}<a href="{% url 'billing:receipt' p.pk %}" target="_blank" rel="noopener">{{ p.receipt_number }}</a>{% if p.mpesa_receipt %} <small class="text-secondary">M-Pesa {{ p.mpesa_receipt }}</small>{% endif %}{% else %}-{% endif %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endwith %}

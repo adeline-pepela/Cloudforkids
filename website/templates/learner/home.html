@@ -24,6 +24,18 @@
   </div>
 </div>
 
+{% if not plan_sub %}
+<a class="plan-note mb-4 text-decoration-none" href="{% url 'billing:my_plan' %}">
+  <i class="bi bi-gem" aria-hidden="true"></i>
+  <span><strong>Choose a plan to open your lessons.</strong> Starter is KES 2,000 for 4 weeks. Ask a parent to pay with M-Pesa, or pay from My Plan.</span>
+</a>
+{% elif plan_sub.days_left <= 5 %}
+<a class="plan-note mb-4 text-decoration-none" href="{% url 'billing:my_plan' %}">
+  <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+  <span>Your <strong>{{ plan_sub.plan.name }}</strong> plan ends on {{ plan_sub.ends_at|date:"j M" }}. Renew it to keep learning without a break.</span>
+</a>
+{% endif %}
+
 {% if next_sessions %}
 <div class="l-card mb-4" style="height:auto;">
   <h3><i class="bi bi-calendar-event-fill text-primary" aria-hidden="true"></i> Coming up in my classes</h3>
@@ -108,7 +120,7 @@
         <span class="lab-ico ico tone-{{ lab.tone }}"><i class="bi {{ lab.icon }}" aria-hidden="true"></i></span>
         <h5 class="mb-0 fw-bold">{{ lab.title }}</h5>
         <p class="text-secondary small mb-0">{{ lab.summary }}</p>
-        <div class="lab-meta"><span><i class="bi bi-clock" aria-hidden="true"></i> {{ lab.minutes }} min</span>{% if lab.done %}<span class="done-pill"><i class="bi bi-check-lg" aria-hidden="true"></i> Done</span>{% endif %}</div>
+        <div class="lab-meta"><span><i class="bi bi-clock" aria-hidden="true"></i> {{ lab.minutes }} min</span>{% if lab.done %}<span class="done-pill"><i class="bi bi-check-lg" aria-hidden="true"></i> Done</span>{% endif %}{% if lab.locked %}<span class="lock-pill"><i class="bi bi-lock-fill" aria-hidden="true"></i> Locked</span>{% endif %}</div>
       </a>
     </div>
     {% endfor %}

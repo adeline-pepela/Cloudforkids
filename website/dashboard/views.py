@@ -2,6 +2,7 @@ import calendar
 from collections import defaultdict
 from datetime import date, timedelta
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
@@ -9,6 +10,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from accounts.models import ClassSession
+from billing import access
 from courses.badges import check_and_award_badges
 from courses.tiers import suggested_tier
 from courses.models import Badge, Course, Enrollment, Lesson, Tier
@@ -71,7 +73,7 @@ def _continue_lesson(enrollments):
 
 def _labs_with_status(user):
     done = set(LabCompletion.objects.filter(learner=user).values_list("slug", flat=True))
-    return [dict(lab, done=lab["slug"] in done) for lab in get_labs()]
+    return [dict(lab, done=lab["slug"] in done, locked=not access.can_open_lab(user, lab["level"])) for lab in get_labs()]
 
 
 def _path_for(user, enrollments):
@@ -133,11 +135,12 @@ def home(request):
             "tier": tier,
             "steps": steps,
             "path_preview": [s for s in steps if s["status"] != "done"][:3],
-            "labs": sorted(labs, key=lambda lab: lab["done"])[:3],
+            "labs": sorted(labs, key=lambda lab: (lab["locked"], lab["done"]))[:3],
             "earned": earned[:6],
             "earned_count": len(earned),
             "next_badges": next_badges,
             "teacher_tasks": _teacher_tasks(user, enrollments),
+            "plan_sub": access.current_subscription(user),
             "nav": "home",
         },
     )
@@ -258,7 +261,10 @@ def labs(request):
     return render(
         request,
         "learner/labs.html",
-        {"stats": learner_stats(request.user), "labs": _labs_with_status(request.user), "nav": "labs"},
+        {
+            "stats": learner_stats(request.user), "labs": _labs_with_status(request.user), "nav": "labs",
+            "lock_note": access.lab_limit_text(request.user) if not access.has_full_access(request.user) else "",
+        },
     )
 
 
@@ -267,6 +273,9 @@ def lab(request, slug):
     info = get_lab(slug)
     if info is None:
         raise Http404("No such lab")
+    if not access.can_open_lab(request.user, info["level"]):
+        messages.info(request, access.lab_limit_text(request.user))
+        return redirect("billing:my_plan" if request.user.role in ("learner", "parent") else "billing:pricing")
     done = LabCompletion.objects.filter(learner=request.user, slug=slug).exists()
     return render(
         request,
@@ -281,8 +290,11 @@ def lab(request, slug):
 @login_required
 @require_POST
 def lab_complete(request, slug):
-    if get_lab(slug) is None:
+    info = get_lab(slug)
+    if info is None:
         raise Http404("No such lab")
+    if not access.can_open_lab(request.user, info["level"]):
+        return JsonResponse({"error": access.lab_limit_text(request.user)}, status=403)
     _, created = LabCompletion.objects.get_or_create(learner=request.user, slug=slug)
     new_badges = check_and_award_badges(request.user) if created else []
     stats = learner_stats(request.user)

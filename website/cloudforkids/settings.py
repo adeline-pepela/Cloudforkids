@@ -94,6 +94,7 @@ INSTALLED_APPS = [
     'courses',
     'core',
     'dashboard',
+    'billing',
 ]
 
 MIDDLEWARE = [
@@ -203,6 +204,21 @@ PASSWORD_RESET_TIMEOUT = 60 * 60 * 2  # reset links work for 2 hours
 LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'dashboard:home'
 LOGOUT_REDIRECT_URL = 'core:home'
+
+# M-Pesa Express (STK Push) for plan payments. See billing/mpesa.py and .env.example.
+MPESA_ENV = os.environ.get('MPESA_ENV', 'sandbox').strip().lower()
+MPESA_CONSUMER_KEY = os.environ.get('MPESA_CONSUMER_KEY', '').strip()
+MPESA_CONSUMER_SECRET = os.environ.get('MPESA_CONSUMER_SECRET', '').strip()
+MPESA_SHORTCODE = os.environ.get('MPESA_SHORTCODE', '').strip()
+MPESA_PASSKEY = os.environ.get('MPESA_PASSKEY', '').strip()
+MPESA_TILL_NUMBER = os.environ.get('MPESA_TILL_NUMBER', '').strip()  # only for a Buy Goods till
+MPESA_CALLBACK_TOKEN = os.environ.get('MPESA_CALLBACK_TOKEN', '').strip()
+MPESA_ACCOUNT_REFERENCE = os.environ.get('MPESA_ACCOUNT_REFERENCE', 'CloudForKids').strip()  # shown on the PIN prompt, max 12
+# B2C payouts and balance checks (admin only). The credential is the initiator password encrypted with Safaricom's certificate.
+MPESA_INITIATOR_NAME = os.environ.get('MPESA_INITIATOR_NAME', '').strip()
+MPESA_SECURITY_CREDENTIAL = os.environ.get('MPESA_SECURITY_CREDENTIAL', '').strip()
+SIBLING_DISCOUNT_PERCENT = int(os.environ.get('SIBLING_DISCOUNT_PERCENT', '10'))  # off a parent's 2nd, 3rd... child
+BILLING_KRA_PIN = os.environ.get('BILLING_KRA_PIN', '').strip()  # printed on receipts when set
 
 SITE_NAME = 'Cloud for Kids'
 SITE_TAGLINE = "Building Kenya's Cloud-Ready Generation"

@@ -1,0 +1,64 @@
+{% load static humanize %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Receipt {{ payment.receipt_number }} | Cloud for Kids</title>
+  <link href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}" rel="stylesheet">
+  <link href="{% static 'vendor/fonts/fonts.css' %}" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/billing.css' %}">
+</head>
+<body class="cert-page">
+  <div class="cert-actions">
+    {% if back_url %}<a href="{{ back_url }}" class="rc-back"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a>{% endif %}
+    <button type="button" onclick="window.print()"><i class="bi bi-printer-fill" aria-hidden="true"></i> Print or save as PDF</button>
+  </div>
+  <main class="rc">
+    <header class="rc-head">
+      <div>
+        <div class="rc-brand"><i class="bi bi-cloud-fill" aria-hidden="true"></i> Cloud for Kids</div>
+        <div class="rc-biz">
+          {% if site.location %}{{ site.location }}<br>{% endif %}
+          {% if site.footer_email %}{{ site.footer_email }}{% endif %}{% if site.phone %} &middot; {{ site.phone }}{% endif %}<br>
+          {% if site.website %}{{ site.website }}{% endif %}
+          {% if kra_pin %}<br>KRA PIN: {{ kra_pin }}{% endif %}
+        </div>
+      </div>
+      <div class="rc-title">
+        <h1>{% if payment.status == 'refunded' %}Refunded receipt{% else %}Receipt{% endif %}</h1>
+        <div><span>Receipt no.</span> <strong>{{ payment.receipt_number }}</strong></div>
+        <div><span>Date paid</span> <strong>{{ payment.paid_at|date:"j F Y, H:i" }}</strong></div>
+        {% if payment.refunded_at %}<div class="rc-refund"><span>Refunded</span> <strong>{{ payment.refunded_at|date:"j F Y" }}</strong></div>{% endif %}
+      </div>
+    </header>
+
+    <section class="rc-parties">
+      <div><span>Paid by</span><strong>{{ payment.payer_label }}</strong>{% if payment.phone %}<small>{{ payment.phone }}</small>{% endif %}</div>
+      <div><span>Learner</span><strong>{% if payment.sponsor_name and not payment.payer %}{{ payment.learner.first_name }} {{ payment.learner.last_name|slice:":1" }}.{% else %}{{ payment.learner.get_full_name|default:payment.learner.username }}{% endif %}</strong></div>
+    </section>
+
+    <table class="rc-table">
+      <thead><tr><th>Description</th><th>Period</th><th class="num">Amount (KES)</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>{{ payment.plan.name }} plan{% if payment.plan.tagline %} ({{ payment.plan.tagline }}){% endif %}<small>{{ payment.plan.weeks }} weeks of access</small></td>
+          <td>{% if payment.subscription %}{{ payment.subscription.starts_at|date:"j M Y" }} to {{ payment.subscription.ends_at|date:"j M Y" }}{% else %}-{% endif %}</td>
+          <td class="num">{{ payment.list_price|intcomma }}</td>
+        </tr>
+        {% if payment.discount %}<tr class="rc-disc"><td colspan="2">{{ payment.discount_note|default:"Discount" }}</td><td class="num">&minus;{{ payment.discount|intcomma }}</td></tr>{% endif %}
+      </tbody>
+      <tfoot><tr><th colspan="2">Total paid</th><th class="num">KES {{ payment.amount|intcomma }}</th></tr></tfoot>
+    </table>
+
+    <section class="rc-meta">
+      <div><span>Payment method</span><strong>{{ payment.get_method_display }}</strong></div>
+      {% if payment.mpesa_receipt %}<div><span>M-Pesa code</span><strong>{{ payment.mpesa_receipt }}</strong></div>{% endif %}
+      {% if payment.reference %}<div><span>Reference</span><strong>{{ payment.reference }}</strong></div>{% endif %}
+      <div><span>Status</span><strong>{{ payment.get_status_display }}</strong></div>
+    </section>
+    {% if payment.sponsor_message %}<p class="rc-note">&ldquo;{{ payment.sponsor_message }}&rdquo;</p>{% endif %}
+    <p class="rc-foot">Thank you for supporting a young cloud learner. Questions about this receipt? Write to {{ site.footer_email|default:site.contact_email }}.</p>
+  </main>
+</body>
+</html>
