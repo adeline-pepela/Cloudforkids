@@ -15,6 +15,39 @@ from .models import Action, AssistantSettings, Connection, Thread, Turn
 from .tools import ToolError, request_meta
 
 STALE_AFTER = timedelta(minutes=4)  # a reply that has been "busy" this long was cut off (a server restart)
+FILE_AREAS = ("admin", "teach")  # children and parents don't attach files
+MAX_FILES = 4
+TEXT_LIMIT = 300_000  # characters of a text file
+BINARY_LIMIT = 2_000_000  # characters of base64 (about 1.5 MB), under Django's request size limit
+IMAGE_TYPES = ("image/png", "image/jpeg", "image/webp", "image/gif")
+
+
+def clean_files(raw):
+    """Attached files as the browser sent them, checked: [{name, type, kind, text|data, size}]."""
+    if not raw:
+        return []
+    if not isinstance(raw, list) or len(raw) > MAX_FILES:
+        raise ValueError(f"Attach up to {MAX_FILES} files.")
+    files = []
+    for f in raw:
+        if not isinstance(f, dict):
+            raise ValueError("A file could not be read.")
+        name, mime, kind = str(f.get("name") or "file")[:120], str(f.get("type") or ""), f.get("kind")
+        if kind == "text":
+            text = str(f.get("text") or "")
+            if len(text) > TEXT_LIMIT:
+                raise ValueError(f"{name} is too long. Attach a smaller file.")
+            files.append({"name": name, "type": mime or "text/plain", "kind": "text", "text": text, "size": len(text)})
+        elif kind in ("image", "pdf"):
+            data = str(f.get("data") or "")
+            if kind == "image" and mime not in IMAGE_TYPES:
+                raise ValueError(f"{name}: attach PNG, JPEG, WebP or GIF images.")
+            if not data or len(data) > BINARY_LIMIT:
+                raise ValueError(f"{name} is too big. Attach a file under 1.5 MB.")
+            files.append({"name": name, "type": mime if kind == "image" else "application/pdf", "kind": kind, "data": data, "size": len(data) * 3 // 4})
+        else:
+            raise ValueError(f"{name}: attach text, CSV, JSON, an image or a PDF.")
+    return files
 
 
 def _json(request):
@@ -66,7 +99,7 @@ def _thread_json(thread):
         "ok": True, "id": thread.pk, "title": str(thread), "busy": thread.busy,
         "connection_id": thread.connection_id,
         "turns": [{
-            "id": t.pk, "role": t.role, "text": t.text, "reasoning": t.reasoning if t.role == Turn.Role.ASSISTANT else "",
+            "id": t.pk, "role": t.role, "files": [f.get("name") for f in t.files or []], "text": t.text, "reasoning": t.reasoning if t.role == Turn.Role.ASSISTANT else "",
             "streaming": t.streaming, "failed": t.failed, "error": t.error, "when": timezone.localtime(t.created_at).strftime("%H:%M"),
             "actions": actions.get(t.pk, []),
         } for t in turns],
@@ -88,6 +121,7 @@ def state(request):
         "default_connection": default.pk if default else None,
         "read_only": settings.read_only, "confirm_writes": settings.confirm_writes,
         "can_configure": request.user.is_superuser,
+        "can_attach": area in FILE_AREAS,
         "threads": [{"id": t.pk, "title": str(t), "when": timezone.localtime(t.updated_at).strftime("%d %b, %H:%M")} for t in threads],
     })
 
@@ -111,6 +145,16 @@ def send(request):
     text = str(data.get("text") or "").strip()[:8000]
     if not text:
         return _error("Write a message first.")
+    try:
+        files = clean_files(data.get("files")) if area in FILE_AREAS else []
+    except ValueError as err:
+        return _error(str(err))
+    if area == "learn":
+        from live import moderation
+
+        reason = moderation.check(text)
+        if reason:
+            return _error(moderation.REASONS[reason].replace(" in class chat", " here"))
     if data.get("thread"):
         thread = _thread(request, data["thread"])
         if thread is None or thread.area != area:
@@ -125,7 +169,7 @@ def send(request):
             thread.connection = conn
             thread.save(update_fields=["connection", "updated_at"])
     loop.supersede_pending(thread)
-    Turn.objects.create(thread=thread, role=Turn.Role.USER, text=text, screen=clean_screen(data.get("screen")))
+    Turn.objects.create(thread=thread, role=Turn.Role.USER, text=text, screen=clean_screen(data.get("screen")), files=files)
     loop.start(thread, request_meta(request))
     thread.refresh_from_db()
     return JsonResponse(_thread_json(thread), status=202)

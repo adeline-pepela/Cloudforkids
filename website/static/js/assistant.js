@@ -13,7 +13,7 @@
       foot = $('c4ka-foot');
   var area = root.dataset.area;
   var STORE = 'c4ka-' + area + '-';
-  var state = { thread: null, busy: false, polling: null, rendered: {}, loaded: false, extra: '', info: null };
+  var state = { thread: null, busy: false, polling: null, rendered: {}, loaded: false, extra: '', info: null, files: [] };
 
   var SUGGEST = {
     admin: [
@@ -27,8 +27,27 @@
       'Summarise this page for me.',
       'Which lessons is my class finding hardest?',
       'Add a session next Tuesday at 4pm to my class.'
+    ],
+    learn: [
+      'What should I learn next?',
+      'Explain this lesson in simple words.',
+      'Give me a hint for this quiz, not the answer.',
+      'How am I doing?'
+    ],
+    family: [
+      'How is my child doing this week?',
+      'What can we practise together at home?',
+      'Do I have messages from the teacher?',
+      'What does my child\'s plan include?'
     ]
   };
+  var WORDS = {
+    admin: { hello: 'I can see this page, and I work with your permissions.', place: 'Ask about this page, or ask me to do something', foot: 'Reads this page when you send. Changes wait for your approval.' },
+    teach: { hello: 'I can see this page, and I work only with your classes.', place: 'Ask about your classes, or ask me to do something', foot: 'Reads this page when you send. Changes wait for your approval.' },
+    learn: { hello: 'I am Nimbus. I can explain your lessons and help you practise. I give hints, not quiz answers.', place: 'Ask Nimbus about a lesson', foot: 'Nimbus can make mistakes. Ask your teacher if unsure, and never share personal details.' },
+    family: { hello: 'Ask me about your child\'s learning, and how to help at home.', place: 'Ask about your child\'s progress', foot: 'Only your own linked children. Replies to teachers wait for your approval.' }
+  }[area] || {};
+  input.placeholder = WORDS.place || input.placeholder;
 
   function store(key, value) {
     try {
@@ -147,8 +166,8 @@
   function hello() {
     var box = document.createElement('div');
     box.className = 'c4ka-hello';
-    box.innerHTML = '<h3>How can I help?</h3><p>I can see this page, and I work with your permissions. ' +
-      (state.info && state.info.read_only ? 'Read-only mode is on, so I will only look and answer.' : 'I ask before I change anything.') +
+    var extra = area === 'learn' ? '' : (state.info && state.info.read_only ? ' Read-only mode is on, so I will only look and answer.' : ' I ask before I change anything.');
+    box.innerHTML = '<h3>' + (area === 'learn' ? 'Habari! How can I help?' : 'How can I help?') + '</h3><p>' + esc(WORDS.hello || '') + esc(extra) +
       '</p><div class="c4ka-suggest"></div>';
     var list = box.querySelector('.c4ka-suggest');
     (SUGGEST[area] || []).forEach(function (text) {
@@ -225,7 +244,15 @@
       }
       if (el.dataset.key !== key) {
         el.dataset.key = key;
-        if (t.role === 'user') el.textContent = t.text; else el.innerHTML = turnHtml(t);
+        if (t.role === 'user') {
+          el.textContent = t.text;
+          if (t.files && t.files.length) {
+            var sent = document.createElement('span');
+            sent.className = 'c4ka-sent-files';
+            sent.textContent = 'Attached: ' + t.files.join(', ');
+            el.appendChild(sent);
+          }
+        } else el.innerHTML = turnHtml(t);
       }
     });
     Object.keys(state.rendered).forEach(function (id) {
@@ -240,7 +267,8 @@
     state.busy = busy;
     sendBtn.hidden = busy;
     stopBtn.hidden = !busy;
-    foot.textContent = busy ? 'Working… you can keep reading the page.' : (state.info && state.info.read_only ? 'Read-only mode: nothing will be changed.' : 'Reads this page when you send. Changes wait for your approval.');
+    foot.textContent = busy ? 'Working… you can keep reading the page.' :
+      (state.info && state.info.read_only && area !== 'learn' ? 'Read-only mode: nothing will be changed.' : (WORDS.foot || ''));
     if (busy) poll(); else stopPolling();
   }
 
@@ -271,8 +299,10 @@
   function send() {
     var text = input.value.trim();
     if (!text || state.busy) return;
-    if (!modelSel.options.length) { showError('No AI model is set up yet. ' + (root.dataset.settings ? 'Add one in Settings.' : 'Ask an admin to add one.')); return; }
+    if (!modelSel.value && !(state.info && state.info.default_connection)) { showError('No AI model is set up yet. ' + (root.dataset.settings ? 'Add one in Settings.' : 'Ask an admin to add one.')); return; }
+    var files = state.files.slice();
     input.value = ''; grow();
+    state.files = []; drawFiles();
     setBusy(true);
     stopPolling();
     var hi = log.querySelector('.c4ka-hello'); if (hi) hi.remove();
@@ -280,10 +310,10 @@
     temp.className = 'c4ka-msg user'; temp.textContent = text;
     log.appendChild(temp); toBottom();
     api('POST', root.dataset.send, {
-      area: area, text: text, thread: state.thread, connection: modelSel.value || null, screen: captureScreen()
+      area: area, text: text, thread: state.thread, connection: modelSel.value || null, screen: captureScreen(), files: files
     }).then(function (data) {
       temp.remove();
-      if (!data.ok) { input.value = text; setBusy(false); showError(data.error); return; }
+      if (!data.ok) { input.value = text; state.files = files; drawFiles(); setBusy(false); showError(data.error); return; }
       render(data);
     });
   }
@@ -360,6 +390,90 @@
   historyBtn.addEventListener('click', function () { showThreads(threadsBox.hidden); });
   $('c4ka-new').addEventListener('click', newChat);
   modelSel.addEventListener('change', function () { store('model', modelSel.value); });
+
+  // ---------------------------------------------------------------- attachments (admin and facilitator areas)
+
+  var fileInput = $('c4ka-file'), filesBox = $('c4ka-files');
+  var TEXT_EXT = /\.(txt|md|csv|tsv|json|xml|html?)$/i, MAX_FILES = 4, MAX_TEXT = 300000, MAX_BINARY = 1500000;
+
+  function drawFiles() {
+    if (!filesBox) return;
+    filesBox.hidden = !state.files.length;
+    filesBox.innerHTML = state.files.map(function (f, i) {
+      return '<span class="c4ka-file"><i class="bi ' + (f.kind === 'image' ? 'bi-image' : f.kind === 'pdf' ? 'bi-file-earmark-pdf' : 'bi-file-earmark-text') +
+        '" aria-hidden="true"></i><span>' + esc(f.name) + '</span><button type="button" data-drop="' + i + '" aria-label="Remove ' + esc(f.name) + '">&times;</button></span>';
+    }).join('');
+  }
+  if (filesBox) filesBox.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-drop]');
+    if (b) { state.files.splice(+b.dataset.drop, 1); drawFiles(); }
+  });
+
+  function shrinkImage(file) {
+    // Big photos are scaled down in the browser (longest side 1600px), which keeps them well under the upload limit.
+    return new Promise(function (resolve, reject) {
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function () {
+        var scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale); canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('Could not read ' + file.name + '.')); };
+      img.src = url;
+    });
+  }
+  function readAs(file, how) {
+    return new Promise(function (resolve, reject) {
+      var r = new FileReader();
+      r.onload = function () { resolve(r.result); };
+      r.onerror = reject;
+      if (how === 'text') r.readAsText(file); else r.readAsDataURL(file);
+    });
+  }
+
+  function addFiles(list) {
+    Array.prototype.forEach.call(list, function (file) {
+      if (state.files.length >= MAX_FILES) { showError('Attach up to ' + MAX_FILES + ' files.'); return; }
+      // A pasted screenshot has no useful name of its own: name it by the time it arrived.
+      var name = file.name && file.name !== 'image.png' ? file.name : 'pasted ' + new Date().toTimeString().slice(0, 8).replace(/:/g, '.') + '.png';
+      var job;
+      if (/^image\//.test(file.type)) {
+        job = shrinkImage(file).then(function (url) { return { name: name.replace(/\.\w+$/, '') + '.jpg', type: 'image/jpeg', kind: 'image', data: url.split(',')[1] }; });
+      } else if (file.type === 'application/pdf' || /\.pdf$/i.test(name)) {
+        if (file.size > MAX_BINARY) { showError(name + ' is too big. Attach a PDF under 1.5 MB.'); return; }
+        job = readAs(file, 'url').then(function (url) { return { name: name, type: 'application/pdf', kind: 'pdf', data: url.split(',')[1] }; });
+      } else if (/^text\//.test(file.type) || TEXT_EXT.test(name) || file.type === 'application/json') {
+        job = readAs(file, 'text').then(function (text) {
+          if (text.length > MAX_TEXT) throw new Error(name + ' is too long. Attach a smaller file.');
+          return { name: name, type: file.type || 'text/plain', kind: 'text', text: text };
+        });
+      } else { showError(name + ': attach text, CSV, JSON, an image or a PDF.'); return; }
+      job.then(function (f) {
+        if (f.data && f.data.length > MAX_BINARY * 4 / 3) { showError(f.name + ' is too big.'); return; }
+        if (state.files.length < MAX_FILES) { state.files.push(f); drawFiles(); }
+      }).catch(function (err) { showError((err && err.message) || ('Could not read ' + name + '.')); });
+    });
+  }
+
+  if (fileInput) {
+    $('c4ka-attach').addEventListener('click', function () { fileInput.click(); });
+    fileInput.addEventListener('change', function () { addFiles(fileInput.files); fileInput.value = ''; });
+    root.addEventListener('dragover', function (e) {
+      if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, 'Files') !== -1) { e.preventDefault(); root.classList.add('is-drop'); }
+    });
+    root.addEventListener('dragleave', function (e) { if (!root.contains(e.relatedTarget)) root.classList.remove('is-drop'); });
+    root.addEventListener('drop', function (e) {
+      root.classList.remove('is-drop');
+      if (e.dataTransfer && e.dataTransfer.files.length) { e.preventDefault(); addFiles(e.dataTransfer.files); }
+    });
+    input.addEventListener('paste', function (e) {
+      var pasted = (e.clipboardData && e.clipboardData.files) || [];
+      if (pasted.length) { e.preventDefault(); addFiles(pasted); }
+    });
+  }
 
   // ---------------------------------------------------------------- open, close, type
 

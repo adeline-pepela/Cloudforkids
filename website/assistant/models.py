@@ -52,6 +52,11 @@ class AssistantSettings(models.Model):
     enabled = models.BooleanField(default=True, help_text="Turn the assistant on or off for everyone")
     for_admins = models.BooleanField("Admins can use it", default=True)
     for_tutors = models.BooleanField("Facilitators can use it", default=True)
+    for_learners = models.BooleanField(
+        "Learners can use the study helper", default=True,
+        help_text="Only learners whose plan includes the AI learning assistant (Admin > Plans). It reads and explains, never changes anything",
+    )
+    for_parents = models.BooleanField("Parents can use it", default=True, help_text="About their own linked children only")
     read_only = models.BooleanField(
         default=False, help_text="It can search, read and answer questions, but changes nothing"
     )
@@ -88,6 +93,8 @@ class Thread(models.Model):
     class Area(models.TextChoices):
         ADMIN = "admin", "Admin console"
         TEACH = "teach", "Facilitator portal"
+        LEARN = "learn", "Learner study helper"
+        FAMILY = "family", "Family portal"
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="assistant_threads")
     area = models.CharField(max_length=10, choices=Area.choices)
@@ -126,6 +133,7 @@ class Turn(models.Model):
     error = models.CharField(max_length=500, blank=True)
     streaming = models.BooleanField(default=False)
     screen = models.JSONField(null=True, blank=True, help_text="What the user's screen showed when they sent this")
+    files = models.JSONField(default=list, blank=True, help_text="Files attached to this message: [{name, type, kind, text|data, size}]")
     usage = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

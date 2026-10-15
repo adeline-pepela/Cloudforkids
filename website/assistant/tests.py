@@ -475,3 +475,144 @@ class SettingsPageTests(Base):
         staff = User.objects.create_user("helper", password=PASSWORD, role="admin", is_staff=True)
         self.login(staff)
         self.assertRedirects(self.client.get(reverse("tools:assistant_settings")), reverse("admin:index"))
+
+
+class NewPowersTests(Base):
+    def grant(self, learner, slug):
+        from billing import services
+        from billing.models import Plan
+
+        services.grant(learner, Plan.objects.get(slug=slug))
+
+    def approve(self, card):
+        return self.client.post(reverse("assistant:decide", args=[card["id"]]), json.dumps({"approve": True}), content_type="application/json").json()
+
+    # ---- learner study helper
+    def test_study_helper_comes_with_the_advanced_plan_only(self):
+        self.login(self.kid)
+        self.assertNotContains(self.client.get(reverse("dashboard:home")), 'id="c4ka"')
+        self.assertEqual(self.send("hi", area="learn").status_code, 403)
+        self.grant(self.kid, "core")
+        self.assertEqual(self.send("hi", area="learn").status_code, 403)
+        self.grant(self.kid, "advanced")
+        self.assertContains(self.client.get(reverse("dashboard:home")), 'data-area="learn"')
+
+    def test_study_helper_never_sees_quiz_answers(self):
+        from courses.models import Lesson
+
+        self.grant(self.kid, "advanced")
+        lesson = next(l for l in Lesson.objects.exclude(lesson_type="exam") if "data-correct" in l.content)
+        seen = self.scripted(Reply(tool_calls=[call("read_lesson", lesson_id=lesson.pk)]), Reply(text="Here is a hint."))
+        self.login(self.kid)
+        self.send("Explain this lesson", area="learn")
+        result = Turn.objects.get(role="tool").text
+        self.assertNotIn("data-correct", result)
+        self.assertNotIn("mcq-explain", result)
+        self.assertIn("never give the answer", seen[0]["system"])
+        self.assertEqual(set(seen[0]["tools"]), {"my_progress", "course_lessons", "read_lesson"})
+
+    def test_study_helper_filters_personal_details(self):
+        self.grant(self.kid, "advanced")
+        self.scripted()
+        self.login(self.kid)
+        res = self.send("my number is 0712 345 678 call me", area="learn")
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("Phone numbers", res.json()["error"])
+        self.assertFalse(Turn.objects.exists())
+
+    # ---- parents
+    def test_parents_see_only_their_own_children(self):
+        stranger = User.objects.create_user("stranger", password=PASSWORD, role="learner")
+        self.scripted(Reply(tool_calls=[call("child_progress", "c1", child_id=stranger.pk), call("child_progress", "c2", child_id=self.kid.pk)]),
+                      Reply(text="Amani is doing well."))
+        self.login(self.parent)
+        cards = self.send("How are they doing?", area="family").json()["turns"][1]["actions"]
+        self.assertEqual([c["status"] for c in cards], ["failed", "done"])
+        self.assertContains(self.client.get(reverse("family:home")), 'data-area="family"')
+
+    # ---- admin billing and outreach
+    def test_payouts_stay_out_of_reach(self):
+        self.settings(confirm_writes=False)
+        self.scripted(Reply(tool_calls=[call("create_record", type="billing.payout", values={"phone": "254712345678", "amount": 500, "reason": "x"})]),
+                      Reply(text="I can't."))
+        self.login(self.admin)
+        card = self.send("Pay the tutor").json()["turns"][1]["actions"][0]
+        self.assertEqual(card["status"], "failed")
+        self.assertIn("read-only for the assistant", card["error"])
+
+    def test_give_plan_and_undo(self):
+        from billing.access import current_plan
+
+        self.scripted(Reply(tool_calls=[call("give_plan", learner_id=self.kid.pk, plan="Core", note="Pilot")]), Reply(text="Done."))
+        self.login(self.admin)
+        card = self.send("Give Amani Core").json()["turns"][1]["actions"][0]
+        self.assertEqual(card["status"], "pending")
+        self.assertIn("Core plan free", card["summary"])
+        self.approve(card)
+        self.assertEqual(current_plan(User.objects.get(pk=self.kid.pk)).slug, "core")
+        self.client.post(reverse("assistant:undo", args=[card["id"]]), "{}", content_type="application/json")
+        self.assertIsNone(current_plan(User.objects.get(pk=self.kid.pk)))
+
+    def test_record_payment_starts_the_plan(self):
+        from billing.models import Payment
+
+        self.scripted(Reply(tool_calls=[call("record_payment", learner_id=self.kid.pk, plan="core", method="cash", amount=3500)]), Reply(text="Recorded."))
+        self.login(self.admin)
+        self.approve(self.send("Amani paid cash").json()["turns"][1]["actions"][0])
+        payment = Payment.objects.get(learner=self.kid)
+        self.assertEqual((payment.status, payment.amount, payment.recorded_by), ("paid", 3500, self.admin))
+
+    def test_email_announcement_reaches_the_class_parents(self):
+        self.scripted(Reply(tool_calls=[call("email_announcement", audience="class_parents", class_id=self.classroom.pk,
+                                             subject="Open day", message="Come and see.\n\nSaturday at 10.")]), Reply(text="Sent."))
+        self.login(self.admin)
+        card = self.send("Tell the parents").json()["turns"][1]["actions"][0]
+        self.assertIn("(1 person who accept", card["summary"])
+        mail.outbox.clear()
+        self.approve(card)
+        self.assertEqual([m.to for m in mail.outbox], [["mama@example.com"]])
+
+    # ---- files
+    def test_import_learners_from_an_attached_csv(self):
+        csv_text = "first_name,last_name,grade\nZuri,Akinyi,Grade 5\nJabari,Mwangi,Grade 6\n"
+        self.scripted(Reply(tool_calls=[call("import_learners", file="class.csv", class_id=self.classroom.pk, consent_confirmed=True)]),
+                      Reply(text="Two learners created."))
+        self.login(self.admin)
+        res = self.client.post(reverse("assistant:send"), json.dumps({
+            "area": "admin", "text": "Import these", "files": [{"name": "class.csv", "type": "text/csv", "kind": "text", "text": csv_text}],
+        }), content_type="application/json").json()
+        self.assertEqual(res["turns"][0]["files"], ["class.csv"])
+        card = res["turns"][1]["actions"][0]
+        self.assertIn("class.csv", card["summary"])
+        self.approve(card)
+        self.assertEqual(set(self.classroom.memberships.values_list("learner__first_name", flat=True)), {"Amani", "Zuri", "Jabari"})
+        self.client.post(reverse("assistant:undo", args=[card["id"]]), "{}", content_type="application/json")
+        self.assertFalse(User.objects.filter(first_name__in=["Zuri", "Jabari"]).exists())
+
+    def test_attachments_are_checked_and_reach_each_provider(self):
+        self.login(self.admin)
+        bad = self.client.post(reverse("assistant:send"), json.dumps({"area": "admin", "text": "x", "files": [{"name": "a.exe", "kind": "binary"}]}),
+                               content_type="application/json")
+        self.assertEqual(bad.status_code, 400)
+        msgs = [{"role": "user", "text": "What is this?", "files": [{"name": "p.png", "type": "image/png", "kind": "image", "data": "AAAA"},
+                                                                    {"name": "r.pdf", "type": "application/pdf", "kind": "pdf", "data": "BBBB"}]}]
+        claude = providers._anthropic_messages(msgs, "t")[0]["content"]
+        self.assertEqual([b["type"] for b in claude], ["image", "document", "text"])
+        openai = providers._responses_input(msgs, "t")[0]["content"]
+        self.assertEqual([p["type"] for p in openai], ["input_image", "input_file", "input_text"])
+        gemini = providers._gemini_contents(msgs, "t")[0]["parts"]
+        self.assertIn("inlineData", gemini[0])
+        deepseek = providers._openai_messages("deepseek", "s", msgs, "t")[1]["content"]
+        self.assertIn("can't read images or PDFs", deepseek)
+
+    # ---- live classes
+    def test_live_tools_need_a_live_class(self):
+        self.settings(confirm_writes=False)
+        self.scripted(Reply(tool_calls=[call("live_status", "c1", class_id=self.classroom.pk),
+                                        call("live_poll", "c2", class_id=self.classroom.pk, question="Ready?", options=["Yes", "No"])]),
+                      Reply(text="Not live yet."))
+        self.login(self.teacher)
+        cards = self.send("Poll the class", area="teach").json()["turns"][1]["actions"]
+        self.assertEqual(cards[0]["status"], "done")
+        self.assertEqual(cards[1]["status"], "failed")
+        self.assertIn("not live right now", cards[1]["error"])

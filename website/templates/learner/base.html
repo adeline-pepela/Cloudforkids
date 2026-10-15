@@ -109,6 +109,6 @@
   })();
 </script>
 {% block extra_js %}{% endblock %}
-{% block body_end %}{% endblock %}
+{% block body_end %}{% if assistant_area %}{% include "assistant/panel.html" %}{% endif %}{% endblock %}
 </body>
 </html>

@@ -12,7 +12,7 @@
   <header class="c4ka-head">
     <div class="c4ka-title">
       <span class="c4ka-ico" aria-hidden="true"><i class="bi bi-stars"></i></span>
-      <div><strong>Assistant</strong><small id="c4ka-mode">{% if assistant_area == "admin" %}Admin console{% else %}Facilitator portal{% endif %}</small></div>
+      <div><strong>{% if assistant_area == "learn" %}Nimbus{% else %}Assistant{% endif %}</strong><small id="c4ka-mode">{% if assistant_area == "admin" %}Admin console{% elif assistant_area == "teach" %}Facilitator portal{% elif assistant_area == "learn" %}Your study buddy{% else %}Family portal{% endif %}</small></div>
     </div>
     <div class="c4ka-head-actions">
       <button type="button" class="c4ka-btn-icon" id="c4ka-history-btn" title="Past chats" aria-label="Past chats" aria-expanded="false"><i class="bi bi-clock-history" aria-hidden="true"></i></button>
@@ -20,7 +20,7 @@
       <button type="button" class="c4ka-btn-icon" id="c4ka-close" title="Close (Esc)" aria-label="Close the assistant"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
     </div>
   </header>
-  <div class="c4ka-bar">
+  <div class="c4ka-bar"{% if assistant_area == "learn" or assistant_area == "family" %} hidden{% endif %}>
     <label class="c4ka-model"><i class="bi bi-cpu" aria-hidden="true"></i><span class="visually-hidden">Model</span>
       <select id="c4ka-model" aria-label="AI model"></select>
     </label>
@@ -28,11 +28,16 @@
   </div>
   <div class="c4ka-threads" id="c4ka-threads" hidden></div>
   <div class="c4ka-log" id="c4ka-log" aria-live="polite"></div>
+  <div class="c4ka-files" id="c4ka-files" hidden></div>
   <form class="c4ka-compose" id="c4ka-form">
+    {% if assistant_area == "admin" or assistant_area == "teach" %}
+    <input type="file" id="c4ka-file" multiple hidden accept=".txt,.md,.csv,.json,.tsv,text/*,image/png,image/jpeg,image/webp,image/gif,application/pdf">
+    <button type="button" class="c4ka-btn-icon c4ka-attach" id="c4ka-attach" title="Attach files (CSV, text, images, PDF)" aria-label="Attach files"><i class="bi bi-paperclip" aria-hidden="true"></i></button>
+    {% endif %}
     <textarea id="c4ka-input" rows="1" maxlength="8000" placeholder="Ask about this page, or ask me to do something" aria-label="Message to the assistant"></textarea>
     <button type="button" class="c4ka-send c4ka-stop" id="c4ka-stop" aria-label="Stop" title="Stop" hidden><i class="bi bi-stop-fill" aria-hidden="true"></i></button>
     <button type="submit" class="c4ka-send" id="c4ka-send" aria-label="Send" title="Send (Enter)"><i class="bi bi-arrow-up" aria-hidden="true"></i></button>
   </form>
-  <p class="c4ka-foot" id="c4ka-foot">Reads this page when you send.</p>
+  <p class="c4ka-foot" id="c4ka-foot"></p>
 </section>
 <script src="{% static 'js/assistant.js' %}" defer></script>

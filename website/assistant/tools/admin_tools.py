@@ -16,6 +16,8 @@ SECRET_FIELDS = {"password", "key_sealed", "token", "checkout_request_id", "merc
 LOOKUPS = {"exact", "iexact", "contains", "icontains", "in", "gt", "gte", "lt", "lte", "startswith", "istartswith",
            "isnull", "year", "month", "day", "date", "range"}
 LIST_LIMIT = 50
+# Money leaving the business is never the assistant's to move: payouts stay read-only here, whatever the permission.
+NO_WRITE_TYPES = {"billing.payout", "billing.mpesabalance"}
 
 
 def _staff(ctx):
@@ -43,6 +45,11 @@ def _resolve(ctx, name):
                 raise ToolError(f"You don't have permission to see {meta.verbose_name_plural} in the admin.")
             return model, model_admin
     raise ToolError(f"There is no record type called '{name}'. Use list_record_types to see them.")
+
+
+def _writable(model):
+    if model._meta.label_lower in NO_WRITE_TYPES:
+        raise ToolError("M-Pesa payouts and balances are read-only for the assistant. Send payouts yourself in Admin > Payouts.")
 
 
 def _object(ctx, model, model_admin, record_id):
@@ -290,6 +297,7 @@ def _undo_create(ctx, info):
       writes=True, describe=_describe_create, undo=_undo_create)
 def create_record(ctx, args):
     model, model_admin = _resolve(ctx, args.get("type"))
+    _writable(model)
     if not model_admin.has_add_permission(ctx.request):
         raise ToolError(f"You don't have permission to add {model._meta.verbose_name_plural}.")
     form_class = model_admin.get_form(ctx.request, None, change=False)
@@ -332,6 +340,7 @@ def _undo_restore(ctx, info):
       ["type", "id", "values"], writes=True, describe=_describe_update, undo=_undo_restore)
 def update_record(ctx, args):
     model, model_admin = _resolve(ctx, args.get("type"))
+    _writable(model)
     obj = _object(ctx, model, model_admin, args.get("id"))
     if not model_admin.has_change_permission(ctx.request, obj):
         raise ToolError(f"You don't have permission to change this {model._meta.verbose_name}.")
@@ -368,6 +377,7 @@ def _describe_delete(ctx, args):
       writes=True, always_confirm=True, describe=_describe_delete)
 def delete_record(ctx, args):
     model, model_admin = _resolve(ctx, args.get("type"))
+    _writable(model)
     obj = _object(ctx, model, model_admin, args.get("id"))
     if not model_admin.has_delete_permission(ctx.request, obj):
         raise ToolError(f"You don't have permission to delete this {model._meta.verbose_name}.")
@@ -401,6 +411,7 @@ def _describe_action(ctx, args):
       writes=True, always_confirm=True, describe=_describe_action)
 def run_bulk_action(ctx, args):
     model, model_admin = _resolve(ctx, args.get("type"))
+    _writable(model)
     actions = model_admin.get_actions(ctx.request)
     name = args.get("action")
     if name == "delete_selected":

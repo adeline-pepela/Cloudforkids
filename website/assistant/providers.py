@@ -73,6 +73,14 @@ def new_call_id():
     return "call_" + secrets.token_hex(8)
 
 
+def _file_text(f):
+    return f"[Attached file: {f.get('name', 'file')}]\n{f.get('text', '')}"
+
+
+def _cannot_read(f, what):
+    return f"[{f.get('name', 'A file')} is attached, but this model can't read {what}. Switch to a Claude, OpenAI or Gemini model for it.]"
+
+
 # ---------------------------------------------------------------- HTTP and server-sent events
 
 def _open(url, payload=None, headers=None, method=None):
@@ -253,7 +261,15 @@ def _anthropic_messages(messages, tag):
 
     for m in messages:
         if m["role"] == "user":
-            push("user", [{"type": "text", "text": m["text"] or "(empty)"}])
+            blocks = []
+            for f in m.get("files") or []:
+                if f.get("kind") == "image":
+                    blocks.append({"type": "image", "source": {"type": "base64", "media_type": f["type"], "data": f["data"]}})
+                elif f.get("kind") == "pdf":
+                    blocks.append({"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": f["data"]}, "title": f.get("name", "file.pdf")})
+                else:
+                    blocks.append({"type": "text", "text": _file_text(f)})
+            push("user", blocks + [{"type": "text", "text": m["text"] or "(empty)"}])
         elif m["role"] == "assistant":
             if m.get("raw") and m.get("model") == tag and isinstance(m["raw"], list):
                 blocks = m["raw"]
@@ -330,7 +346,8 @@ def _openai_messages(provider, system, messages, tag):
     current_turn = _last_user_index(messages)
     for i, m in enumerate(messages):
         if m["role"] == "user":
-            out.append({"role": "user", "content": m["text"] or "(empty)"})
+            notes = [_file_text(f) if f.get("kind") == "text" else _cannot_read(f, "images or PDFs") for f in m.get("files") or []]
+            out.append({"role": "user", "content": "\n\n".join(notes + [m["text"] or "(empty)"])})
         elif m["role"] == "assistant":
             item = {"role": "assistant", "content": m.get("text") or ""}
             calls = m.get("tool_calls") or []
@@ -402,7 +419,16 @@ def _responses_input(messages, tag):
     out = []
     for m in messages:
         if m["role"] == "user":
-            out.append({"role": "user", "content": m["text"] or "(empty)"})
+            parts = []
+            for f in m.get("files") or []:
+                if f.get("kind") == "image":
+                    parts.append({"type": "input_image", "image_url": f"data:{f['type']};base64,{f['data']}"})
+                elif f.get("kind") == "pdf":
+                    parts.append({"type": "input_file", "filename": f.get("name", "file.pdf"), "file_data": f"data:application/pdf;base64,{f['data']}"})
+                else:
+                    parts.append({"type": "input_text", "text": _file_text(f)})
+            parts.append({"type": "input_text", "text": m["text"] or "(empty)"})
+            out.append({"role": "user", "content": parts})
         elif m["role"] == "assistant":
             raw = m.get("raw") if m.get("model") == tag and isinstance(m.get("raw"), list) else []
             out.extend(item for item in raw if item.get("type") == "reasoning")  # encrypted reasoning, replayed as given
@@ -497,7 +523,13 @@ def _gemini_contents(messages, tag):
 
     for m in messages:
         if m["role"] == "user":
-            push("user", [{"text": m["text"] or "(empty)"}])
+            parts = []
+            for f in m.get("files") or []:
+                if f.get("kind") in ("image", "pdf"):
+                    parts.append({"inlineData": {"mimeType": f["type"] if f["kind"] == "image" else "application/pdf", "data": f["data"]}})
+                else:
+                    parts.append({"text": _file_text(f)})
+            push("user", parts + [{"text": m["text"] or "(empty)"}])
         elif m["role"] == "assistant":
             if m.get("raw") and m.get("model") == tag and isinstance(m["raw"], list):
                 parts = m["raw"]

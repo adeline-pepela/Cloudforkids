@@ -23,7 +23,7 @@ TEST_VALID_FOR = 30 * 60  # a passed test lets you save within 30 minutes
 class SettingsForm(forms.ModelForm):
     class Meta:
         model = AssistantSettings
-        fields = ["enabled", "for_admins", "for_tutors", "read_only", "confirm_writes", "max_rounds"]
+        fields = ["enabled", "for_admins", "for_tutors", "for_learners", "for_parents", "read_only", "confirm_writes", "max_rounds"]
 
 
 def _superuser(view):

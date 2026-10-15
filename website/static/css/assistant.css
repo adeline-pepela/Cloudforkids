@@ -152,6 +152,17 @@ html[data-theme="dark"] .c4ka-text a, html[data-bs-theme="dark"] .c4ka-text a { 
 .c4ka-send:disabled { opacity: .5; cursor: default; }
 .c4ka-send[hidden] { display: none; }
 .c4ka-stop { background: var(--a-text); color: var(--a-bg); }
+.c4ka-bar[hidden] { display: none; }
+.c4ka-attach { width: 40px; height: 44px; flex-shrink: 0; font-size: 1.15rem; }
+.c4ka-files { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px 0; border-top: 1px solid var(--a-line); }
+.c4ka-files[hidden] { display: none; }
+.c4ka-files + .c4ka-compose { border-top: 0; }
+.c4ka-file { display: inline-flex; align-items: center; gap: .35rem; max-width: 100%; font-size: .78rem; background: var(--a-sky-tint);
+  border: 1px solid var(--a-line); border-radius: 999px; padding: 3px 4px 3px 10px; }
+.c4ka-file span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.c4ka-file button { border: 0; background: none; color: var(--a-quiet); cursor: pointer; width: 22px; height: 22px; border-radius: 50%; padding: 0; }
+.c4ka-file button:hover { background: var(--a-line); color: var(--a-text); }
+.c4ka-msg.user .c4ka-sent-files { display: block; font-size: .76rem; opacity: .85; margin-top: 4px; }
 .c4ka-foot { margin: 0; padding: 2px 16px 10px; font-size: .72rem; color: var(--a-quiet); }
 
 /* ---------- tablets and up: a docked column that the page makes room for, so nothing is covered ---------- */

@@ -49,58 +49,63 @@ def _username(first, last, taken):
     return name
 
 
+def create_learners(text, classroom=None, tier=None):
+    """Learner accounts from CSV text. Returns (created, errors): created rows carry the new username and password."""
+    created, errors, taken = [], [], set()
+    rows = list(csv.DictReader(io.StringIO(text)))
+    if len(rows) > MAX_ROWS:
+        return [], [(0, f"Too many rows ({len(rows)}). Please import {MAX_ROWS} or fewer at a time.")]
+    for number, row in enumerate(rows, start=2):
+        row = {(k or "").strip().lower(): (v or "").strip() for k, v in row.items()}
+        first, last = row.get("first_name", ""), row.get("last_name", "")
+        if not first or not last:
+            errors.append((number, "first_name and last_name are required"))
+            continue
+        born = None
+        if row.get("date_of_birth"):
+            try:
+                born = datetime.strptime(row["date_of_birth"], "%Y-%m-%d").date()
+            except ValueError:
+                errors.append((number, f"date_of_birth '{row['date_of_birth']}' must look like 2014-03-12"))
+                continue
+        email = row.get("email", "")
+        if email and "@" not in email:
+            errors.append((number, f"email '{email}' is not valid"))
+            continue
+        if row.get("username") and User.objects.filter(username__iexact=row["username"]).exists():
+            errors.append((number, f"username '{row['username']}' is already taken"))
+            continue
+        username = row.get("username") or _username(first, last, taken)
+        password = "".join(secrets.choice(PASSWORD_ALPHABET) for _ in range(8))
+        user = User.objects.create_user(username, email=email, password=password, first_name=first, last_name=last, role=User.Role.LEARNER)
+        profile = user.learner_profile  # created automatically for learners
+        profile.date_of_birth = born
+        profile.grade, profile.school_name, profile.county = row.get("grade", ""), row.get("school", ""), row.get("county", "")
+        profile.parent_guardian_name = row.get("parent_name", "")
+        profile.parent_guardian_email = row.get("parent_email", "")
+        profile.parent_guardian_phone = row.get("parent_phone", "")
+        if tier:
+            profile.tier = tier
+        profile.save()
+        if row.get("parent_email"):
+            ParentalConsent.objects.create(
+                user=user, parent_name=row.get("parent_name", ""), parent_email=row["parent_email"],
+                status=ParentalConsent.Status.APPROVED, method=ParentalConsent.Method.SCHOOL, decided_at=timezone.now(),
+            )
+        if classroom:
+            ClassMembership.objects.get_or_create(classroom=classroom, learner=user)
+        created.append({"id": user.pk, "first": first, "last": last, "username": username, "password": password, "grade": row.get("grade", "")})
+    return created, errors
+
+
 def import_learners(request):
     context = {**admin.site.each_context(request), "title": "Import learners", "form": ImportForm(), "sample": SAMPLE_CSV}
     if request.method == "POST":
         form = ImportForm(request.POST, request.FILES)
         context["form"] = form
         if form.is_valid():
-            created, errors, taken = [], [], set()
             text = form.cleaned_data["file"].read().decode("utf-8-sig", "replace")
-            rows = list(csv.DictReader(io.StringIO(text)))
-            if len(rows) > MAX_ROWS:
-                errors.append((0, f"Too many rows ({len(rows)}). Please import {MAX_ROWS} or fewer at a time."))
-                rows = []
-            for number, row in enumerate(rows, start=2):
-                row = {(k or "").strip().lower(): (v or "").strip() for k, v in row.items()}
-                first, last = row.get("first_name", ""), row.get("last_name", "")
-                if not first or not last:
-                    errors.append((number, "first_name and last_name are required"))
-                    continue
-                born = None
-                if row.get("date_of_birth"):
-                    try:
-                        born = datetime.strptime(row["date_of_birth"], "%Y-%m-%d").date()
-                    except ValueError:
-                        errors.append((number, f"date_of_birth '{row['date_of_birth']}' must look like 2014-03-12"))
-                        continue
-                email = row.get("email", "")
-                if email and "@" not in email:
-                    errors.append((number, f"email '{email}' is not valid"))
-                    continue
-                if row.get("username") and User.objects.filter(username__iexact=row["username"]).exists():
-                    errors.append((number, f"username '{row['username']}' is already taken"))
-                    continue
-                username = row.get("username") or _username(first, last, taken)
-                password = "".join(secrets.choice(PASSWORD_ALPHABET) for _ in range(8))
-                user = User.objects.create_user(username, email=email, password=password, first_name=first, last_name=last, role=User.Role.LEARNER)
-                profile = user.learner_profile  # created automatically for learners
-                profile.date_of_birth = born
-                profile.grade, profile.school_name, profile.county = row.get("grade", ""), row.get("school", ""), row.get("county", "")
-                profile.parent_guardian_name = row.get("parent_name", "")
-                profile.parent_guardian_email = row.get("parent_email", "")
-                profile.parent_guardian_phone = row.get("parent_phone", "")
-                if form.cleaned_data["tier"]:
-                    profile.tier = form.cleaned_data["tier"]
-                profile.save()
-                if row.get("parent_email"):
-                    ParentalConsent.objects.create(
-                        user=user, parent_name=row.get("parent_name", ""), parent_email=row["parent_email"],
-                        status=ParentalConsent.Status.APPROVED, method=ParentalConsent.Method.SCHOOL, decided_at=timezone.now(),
-                    )
-                if form.cleaned_data["classroom"]:
-                    ClassMembership.objects.get_or_create(classroom=form.cleaned_data["classroom"], learner=user)
-                created.append({"first": first, "last": last, "username": username, "password": password, "grade": row.get("grade", "")})
+            created, errors = create_learners(text, form.cleaned_data["classroom"], form.cleaned_data["tier"])
             out = io.StringIO()
             writer = csv.writer(out)
             writer.writerow(["First name", "Last name", "Username", "Password"])

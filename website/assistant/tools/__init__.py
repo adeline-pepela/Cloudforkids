@@ -11,7 +11,7 @@ from django.forms import MultiWidget
 from django.http import HttpRequest
 from django.utils.dateparse import parse_date, parse_datetime, parse_time
 
-AREAS = ("admin", "teach")
+AREAS = ("admin", "teach", "learn", "family")
 
 
 class ToolError(Exception):
@@ -70,15 +70,17 @@ def tool(area, name, description, params=None, required=(), writes=False, always
     return wrap
 
 
-def tools_for(area):
-    from . import admin_tools, teach_tools  # noqa: F401  (registers them)
+def _load():
+    from . import admin_extra_tools, admin_tools, family_tools, learn_tools, live_tools, teach_tools  # noqa: F401  (registering them)
 
+
+def tools_for(area):
+    _load()
     return [t for t in REGISTRY.values() if t.area == area]
 
 
 def get(name):
-    from . import admin_tools, teach_tools  # noqa: F401
-
+    _load()
     return REGISTRY.get(name)
 
 
@@ -103,6 +105,7 @@ class Ctx:
     area: str
     request: HttpRequest = None
     meta: dict = field(default_factory=dict)
+    thread: object = None
 
     def __post_init__(self):
         if self.request is None:
@@ -110,6 +113,22 @@ class Ctx:
 
     def notes(self):
         return [text for _level, text in self.request._messages]
+
+    def attachment(self, name=""):
+        """A file attached earlier in this chat: by name, or the newest one when no name is given."""
+        if self.thread is None:
+            raise ToolError("No files are attached in this chat.")
+        found = []
+        for turn in self.thread.turns.filter(role="user").order_by("-created_at", "-id"):
+            found.extend(turn.files or [])
+        if not found:
+            raise ToolError("No files are attached in this chat. Attach one with the paperclip first.")
+        if name:
+            match = [f for f in found if f.get("name", "").lower() == str(name).lower()]
+            if not match:
+                raise ToolError(f"No attached file called {name}. Attached: {', '.join(f.get('name', '?') for f in found[:8])}.")
+            return match[0]
+        return found[0]
 
 
 def make_request(user, meta):

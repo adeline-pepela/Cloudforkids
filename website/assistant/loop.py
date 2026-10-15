@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 RESULT_LIMIT = 12000
 HISTORY_USER_TURNS = 12  # older turns are left out of the request (the panel still shows them)
+FILES_FOR_TURNS = 3  # images and PDFs travel with the last few messages only; older ones become a short note
 DECLINED = "The person declined this, so it was not done. Do not try it again unless they ask."
 SUPERSEDED = "Not done: the person sent a new message instead of approving this. Do not try it again unless they ask."
 
@@ -71,7 +72,7 @@ def _run(thread_id, meta):
         _say(thread, str(err), failed=True)
         return
 
-    ctx = tools.Ctx(user=user, area=thread.area, meta=meta)
+    ctx = tools.Ctx(user=user, area=thread.area, meta=meta, thread=thread)
     offered = [t for t in tools.tools_for(thread.area) if not (settings.read_only and t.writes)]
     specs = [t.spec() for t in offered]
     last_user = thread.turns.filter(role=Turn.Role.USER).order_by("-created_at", "-id").first()
@@ -112,10 +113,17 @@ def build_history(thread):
     if len(user_idx) > HISTORY_USER_TURNS:
         turns = turns[user_idx[-HISTORY_USER_TURNS]:]
     results = {t.call_id: t for t in turns if t.role == Turn.Role.TOOL}
+    recent = {t.pk for t in [t for t in turns if t.role == Turn.Role.USER][-FILES_FOR_TURNS:]}
     out = []
     for t in turns:
         if t.role == Turn.Role.USER:
-            out.append({"role": "user", "text": t.text})
+            files = []
+            for f in t.files or []:
+                if f.get("kind") == "text" or t.pk in recent:
+                    files.append(f)
+                else:
+                    files.append({"name": f.get("name"), "kind": "text", "text": "(attached earlier; ask the person to attach it again to look at it)"})
+            out.append({"role": "user", "text": t.text, "files": files})
         elif t.role == Turn.Role.ASSISTANT:
             if t.streaming or (t.failed and not t.tool_calls):
                 continue
@@ -196,7 +204,7 @@ def decide(action, approve, meta):
         if settings.read_only:
             finish(action, "Read-only mode is on, so nothing was changed.", failed=True)
         else:
-            execute(action, tool, tools.Ctx(user=action.user, area=thread.area, meta=meta))
+            execute(action, tool, tools.Ctx(user=action.user, area=thread.area, meta=meta, thread=thread))
     else:
         finish(action, DECLINED, status=Action.Status.DECLINED)
     if not action.turn.actions.filter(status=Action.Status.PENDING).exists():
@@ -215,7 +223,7 @@ def undo(action, meta):
         raise tools.ToolError("This can't be undone.")
     if AssistantSettings.load().read_only:
         raise tools.ToolError("Read-only mode is on, so nothing can be changed, undo included.")
-    ctx = tools.Ctx(user=action.user, area=action.thread.area, meta=meta)
+    ctx = tools.Ctx(user=action.user, area=action.thread.area, meta=meta, thread=action.thread)
     with transaction.atomic():
         message = tool.undo(ctx, action.undo)
     action.status = Action.Status.UNDONE
