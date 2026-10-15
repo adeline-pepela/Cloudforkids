@@ -1,0 +1,170 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Live: {{ room.classroom.name }} | Cloud for Kids</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><path fill=%22%230ea5e9%22 d=%22M25 75a18 18 0 0 1-1-36 26 26 0 0 1 50-6 21 21 0 0 1 2 42z%22/></svg>">
+  <link href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}" rel="stylesheet">
+  <link href="{% static 'vendor/fonts/fonts.css' %}" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/live.css' %}">
+</head>
+<body class="lv-body lv-{{ role }}">
+{{ config|json_script:"lv-config" }}
+{% csrf_token %}
+
+<!-- Before joining: one tap so the browser lets the class audio play -->
+<div class="lv-prejoin" id="lv-prejoin">
+  <div class="lv-prejoin-card">
+    <div class="lv-prejoin-ico" aria-hidden="true"><i class="bi bi-broadcast"></i></div>
+    <h1>{{ room.classroom.name }}</h1>
+    {% if role == "host" %}
+    <p>You are the teacher. Your camera and microphone switch on when you join. Learners join muted and raise a hand to speak.</p>
+    {% else %}
+    <p>Your microphone and camera stay off when you join. Raise your hand when you want to speak and your teacher will let you in.</p>
+    {% endif %}
+    <button type="button" class="lv-btn lv-btn-primary lv-btn-big" id="lv-join"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> {% if role == "host" %}Join as teacher{% else %}Join the class{% endif %}</button>
+    <p class="lv-error" id="lv-join-error" role="alert" hidden></p>
+    <a class="lv-link" href="{{ config.exitUrl }}">Not now</a>
+  </div>
+</div>
+
+<!-- After the class -->
+<div class="lv-prejoin" id="lv-ended" hidden>
+  <div class="lv-prejoin-card">
+    <div class="lv-prejoin-ico" aria-hidden="true"><i class="bi bi-emoji-smile-fill"></i></div>
+    <h1 id="lv-ended-title">The class has ended</h1>
+    <p id="lv-ended-text">Thanks for joining! See you at the next class.</p>
+    <a class="lv-btn lv-btn-primary lv-btn-big" href="{{ config.exitUrl }}">Done</a>
+  </div>
+</div>
+
+<div class="lv-app" id="lv-app" hidden>
+  <header class="lv-top">
+    <div class="lv-title">
+      <span class="lv-live-dot" aria-hidden="true"></span>
+      <strong>{{ room.classroom.name }}</strong>
+      <span class="lv-timer" id="lv-timer" aria-label="Time since the class started">0:00</span>
+    </div>
+    <div class="lv-top-actions">
+      <span class="lv-chip" id="lv-count" title="People in the class"><i class="bi bi-people-fill" aria-hidden="true"></i> <b>1</b></span>
+      <span class="lv-chip lv-chip-warn" id="lv-locked-chip" hidden><i class="bi bi-lock-fill" aria-hidden="true"></i> Locked</span>
+      <span class="lv-chip" id="lv-net" hidden><i class="bi bi-wifi-1" aria-hidden="true"></i> Weak connection</span>
+      {% if role == "host" %}
+      <button type="button" class="lv-btn lv-btn-ghost" id="lv-share"><i class="bi bi-link-45deg" aria-hidden="true"></i> <span class="lv-hide-sm">Copy class link</span></button>
+      {% endif %}
+    </div>
+  </header>
+
+  <main class="lv-main">
+    <section class="lv-stage" aria-label="Class video">
+      <div class="lv-spot" id="lv-spot"></div>
+      <div class="lv-grid" id="lv-grid"></div>
+      <div class="lv-banner" id="lv-banner" role="status" hidden></div>
+      <div class="lv-floats" id="lv-floats" aria-hidden="true"></div>
+    </section>
+
+    <aside class="lv-panel" id="lv-panel" aria-label="People and chat">
+      <div class="lv-tabs" role="tablist">
+        <button type="button" role="tab" class="lv-tab active" data-tab="people" aria-selected="true"><i class="bi bi-people-fill" aria-hidden="true"></i> People <span class="lv-badge" id="lv-hand-badge" hidden>0</span></button>
+        <button type="button" role="tab" class="lv-tab" data-tab="chat" aria-selected="false"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i> Chat <span class="lv-badge" id="lv-chat-badge" hidden>0</span></button>
+        <button type="button" class="lv-panel-close" id="lv-panel-close" aria-label="Close panel"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+      </div>
+
+      <div class="lv-pane" data-pane="people">
+        {% if role == "host" %}
+        <div class="lv-host-tools">
+          <h2>Class controls</h2>
+          <label class="lv-switch"><input type="checkbox" data-setting="open_mic"><span></span> Open mic <small>Everyone may unmute without raising a hand</small></label>
+          <label class="lv-switch"><input type="checkbox" data-setting="video"><span></span> Learner cameras <small>Learners may turn on their camera</small></label>
+          <label class="lv-switch"><input type="checkbox" data-setting="chat"><span></span> Chat and reactions</label>
+          <label class="lv-switch"><input type="checkbox" data-setting="locked"><span></span> Lock the class <small>Nobody new can join</small></label>
+          <div class="lv-tool-row">
+            <button type="button" class="lv-btn lv-btn-soft" data-action="mute_all"><i class="bi bi-mic-mute-fill" aria-hidden="true"></i> Mute everyone</button>
+            <button type="button" class="lv-btn lv-btn-soft" data-action="lower_all_hands"><i class="bi bi-hand-index" aria-hidden="true"></i> Lower all hands</button>
+          </div>
+        </div>
+        {% endif %}
+        <h2 class="lv-hands-title" id="lv-hands-title" hidden><i class="bi bi-hand-index-thumb-fill" aria-hidden="true"></i> Hands up</h2>
+        <ol class="lv-people lv-hands" id="lv-hands"></ol>
+        <h2>In the class</h2>
+        <ul class="lv-people" id="lv-people"></ul>
+      </div>
+
+      <div class="lv-pane" data-pane="chat" hidden>
+        <div class="lv-chat" id="lv-chat" aria-live="polite"></div>
+        <p class="lv-chat-off" id="lv-chat-off" hidden><i class="bi bi-chat-square-text" aria-hidden="true"></i> The teacher has turned chat off.</p>
+        <form class="lv-chat-form" id="lv-chat-form" autocomplete="off">
+          <input type="text" id="lv-chat-input" maxlength="300" placeholder="Type a message for the class" aria-label="Chat message">
+          <button type="submit" class="lv-btn lv-btn-primary" aria-label="Send"><i class="bi bi-send-fill" aria-hidden="true"></i></button>
+        </form>
+        <p class="lv-chat-note">Be kind. Your teacher can see every message.</p>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="lv-bar">
+    <div class="lv-bar-group">
+      <button type="button" class="lv-ctl" id="lv-mic" aria-pressed="false"><i class="bi bi-mic-mute-fill" aria-hidden="true"></i><span>Mic</span></button>
+      <button type="button" class="lv-ctl" id="lv-cam" aria-pressed="false"><i class="bi bi-camera-video-off-fill" aria-hidden="true"></i><span>Camera</span></button>
+      {% if role == "host" %}
+      <button type="button" class="lv-ctl" id="lv-screen" aria-pressed="false"><i class="bi bi-display" aria-hidden="true"></i><span>Share screen</span></button>
+      {% else %}
+      <button type="button" class="lv-ctl lv-ctl-hand" id="lv-hand" aria-pressed="false"><i class="bi bi-hand-index-thumb" aria-hidden="true"></i><span>Raise hand</span></button>
+      {% endif %}
+    </div>
+    <div class="lv-bar-group lv-reacts" id="lv-reacts" aria-label="Reactions">
+      <button type="button" class="lv-react" data-emoji="👍" aria-label="Thumbs up">👍</button>
+      <button type="button" class="lv-react" data-emoji="👏" aria-label="Clap">👏</button>
+      <button type="button" class="lv-react" data-emoji="😂" aria-label="Laugh">😂</button>
+      <button type="button" class="lv-react" data-emoji="😕" aria-label="I am confused">😕</button>
+      <button type="button" class="lv-react" data-emoji="🎉" aria-label="Celebrate">🎉</button>
+    </div>
+    <div class="lv-bar-group">
+      <button type="button" class="lv-ctl lv-show-sm" id="lv-open-people"><i class="bi bi-people-fill" aria-hidden="true"></i><span>People</span></button>
+      <button type="button" class="lv-ctl lv-show-sm" id="lv-open-chat"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i><span>Chat</span></button>
+      <button type="button" class="lv-ctl lv-ctl-leave" id="lv-leave"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Leave</span></button>
+      {% if role == "host" %}
+      <button type="button" class="lv-ctl lv-ctl-end" id="lv-end"><i class="bi bi-stop-circle-fill" aria-hidden="true"></i><span>End class</span></button>
+      {% endif %}
+    </div>
+  </footer>
+</div>
+
+<!-- Wording the script shows. Kept in the page so the Kiswahili switch translates it like any other text. -->
+<div id="lv-strings" hidden>
+  <span data-k="teacher">Teacher</span>
+  <span data-k="you">You</span>
+  <span data-k="mic">Mic</span>
+  <span data-k="camera">Camera</span>
+  <span data-k="raise">Raise hand</span>
+  <span data-k="lower">Lower hand</span>
+  <span data-k="share">Share screen</span>
+  <span data-k="stopShare">Stop sharing</span>
+  <span data-k="allow">Let speak</span>
+  <span data-k="stopSpeak">Mute</span>
+  <span data-k="lowerHand">Lower hand</span>
+  <span data-k="remove">Remove</span>
+  <span data-k="canSpeak">You can speak now. Tap Mic to unmute.</span>
+  <span data-k="muted">The teacher muted you.</span>
+  <span data-k="handUp">Your hand is up. The teacher will call on you.</span>
+  <span data-k="copied">Class link copied. Paste it in your class group.</span>
+  <span data-k="confirmRemove">Remove this learner from today's class? They cannot rejoin until the next class.</span>
+  <span data-k="confirmEnd">End the class for everyone?</span>
+  <span data-k="confirmLeave">Leave the class? It keeps running and you can rejoin from the class page.</span>
+  <span data-k="removedTitle">You were removed from the class</span>
+  <span data-k="removedText">Your teacher removed you from today's live class.</span>
+  <span data-k="leftTitle">You left the class</span>
+  <span data-k="leftText">You can rejoin from My Classes while the class is still running.</span>
+  <span data-k="noMedia">We could not use your microphone or camera. Check that the browser is allowed to use them.</span>
+  <span data-k="joinFailed">We could not join the class. Check your internet and try again.</span>
+  <span data-k="reconnecting">Reconnecting...</span>
+  <span data-k="screenSharing">is sharing their screen</span>
+  <span data-k="nobody">Nobody else is here yet.</span>
+  <span data-k="actionFailed">That did not work. Please try again.</span>
+</div>
+
+<script src="{% static 'vendor/livekit/livekit-client.umd.js' %}"></script>
+<script src="{% static 'js/live.js' %}"></script>
+</body>
+</html>

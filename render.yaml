@@ -34,6 +34,12 @@ envVarGroups:
         sync: false                # leave empty for a Paybill
       - key: MPESA_CALLBACK_TOKEN
         generateValue: true
+      - key: LIVEKIT_URL
+        sync: false                # wss://your-project.livekit.cloud (live online classes)
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
       - key: MPESA_ACCOUNT_REFERENCE
         value: CloudForKids            # the account name on the PIN prompt (12 characters at most)
       - key: MPESA_INITIATOR_NAME

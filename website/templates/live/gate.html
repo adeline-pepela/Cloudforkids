@@ -1,0 +1,70 @@
+{% extends base_tpl %}
+{% block title %}Live class{% endblock %}
+{% block content %}
+<style>
+  .lv-gate-ico { width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center; font-size: 2.4rem; margin: 0 auto 1rem; }
+  .lv-gate-ico.sky { background: #E0F2FE; color: #0369A1; } .lv-gate-ico.grass { background: #DCFCE7; color: #15803D; }
+  .lv-gate-ico.coral { background: #FFE4E6; color: #BE123C; } .lv-gate-ico.sun { background: #FFF1CC; color: #B87900; }
+</style>
+<div class="l-card text-center py-5 mx-auto" style="height:auto;max-width:640px;">
+  {% if reason == "waiting" %}
+  <div class="lv-gate-ico sky" aria-hidden="true"><i class="bi bi-broadcast"></i></div>
+  <h1 class="l-title">{{ room.classroom.name }}</h1>
+  <p class="text-secondary mx-auto" style="max-width:460px;">Your teacher has not started the live class yet. Keep this page open: it opens the class by itself as soon as your teacher starts.</p>
+  <p class="small text-secondary" id="lv-wait-note"><span class="spinner-grow spinner-grow-sm text-primary" aria-hidden="true"></span> Waiting for your teacher...</p>
+  <a href="{% url 'dashboard:classes' %}" class="btn btn-outline-cloud">Back to My Classes</a>
+
+  {% elif reason == "host_start" %}
+  <div class="lv-gate-ico grass" aria-hidden="true"><i class="bi bi-camera-video-fill"></i></div>
+  <h1 class="l-title">{{ room.classroom.name }}</h1>
+  <p class="text-secondary mx-auto" style="max-width:460px;">The live class is not running. Start it and learners who open the class link come straight in, with their microphones off until you let them speak.</p>
+  <form method="post" action="{% url 'live:start' room.classroom.pk %}">{% csrf_token %}
+    <button type="submit" class="btn btn-cloud btn-big"><i class="bi bi-broadcast" aria-hidden="true"></i> Start live class</button>
+  </form>
+
+  {% elif reason == "not_member" %}
+  <div class="lv-gate-ico coral" aria-hidden="true"><i class="bi bi-shield-lock-fill"></i></div>
+  <h1 class="l-title">This live class is only for its learners</h1>
+  <p class="text-secondary mx-auto" style="max-width:460px;">To keep classes safe, only learners who have joined {{ room.classroom.name }} can come in. Ask your teacher for the class code, join the class on <strong>My Classes</strong>, then open this link again.</p>
+  {% if user.role == "learner" %}<a href="{% url 'dashboard:classes' %}" class="btn btn-cloud btn-big">Go to My Classes</a>{% endif %}
+
+  {% elif reason == "removed" %}
+  <div class="lv-gate-ico coral" aria-hidden="true"><i class="bi bi-door-closed-fill"></i></div>
+  <h1 class="l-title">You were removed from this class</h1>
+  <p class="text-secondary mx-auto" style="max-width:460px;">Your teacher removed you from today's live class. You can join the next one. If you think this was a mistake, send your teacher a message.</p>
+  <a href="{% url 'dashboard:classes' %}" class="btn btn-outline-cloud">Back to My Classes</a>
+
+  {% elif reason == "locked" %}
+  <div class="lv-gate-ico sun" aria-hidden="true"><i class="bi bi-lock-fill"></i></div>
+  <h1 class="l-title">The class is locked</h1>
+  <p class="text-secondary mx-auto" style="max-width:460px;">Your teacher has closed the door for this live class, so nobody new can join right now. This page tries again by itself if the teacher opens it.</p>
+  <a href="{% url 'dashboard:classes' %}" class="btn btn-outline-cloud">Back to My Classes</a>
+
+  {% elif reason == "not_set_up" %}
+  <div class="lv-gate-ico sun" aria-hidden="true"><i class="bi bi-tools"></i></div>
+  <h1 class="l-title">Live classes are not switched on yet</h1>
+  {% if user.role == "facilitator" %}
+  <p class="text-secondary mx-auto" style="max-width:460px;">The site administrator needs to add the LiveKit keys (LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET) before live classes can start.</p>
+  {% else %}
+  <p class="text-secondary mx-auto" style="max-width:460px;">Live classes are coming soon. Your teacher will let you know.</p>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if reason == "waiting" or reason == "locked" %}
+<script>
+(function () {
+  var url = "{% url 'live:status' room.code %}";
+  var wasLocked = "{{ reason }}" === "locked";
+  function check() {
+    fetch(url, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.live && !(wasLocked && d.settings && d.settings.locked)) location.reload();
+    }).catch(function () {});
+  }
+  setInterval(check, 10000);
+})();
+</script>
+{% endif %}
+{% endblock %}

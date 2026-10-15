@@ -95,6 +95,7 @@ INSTALLED_APPS = [
     'core',
     'dashboard',
     'billing',
+    'live',
 ]
 
 MIDDLEWARE = [
@@ -219,6 +220,13 @@ MPESA_INITIATOR_NAME = os.environ.get('MPESA_INITIATOR_NAME', '').strip()
 MPESA_SECURITY_CREDENTIAL = os.environ.get('MPESA_SECURITY_CREDENTIAL', '').strip()
 SIBLING_DISCOUNT_PERCENT = int(os.environ.get('SIBLING_DISCOUNT_PERCENT', '10'))  # off a parent's 2nd, 3rd... child
 BILLING_KRA_PIN = os.environ.get('BILLING_KRA_PIN', '').strip()  # printed on receipts when set
+
+# Live online classes (https://livekit.io). LIVEKIT_URL is the project's wss:// address from the LiveKit Cloud dashboard.
+LIVEKIT_URL = os.environ.get('LIVEKIT_URL', '').strip()
+LIVEKIT_API_KEY = os.environ.get('LIVEKIT_API_KEY', '').strip()
+LIVEKIT_API_SECRET = os.environ.get('LIVEKIT_API_SECRET', '').strip()
+LIVE_MAX_MINUTES = int(os.environ.get('LIVE_MAX_MINUTES', '180'))  # a class nobody ended counts as over after this long
+LIVE_MAX_PARTICIPANTS = int(os.environ.get('LIVE_MAX_PARTICIPANTS', '60'))
 
 SITE_NAME = 'Cloud for Kids'
 SITE_TAGLINE = "Building Kenya's Cloud-Ready Generation"

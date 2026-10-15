@@ -16,6 +16,7 @@ from core import notify
 from core.forms import BootstrapFormMixin
 from courses.models import Tier
 from courses.quiz import quiz_question_count
+from live.views import live_summary
 
 from .family import child_report
 from .teach import class_report, learner_in_class, teacher_overview, teacher_tips
@@ -142,6 +143,7 @@ def class_detail(request, class_id, session_form=None):
             session_form=session_form or SessionForm(),
             upcoming=classroom.sessions.filter(starts_at__gte=timezone.now() - timedelta(hours=2))[:12],
             past_count=classroom.sessions.filter(starts_at__lt=timezone.now() - timedelta(hours=2)).count(),
+            live=live_summary(classroom),
         ),
     )
 

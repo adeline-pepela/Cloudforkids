@@ -36,6 +36,41 @@
   </div>
 </div>
 
+<!-- Live online class -->
+<div class="l-card mb-4 no-print" style="height:auto;">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div>
+      <h3 class="mb-1"><i class="bi bi-broadcast text-danger" aria-hidden="true"></i> Live online class
+        {% if live.current %}<span class="badge rounded-pill text-bg-danger ms-1">LIVE now</span>{% endif %}</h3>
+      <p class="text-secondary small mb-2">Teach {{ c.name }} live with video, screen sharing and raised hands. Learners join muted and only speak when you let them. Share this link once: it works for every class.</p>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <code class="pf-code-val" style="font-size:1rem;letter-spacing:0;" id="lv-link">{{ request.scheme }}://{{ request.get_host }}{% url 'live_short' live.room.code %}</code>
+        <button type="button" class="btn btn-outline-cloud btn-sm" id="lv-copy" aria-label="Copy live class link"><i class="bi bi-clipboard-fill" aria-hidden="true"></i> Copy link</button>
+      </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      {% if live.current %}
+      <a href="{% url 'live:room' live.room.code %}" class="btn btn-cloud btn-big"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Rejoin live class</a>
+      {% else %}
+      <form method="post" action="{% url 'live:start' c.pk %}">{% csrf_token %}
+        <button type="submit" class="btn btn-cloud btn-big"><i class="bi bi-broadcast" aria-hidden="true"></i> Start live class</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% if live.recent %}
+  <h6 class="fw-bold mt-3"><i class="bi bi-clock-history" aria-hidden="true"></i> Recent live classes</h6>
+  {% for s in live.recent %}
+  <div class="fm-row ok">
+    <div>
+      <strong>{{ s.started_at|date:"D j M Y" }}, {{ s.started_at|time:"H:i" }} to {{ s.ended_at|time:"H:i" }}</strong>
+      <small>{% with n=s.attendance.all|length %}{{ n }} attended (including you){% endwith %}{% if s.participant_minutes %} &middot; {{ s.participant_minutes }} participant minutes{% endif %}</small>
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+</div>
+
 <!-- Schedule -->
 <div class="l-card mb-4" style="height:auto;">
   <h3><i class="bi bi-calendar-event-fill text-primary" aria-hidden="true"></i> Class schedule</h3>
@@ -216,6 +251,12 @@
 
 {% block extra_js %}
 <script>
+(function () {
+  var lb = document.getElementById('lv-copy'), link = document.getElementById('lv-link');
+  if (lb && link) lb.addEventListener('click', function () {
+    if (navigator.clipboard) navigator.clipboard.writeText(link.textContent.trim()).then(function () { lb.innerHTML = '<i class="bi bi-check2"></i> Copied'; setTimeout(function () { lb.innerHTML = '<i class="bi bi-clipboard-fill"></i> Copy link'; }, 1800); });
+  });
+})();
 (function () {
   var btn = document.getElementById('tc-copy'), code = document.getElementById('tc-code');
   if (!btn || !code) return;

@@ -6,6 +6,7 @@ from core import admin_tools
 from django.urls import include, path, re_path
 from django.conf import settings
 from core.media import serve_media
+from live import views as live_views
 
 urlpatterns = [
     path('i18n/', include('django.conf.urls.i18n')),
@@ -18,6 +19,8 @@ urlpatterns = [
     path('dashboard/', include('dashboard.urls')),
     path('learn/', include('courses.urls')),
     path('plans/', include('billing.urls')),
+    path('live/', include('live.urls')),
+    path('r/<str:code>/', live_views.short_link, name='live_short'),
     re_path(r'^%s(?P<path>.*)$' % settings.MEDIA_URL.lstrip('/'), serve_media),
     path('', include('core.urls')),
 ]
