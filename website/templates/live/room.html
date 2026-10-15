@@ -35,6 +35,7 @@
     <div class="lv-prejoin-ico" aria-hidden="true"><i class="bi bi-emoji-smile-fill"></i></div>
     <h1 id="lv-ended-title">The class has ended</h1>
     <p id="lv-ended-text">Thanks for joining! See you at the next class.</p>
+    {% if role == "learner" %}<p class="lv-xp" id="lv-ended-xp"><i class="bi bi-stars" aria-hidden="true"></i> You earned {{ config.xp }} XP for coming to class!</p>{% endif %}
     <a class="lv-btn lv-btn-primary lv-btn-big" href="{{ config.exitUrl }}">Done</a>
   </div>
 </div>
@@ -47,9 +48,11 @@
       <span class="lv-timer" id="lv-timer" aria-label="Time since the class started">0:00</span>
     </div>
     <div class="lv-top-actions">
-      <span class="lv-chip" id="lv-count" title="People in the class"><i class="bi bi-people-fill" aria-hidden="true"></i> <b>1</b></span>
+      <span class="lv-chip lv-chip-rec" id="lv-rec-chip" hidden title="The teacher's voice and screen are being recorded. Learners are never recorded."><i class="bi bi-record-circle-fill" aria-hidden="true"></i> REC</span>
+      <span class="lv-chip lv-chip-group" id="lv-group-chip" hidden><i class="bi bi-diagram-3-fill" aria-hidden="true"></i> <span></span></span>
+      <span class="lv-chip" id="lv-count" title="People in the room"><i class="bi bi-people-fill" aria-hidden="true"></i> <b>1</b></span>
       <span class="lv-chip lv-chip-warn" id="lv-locked-chip" hidden><i class="bi bi-lock-fill" aria-hidden="true"></i> Locked</span>
-      <span class="lv-chip" id="lv-net" hidden><i class="bi bi-wifi-1" aria-hidden="true"></i> Weak connection</span>
+      <button type="button" class="lv-chip lv-chip-btn" id="lv-net" hidden><i class="bi bi-wifi-1" aria-hidden="true"></i> Weak connection: save data?</button>
       {% if role == "host" %}
       <button type="button" class="lv-btn lv-btn-ghost" id="lv-share"><i class="bi bi-link-45deg" aria-hidden="true"></i> <span class="lv-hide-sm">Copy class link</span></button>
       {% endif %}
@@ -60,6 +63,38 @@
     <section class="lv-stage" aria-label="Class video">
       <div class="lv-spot" id="lv-spot"></div>
       <div class="lv-grid" id="lv-grid"></div>
+
+      <!-- Whiteboard -->
+      <div class="lv-board" id="lv-board" hidden>
+        <canvas id="lv-board-canvas" aria-label="Class whiteboard"></canvas>
+        <div class="lv-board-tools" id="lv-board-tools" hidden>
+          <button type="button" class="lv-swatch active" data-color="#1F2937" aria-label="Black pen"></button>
+          <button type="button" class="lv-swatch" data-color="#E11D48" aria-label="Red pen"></button>
+          <button type="button" class="lv-swatch" data-color="#1CA7EC" aria-label="Blue pen"></button>
+          <button type="button" class="lv-swatch" data-color="#16A34A" aria-label="Green pen"></button>
+          <button type="button" class="lv-swatch lv-eraser" data-color="#FFFFFF" aria-label="Eraser"><i class="bi bi-eraser-fill" aria-hidden="true"></i></button>
+          {% if role == "host" %}<button type="button" class="lv-btn lv-btn-soft" id="lv-board-clear"><i class="bi bi-trash3" aria-hidden="true"></i> Clear</button>{% endif %}
+        </div>
+      </div>
+
+      <!-- Poll and lesson cards appear over the stage -->
+      <div class="lv-cards">
+        <div class="lv-card" id="lv-poll-card" hidden>
+          <div class="lv-card-head"><i class="bi bi-bar-chart-fill" aria-hidden="true"></i> <span>Quick poll</span>
+            <button type="button" class="lv-card-x" id="lv-poll-x" aria-label="Hide poll"><i class="bi bi-x-lg" aria-hidden="true"></i></button></div>
+          <h3 id="lv-poll-q"></h3>
+          <div class="lv-poll-options" id="lv-poll-options"></div>
+          <p class="lv-card-note" id="lv-poll-note"></p>
+        </div>
+        <div class="lv-card" id="lv-launch-card" hidden>
+          <div class="lv-card-head"><i class="bi bi-journal-richtext" aria-hidden="true"></i> <span>Your teacher opened a lesson</span>
+            <button type="button" class="lv-card-x" id="lv-launch-x" aria-label="Hide"><i class="bi bi-x-lg" aria-hidden="true"></i></button></div>
+          <h3 id="lv-launch-title"></h3>
+          <a class="lv-btn lv-btn-primary" id="lv-launch-open" href="#" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Open the lesson</a>
+          <p class="lv-card-note">It opens in a new tab, so you stay in class.</p>
+        </div>
+      </div>
+
       <div class="lv-banner" id="lv-banner" role="status" hidden></div>
       <div class="lv-floats" id="lv-floats" aria-hidden="true"></div>
     </section>
@@ -68,6 +103,7 @@
       <div class="lv-tabs" role="tablist">
         <button type="button" role="tab" class="lv-tab active" data-tab="people" aria-selected="true"><i class="bi bi-people-fill" aria-hidden="true"></i> People <span class="lv-badge" id="lv-hand-badge" hidden>0</span></button>
         <button type="button" role="tab" class="lv-tab" data-tab="chat" aria-selected="false"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i> Chat <span class="lv-badge" id="lv-chat-badge" hidden>0</span></button>
+        {% if role == "host" %}<button type="button" role="tab" class="lv-tab" data-tab="teach" aria-selected="false"><i class="bi bi-magic" aria-hidden="true"></i> Activities</button>{% endif %}
         <button type="button" class="lv-panel-close" id="lv-panel-close" aria-label="Close panel"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
       </div>
 
@@ -78,6 +114,8 @@
           <label class="lv-switch"><input type="checkbox" data-setting="open_mic"><span></span> Open mic <small>Everyone may unmute without raising a hand</small></label>
           <label class="lv-switch"><input type="checkbox" data-setting="video"><span></span> Learner cameras <small>Learners may turn on their camera</small></label>
           <label class="lv-switch"><input type="checkbox" data-setting="chat"><span></span> Chat and reactions</label>
+          <label class="lv-switch"><input type="checkbox" data-setting="board"><span></span> Whiteboard</label>
+          <label class="lv-switch"><input type="checkbox" data-setting="board_draw"><span></span> Learners can draw <small>On the whiteboard</small></label>
           <label class="lv-switch"><input type="checkbox" data-setting="locked"><span></span> Lock the class <small>Nobody new can join</small></label>
           <div class="lv-tool-row">
             <button type="button" class="lv-btn lv-btn-soft" data-action="mute_all"><i class="bi bi-mic-mute-fill" aria-hidden="true"></i> Mute everyone</button>
@@ -87,7 +125,7 @@
         {% endif %}
         <h2 class="lv-hands-title" id="lv-hands-title" hidden><i class="bi bi-hand-index-thumb-fill" aria-hidden="true"></i> Hands up</h2>
         <ol class="lv-people lv-hands" id="lv-hands"></ol>
-        <h2>In the class</h2>
+        <h2>In this room</h2>
         <ul class="lv-people" id="lv-people"></ul>
       </div>
 
@@ -100,6 +138,72 @@
         </form>
         <p class="lv-chat-note">Be kind. Your teacher can see every message.</p>
       </div>
+
+      {% if role == "host" %}
+      <div class="lv-pane" data-pane="teach" hidden>
+        <!-- Poll -->
+        <section class="lv-act">
+          <h2><i class="bi bi-bar-chart-fill" aria-hidden="true"></i> Quick poll</h2>
+          <form id="lv-poll-form" class="lv-form">
+            <input type="text" name="question" maxlength="200" placeholder="Question, e.g. Which one is a cloud service?" required aria-label="Poll question">
+            <input type="text" name="options" maxlength="80" placeholder="Answer A" required aria-label="Answer A">
+            <input type="text" name="options" maxlength="80" placeholder="Answer B" required aria-label="Answer B">
+            <input type="text" name="options" maxlength="80" placeholder="Answer C (optional)" aria-label="Answer C">
+            <input type="text" name="options" maxlength="80" placeholder="Answer D (optional)" aria-label="Answer D">
+            <button type="submit" class="lv-btn lv-btn-primary"><i class="bi bi-send-fill" aria-hidden="true"></i> Ask the class</button>
+          </form>
+          <button type="button" class="lv-btn lv-btn-soft" id="lv-poll-close" hidden><i class="bi bi-stop-fill" aria-hidden="true"></i> Close the poll</button>
+        </section>
+
+        <!-- Lesson -->
+        <section class="lv-act">
+          <h2><i class="bi bi-journal-richtext" aria-hidden="true"></i> Open a lesson or quiz for everyone</h2>
+          <div class="lv-form">
+            <select id="lv-lesson" aria-label="Lesson to open"></select>
+            <button type="button" class="lv-btn lv-btn-primary" id="lv-launch"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Open for everyone</button>
+          </div>
+          <div id="lv-results" hidden>
+            <p class="lv-act-note"><strong id="lv-results-title"></strong>: who has finished, with quiz scores since you opened it.</p>
+            <ul class="lv-people" id="lv-results-list"></ul>
+            <button type="button" class="lv-btn lv-btn-soft" id="lv-launch-close"><i class="bi bi-x-lg" aria-hidden="true"></i> Close the lesson card</button>
+          </div>
+        </section>
+
+        <!-- Groups -->
+        <section class="lv-act">
+          <h2><i class="bi bi-diagram-3-fill" aria-hidden="true"></i> Breakout groups</h2>
+          <div class="lv-form" id="lv-groups-form">
+            <select id="lv-group-count" aria-label="Number of groups">
+              <option value="2">2 groups</option><option value="3">3 groups</option><option value="4">4 groups</option>
+              <option value="5">5 groups</option><option value="6">6 groups</option>
+            </select>
+            <button type="button" class="lv-btn lv-btn-primary" id="lv-groups-start"><i class="bi bi-shuffle" aria-hidden="true"></i> Split the class</button>
+            <p class="lv-act-note">Learners in the room are shared out at random. In groups everyone may talk (cameras follow your setting) and chat stays filtered and saved.</p>
+          </div>
+          <div id="lv-groups-live" hidden>
+            <ul class="lv-people" id="lv-groups-list"></ul>
+            <div class="lv-form">
+              <input type="text" id="lv-announce" maxlength="300" placeholder="Message to every group" aria-label="Message to every group">
+              <button type="button" class="lv-btn lv-btn-soft" id="lv-announce-send"><i class="bi bi-megaphone-fill" aria-hidden="true"></i> Send to all groups</button>
+            </div>
+            <button type="button" class="lv-btn lv-btn-primary" id="lv-groups-end"><i class="bi bi-people-fill" aria-hidden="true"></i> Bring everyone back</button>
+          </div>
+        </section>
+
+        <!-- Recording -->
+        <section class="lv-act">
+          <h2><i class="bi bi-record-circle" aria-hidden="true"></i> Recording</h2>
+          {% if config.canRecord %}
+          <p class="lv-act-note">Records only you: your voice and your shared screen (or camera). Learners are never recorded. Learners in the class can watch it afterwards.</p>
+          <button type="button" class="lv-btn lv-btn-primary" id="lv-record"><i class="bi bi-record-circle-fill" aria-hidden="true"></i> <span>Start recording</span></button>
+          {% else %}
+          <p class="lv-act-note">Recording is not switched on for this site yet. The administrator needs to connect file storage.</p>
+          {% endif %}
+        </section>
+
+        <a class="lv-report-link" href="{{ config.reportUrl }}" target="_blank" rel="noopener"><i class="bi bi-clipboard-data" aria-hidden="true"></i> Class report: attendance, chat and polls</a>
+      </div>
+      {% endif %}
     </aside>
   </main>
 
@@ -112,6 +216,7 @@
       {% else %}
       <button type="button" class="lv-ctl lv-ctl-hand" id="lv-hand" aria-pressed="false"><i class="bi bi-hand-index-thumb" aria-hidden="true"></i><span>Raise hand</span></button>
       {% endif %}
+      <button type="button" class="lv-ctl" id="lv-data" title="Use less mobile data"><i class="bi bi-reception-4" aria-hidden="true"></i><span>Full video</span></button>
     </div>
     <div class="lv-bar-group lv-reacts" id="lv-reacts" aria-label="Reactions">
       <button type="button" class="lv-react" data-emoji="👍" aria-label="Thumbs up">👍</button>
@@ -123,6 +228,7 @@
     <div class="lv-bar-group">
       <button type="button" class="lv-ctl lv-show-sm" id="lv-open-people"><i class="bi bi-people-fill" aria-hidden="true"></i><span>People</span></button>
       <button type="button" class="lv-ctl lv-show-sm" id="lv-open-chat"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i><span>Chat</span></button>
+      {% if role == "host" %}<button type="button" class="lv-ctl lv-show-sm" id="lv-open-teach"><i class="bi bi-magic" aria-hidden="true"></i><span>Activities</span></button>{% endif %}
       <button type="button" class="lv-ctl lv-ctl-leave" id="lv-leave"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Leave</span></button>
       {% if role == "host" %}
       <button type="button" class="lv-ctl lv-ctl-end" id="lv-end"><i class="bi bi-stop-circle-fill" aria-hidden="true"></i><span>End class</span></button>
@@ -154,17 +260,44 @@
   <span data-k="confirmLeave">Leave the class? It keeps running and you can rejoin from the class page.</span>
   <span data-k="removedTitle">You were removed from the class</span>
   <span data-k="removedText">Your teacher removed you from today's live class.</span>
-  <span data-k="leftTitle">You left the class</span>
-  <span data-k="leftText">You can rejoin from My Classes while the class is still running.</span>
   <span data-k="noMedia">We could not use your microphone or camera. Check that the browser is allowed to use them.</span>
   <span data-k="joinFailed">We could not join the class. Check your internet and try again.</span>
   <span data-k="reconnecting">Reconnecting...</span>
   <span data-k="screenSharing">is sharing their screen</span>
   <span data-k="nobody">Nobody else is here yet.</span>
   <span data-k="actionFailed">That did not work. Please try again.</span>
+  <span data-k="fullVideo">Full video</span>
+  <span data-k="saver">Data saver</span>
+  <span data-k="audioOnly">Audio only</span>
+  <span data-k="saverOn">Data saver: you see only the teacher, in lower quality.</span>
+  <span data-k="audioOn">Audio only: no video, so the class uses very little data.</span>
+  <span data-k="fullOn">Full video is back on.</span>
+  <span data-k="group">Group</span>
+  <span data-k="mainRoom">Main room</span>
+  <span data-k="visiting">Visiting</span>
+  <span data-k="visit">Visit</span>
+  <span data-k="youAreInGroup">You are in a breakout group. Everyone here may talk: tap Mic to unmute.</span>
+  <span data-k="backToMain">Back in the main room.</span>
+  <span data-k="moving">Moving rooms...</span>
+  <span data-k="everyGroup">to every group</span>
+  <span data-k="votes">votes</span>
+  <span data-k="vote">vote</span>
+  <span data-k="pollClosed">The poll is closed.</span>
+  <span data-k="tapAnswer">Tap your answer. You can change it until the poll closes.</span>
+  <span data-k="voted">Thanks! You can still change your answer.</span>
+  <span data-k="flagged">The chat filter blocked a message from</span>
+  <span data-k="startRec">Start recording</span>
+  <span data-k="stopRec">Stop recording</span>
+  <span data-k="recNeedsMedia">Turn on your microphone (and camera or screen share) before recording.</span>
+  <span data-k="finished">Finished</span>
+  <span data-k="notYet">Not yet</span>
+  <span data-k="notHere">Not in class</span>
+  <span data-k="nobodyInGroup">nobody yet</span>
+  <span data-k="deleteMsg">Delete message</span>
 </div>
 
 <script src="{% static 'vendor/livekit/livekit-client.umd.js' %}"></script>
+<script src="{% static 'js/live-board.js' %}"></script>
 <script src="{% static 'js/live.js' %}"></script>
 </body>
 </html>

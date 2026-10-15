@@ -142,6 +142,63 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .lv-reacts.off { opacity: .35; pointer-events: none; }
 .lv-show-sm { display: none; }
 
+/* Chips for recording, groups, weak network */
+.lv-chip-rec { background: #E11D48; color: #fff; font-weight: 700; animation: lv-blink 2s infinite; }
+@keyframes lv-blink { 50% { opacity: .65; } }
+.lv-chip-group { background: rgba(255,201,60,.22); color: var(--lv-sun); font-weight: 600; }
+.lv-chip-btn { border: 0; color: #fff; cursor: pointer; }
+.lv-btn-danger { background: var(--lv-coral) !important; color: #fff !important; }
+.lv-xp { color: var(--lv-sun) !important; font-weight: 700; font-size: 1.1rem; }
+
+/* Whiteboard: a fixed 16:10 sheet so drawings look the same on every screen */
+.lv-board { order: -1; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; position: relative; }
+.lv-board canvas { background: #fff; border-radius: 14px; touch-action: none; display: block; }
+.lv-board canvas.can-draw { cursor: crosshair; }
+.lv-board-tools { position: absolute; left: 50%; bottom: .6rem; transform: translateX(-50%); display: flex; gap: .4rem; align-items: center; background: rgba(15,23,42,.85); padding: .4rem .6rem; border-radius: 999px; }
+.lv-swatch { width: 28px; height: 28px; border-radius: 50%; border: 3px solid transparent; background: var(--c, #1F2937); padding: 0; display: grid; place-items: center; color: #334155; }
+.lv-swatch[data-color="#1F2937"] { background: #1F2937; } .lv-swatch[data-color="#E11D48"] { background: #E11D48; }
+.lv-swatch[data-color="#1CA7EC"] { background: #1CA7EC; } .lv-swatch[data-color="#16A34A"] { background: #16A34A; }
+.lv-swatch[data-color="#FFFFFF"] { background: #fff; }
+.lv-swatch.active { border-color: var(--lv-sun); }
+.lv-board-tools .lv-btn-soft { padding: .3rem .7rem; }
+
+/* Poll and lesson cards over the stage */
+.lv-cards { position: absolute; right: 1rem; top: .8rem; width: min(360px, calc(100% - 2rem)); display: flex; flex-direction: column; gap: .6rem; z-index: 6; }
+.lv-card { background: #fff; color: var(--lv-ink); border-radius: 18px; padding: .9rem 1rem; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
+.lv-card-head { display: flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 700; color: var(--lv-sky-dark); text-transform: uppercase; letter-spacing: .04em; }
+.lv-card-x { margin-left: auto; background: none; border: 0; color: var(--lv-muted); }
+.lv-card h3 { font-size: 1.05rem; margin: .4rem 0 .6rem; }
+.lv-card-note { font-size: .78rem; color: var(--lv-muted); margin: .5rem 0 0; }
+.lv-poll-options { display: flex; flex-direction: column; gap: .4rem; }
+.lv-poll-opt { position: relative; overflow: hidden; display: flex; justify-content: space-between; gap: .5rem; text-align: left; border: 2px solid var(--lv-line); background: #fff; border-radius: 12px; padding: .5rem .7rem; font-weight: 600; color: var(--lv-ink); }
+.lv-poll-opt:hover:not(:disabled) { border-color: var(--lv-sky); }
+.lv-poll-opt:disabled { opacity: 1; cursor: default; }
+.lv-poll-opt.chosen { border-color: var(--lv-sky); }
+.lv-poll-bar { position: absolute; inset: 0 auto 0 0; background: #EAF7FF; z-index: 0; transition: width .3s; }
+.lv-poll-opt.chosen .lv-poll-bar { background: #CDEBFB; }
+.lv-poll-text, .lv-poll-opt b { position: relative; z-index: 1; }
+
+/* Activities tab */
+.lv-act { border-bottom: 1px solid var(--lv-line); padding-bottom: .8rem; margin-bottom: .8rem; }
+.lv-act h2 { text-transform: none; letter-spacing: 0; font-size: .95rem; color: var(--lv-ink); }
+.lv-form { display: flex; flex-direction: column; gap: .4rem; }
+.lv-form input, .lv-form select { border: 1px solid var(--lv-line); border-radius: 10px; padding: .45rem .7rem; font: inherit; font-size: .88rem; width: 100%; background: #fff; }
+.lv-act-note { font-size: .78rem; color: var(--lv-muted); margin: .4rem 0; }
+.lv-act .lv-btn { justify-content: center; margin-top: .3rem; }
+.lv-result { font-size: .75rem; font-weight: 700; border-radius: 999px; padding: .1rem .5rem; }
+.lv-result.done { background: #DCFCE7; color: #15803D; } .lv-result.todo { background: #FEF3C7; color: #92400E; } .lv-result.away { background: #F1F5F9; color: var(--lv-muted); }
+.lv-report-link { display: block; font-weight: 600; color: var(--lv-sky-dark); text-decoration: none; font-size: .9rem; }
+
+/* Chat extras */
+.lv-msg { position: relative; }
+.lv-msg.announce { background: #FFF8E1; }
+.lv-msg-del { position: absolute; top: .3rem; right: .4rem; background: none; border: 0; color: var(--lv-muted); font-size: .75rem; opacity: 0; }
+.lv-msg:hover .lv-msg-del, .lv-msg-del:focus-visible { opacity: 1; }
+@media (hover: none) { .lv-msg-del { opacity: .6; } }
+@media (max-width: 899px) {
+  .lv-cards { right: .5rem; left: .5rem; width: auto; }
+}
+
 /* Phones and small tablets: the panel becomes a drawer, the bar wraps */
 @media (max-width: 899px) {
   .lv-main { grid-template-columns: 1fr; }

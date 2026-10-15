@@ -40,6 +40,12 @@
   <p class="text-secondary mx-auto" style="max-width:460px;">Your teacher has closed the door for this live class, so nobody new can join right now. This page tries again by itself if the teacher opens it.</p>
   <a href="{% url 'dashboard:classes' %}" class="btn btn-outline-cloud">Back to My Classes</a>
 
+  {% elif reason == "plan_needed" %}
+  <div class="lv-gate-ico sun" aria-hidden="true"><i class="bi bi-gem"></i></div>
+  <h1 class="l-title">Live classes are part of a plan</h1>
+  <p class="text-secondary mx-auto" style="max-width:460px;">To join {{ room.classroom.name }} live with your teacher, you need a plan that includes live classes. Ask a parent or guardian to choose one.</p>
+  <a href="{% url 'billing:pricing' %}" class="btn btn-cloud btn-big">See the plans</a>
+
   {% elif reason == "not_set_up" %}
   <div class="lv-gate-ico sun" aria-hidden="true"><i class="bi bi-tools"></i></div>
   <h1 class="l-title">Live classes are not switched on yet</h1>

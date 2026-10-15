@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from accounts.models import ClassSession
+from live.views import class_recordings
 from billing import access
 from courses.badges import check_and_award_badges
 from courses.tiers import suggested_tier
@@ -189,6 +190,7 @@ def my_classes(request):
         {
             "classroom": m.classroom, "joined": m.joined_at, "classmates": m.classroom.memberships.count() - 1,
             "sessions": by_class[m.classroom_id][:4], "tasks": tasks_by_class[m.classroom_id],
+            "recordings": list(class_recordings(m.classroom)[:3]),
         }
         for m in memberships
     ]

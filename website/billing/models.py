@@ -37,6 +37,7 @@ class Plan(models.Model):
     ai_assistant = models.BooleanField("AI learning assistant", default=False)
     project = models.CharField(max_length=120, help_text="e.g. Showcase Project (portfolio-ready)")
     demo_day = models.BooleanField(default=False)
+    live_classes = models.BooleanField(default=True, help_text="Live online classes (only checked when LIVE_CLASSES_REQUIRE_PLAN is on)")
     credential = models.CharField(max_length=12, choices=Credential.choices, default=Credential.COMPLETION)
     order = models.PositiveSmallIntegerField(default=0, help_text="Higher = more features. Used to compare plans")
     is_active = models.BooleanField(default=True, help_text="Untick to stop selling this plan")

@@ -6,15 +6,18 @@ from django.utils import timezone
 
 from courses.models import LessonCompletion
 
-from .labs import LEVEL_NAMES, lab_count, XP_PER_LAB, XP_PER_LESSON, XP_PER_LEVEL
+from .labs import LEVEL_NAMES, lab_count, XP_PER_LAB, XP_PER_LESSON, XP_PER_LEVEL, XP_PER_LIVE_CLASS
 from .models import LabCompletion
 
 
 def activity_days(user):
-    """Set of dates on which the learner finished a lesson or a lab."""
+    """Set of dates on which the learner finished a lesson or a lab, or came to a live class."""
+    from live.models import LiveAttendance
+
     lessons = LessonCompletion.objects.filter(enrollment__learner=user).values_list("completed_at", flat=True)
     labs = LabCompletion.objects.filter(learner=user).values_list("completed_at", flat=True)
-    return {dt.date() for dt in list(lessons) + list(labs)}
+    live = LiveAttendance.objects.filter(user=user, is_host=False, removed=False).values_list("first_joined_at", flat=True)
+    return {dt.date() for dt in list(lessons) + list(labs) + list(live)}
 
 
 def streak_from_days(days):
@@ -38,7 +41,10 @@ def learner_stats(user):
     today = timezone.now().date()
     lessons_done = LessonCompletion.objects.filter(enrollment__learner=user).count()
     labs_done = LabCompletion.objects.filter(learner=user).count()
-    xp = lessons_done * XP_PER_LESSON + labs_done * XP_PER_LAB
+    from live.services import live_classes_attended
+
+    live_done = live_classes_attended(user)
+    xp = lessons_done * XP_PER_LESSON + labs_done * XP_PER_LAB + live_done * XP_PER_LIVE_CLASS
     level = xp // XP_PER_LEVEL + 1
     week = []
     for offset in range(6, -1, -1):
@@ -49,6 +55,7 @@ def learner_stats(user):
         "week": week,
         "lessons_done": lessons_done,
         "labs_done": labs_done,
+        "live_done": live_done,
         "labs_total": lab_count(),
         "xp": xp,
         "level": level,

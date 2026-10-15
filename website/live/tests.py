@@ -14,7 +14,7 @@ from django.utils import timezone
 from accounts.models import ClassMembership, Classroom, User
 
 from . import livekit
-from .models import LiveAttendance, LiveRoom, LiveSession
+from .models import LiveAttendance, LiveChatMessage, LiveRoom, LiveSession
 
 PASSWORD = "pw-12345-Zq"
 LK = dict(LIVEKIT_URL="wss://c4k-test.livekit.cloud", LIVEKIT_API_KEY="APIkey123", LIVEKIT_API_SECRET="s" * 40)
@@ -215,7 +215,8 @@ class TeacherControlTests(LiveTestBase):
         self.assertIsNone(self.room.current_session)
 
     def test_learner_raises_hand(self):
-        self.go_live()
+        session = self.go_live()
+        LiveAttendance.objects.create(session=session, user=self.kid)
         self.login(self.kid)
         self.assertTrue(self.client.post(reverse("live:hand", args=[self.room.code]), {"up": "1"}).json()["up"])
         update = self.calls("UpdateParticipant")[0]
@@ -278,3 +279,240 @@ class ScheduledLiveClassTests(LiveTestBase):
         ClassSession.objects.create(classroom=self.classroom, starts_at=timezone.now() + timedelta(minutes=10), is_live=True)
         self.login(self.teacher)
         self.assertContains(self.client.get(reverse("teach:class", args=[self.classroom.pk])), "Start now")
+
+
+class ModerationTests(TestCase):
+    def test_filter(self):
+        from . import moderation
+
+        self.assertIsNone(moderation.check("Is S3 a cloud storage service?"))
+        self.assertEqual(moderation.check("you are a fuuuck"), "language")
+        self.assertEqual(moderation.check("wewe ni mjinga"), "language")
+        self.assertEqual(moderation.check("sh1t"), "language")
+        self.assertEqual(moderation.check("call me 0712 345 678"), "phone")
+        self.assertEqual(moderation.check("amani@example.com"), "email")
+        self.assertEqual(moderation.check("go to www.example.com"), "link")
+        self.assertEqual(moderation.check("add me tiktok.com/x"), "link")
+        self.assertIsNone(moderation.check("see https://aws.amazon.com", host=True))
+        self.assertIsNone(moderation.check("I scored 100 out of 100 on quiz 3"))
+        with override_settings(LIVE_BLOCKED_WORDS=["banana"]):
+            self.assertEqual(moderation.check("banana"), "language")
+
+
+class ClassActivityTests(LiveTestBase):
+    def setUp(self):
+        super().setUp()
+        self.session = self.go_live()
+        self.kid_att = LiveAttendance.objects.create(session=self.session, user=self.kid)
+        self.host_att = LiveAttendance.objects.create(session=self.session, user=self.teacher, is_host=True)
+
+    def url(self, name):
+        return reverse(f"live:{name}", args=[self.room.code])
+
+    def sent(self):
+        return [(c.args[1]["room"], json.loads(base64.b64decode(c.args[1]["data"]))) for c in self.api.call_args_list if c.args[0] == "SendData"]
+
+    def test_chat_is_filtered_saved_and_passed_on(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        self.login(self.kid)
+        self.assertTrue(self.client.post(self.url("chat"), {"text": "Hello class"}).json()["ok"])
+        room_name, data = self.sent()[-1]
+        self.assertEqual(room_name, self.session.livekit_name)
+        self.assertEqual(data["msg"]["text"], "Hello class")
+        self.assertEqual(data["msg"]["name"], "Amani O")
+        response = self.client.post(self.url("chat"), {"text": "my number is 0712345678"})
+        self.assertEqual(response.status_code, 429)  # too fast
+        cache.clear()
+        response = self.client.post(self.url("chat"), {"text": "my number is 0712345678"})
+        self.assertEqual(response.status_code, 400)
+        flagged = self.session.chat.get(flagged=True)
+        self.assertEqual(flagged.reason, "phone")
+        self.assertEqual(self.sent()[-1][1]["type"], "flag")  # the teacher is told
+        # chat history comes with the token, without blocked messages
+        state = self.client.post(self.url("token")).json()["state"]
+        self.assertEqual([m["text"] for m in state["chat"]], ["Hello class"])
+
+    def test_chat_off_and_outsiders(self):
+        self.room.chat_enabled = False
+        self.room.save()
+        self.login(self.kid)
+        self.assertEqual(self.client.post(self.url("chat"), {"text": "hi"}).status_code, 403)
+        self.login(self.outsider)
+        self.assertEqual(self.client.post(self.url("chat"), {"text": "hi"}).status_code, 403)
+
+    def test_poll(self):
+        self.login(self.teacher)
+        data = self.client.post(self.url("control"), {"action": "poll_start", "question": "Which is cloud storage?", "options": ["S3", "A pen", ""]}).json()
+        poll_id = data["poll"]["id"]
+        self.assertEqual(data["poll"]["options"], ["S3", "A pen"])
+        self.login(self.kid)
+        self.client.post(self.url("vote"), {"poll": poll_id, "choice": 0})
+        self.client.post(self.url("vote"), {"poll": poll_id, "choice": 1})  # changing your mind is fine
+        self.assertEqual(self.sent()[-1][1]["poll"]["counts"], [0, 1])
+        self.assertEqual(self.client.post(self.url("vote"), {"poll": poll_id, "choice": 5}).status_code, 400)
+        self.login(self.teacher)
+        self.assertTrue(self.client.post(self.url("control"), {"action": "poll_close"}).json()["poll"]["closed"])
+        self.login(self.kid)
+        self.assertEqual(self.client.post(self.url("vote"), {"poll": poll_id, "choice": 0}).status_code, 409)
+
+    def test_launch_lesson_and_results(self):
+        from courses.models import Lesson, QuizResult
+
+        lesson = Lesson.objects.first()
+        self.login(self.teacher)
+        data = self.client.post(self.url("control"), {"action": "launch", "lesson": lesson.pk}).json()
+        self.assertEqual(data["launch"]["url"], lesson.get_absolute_url())
+        self.assertEqual(self.sent()[-1][1]["type"], "launch")
+        QuizResult.objects.create(learner=self.kid, lesson=lesson, score_percent=80, passed=True)
+        rows = self.client.get(self.url("results")).json()["rows"]
+        self.assertEqual(rows[0]["name"], "Amani O")
+        self.assertEqual(rows[0]["score"], 80)
+        self.assertTrue(rows[0]["here"])
+        self.login(self.kid)
+        self.assertEqual(self.client.post(self.url("token")).json()["state"]["launch"]["id"], data["launch"]["id"])
+
+    def test_breakout_groups(self):
+        second = User.objects.create_user("zawadi", password=PASSWORD, role="learner", first_name="Zawadi")
+        ClassMembership.objects.create(classroom=self.classroom, learner=second)
+        LiveAttendance.objects.create(session=self.session, user=second)
+        self.api.side_effect = lambda method, payload, grant: (
+            {"participants": [{"identity": f"u{u.pk}"} for u in (self.teacher, self.kid, second)]} if method == "ListParticipants" else {}
+        )
+        self.login(self.teacher)
+        data = self.client.post(self.url("control"), {"action": "groups_start", "count": "2"}).json()
+        self.assertEqual(data["groups"]["count"], 2)
+        self.assertEqual(len(self.calls("CreateRoom")), 2)
+        self.assertEqual(sorted(len(v) for v in data["groups"]["members"].values()), [1, 1])
+        self.kid_att.refresh_from_db()
+        # The learner's next token is for their group room, where they may talk
+        self.login(self.kid)
+        token = self.client.post(self.url("token")).json()
+        claims = decode(token["token"])
+        self.assertEqual(claims["video"]["room"], self.session.room_name(self.kid_att.group))
+        self.assertTrue(claims["video"]["canPublish"])
+        self.assertEqual(token["group"], self.kid_att.group)
+        # The teacher visits a group, then brings everyone back
+        self.login(self.teacher)
+        self.assertTrue(self.client.post(self.url("control"), {"action": "groups_visit", "group": "1"}).json()["move"])
+        data = self.client.post(self.url("control"), {"action": "groups_end"}).json()
+        self.assertTrue(data["move"])
+        self.assertEqual(LiveAttendance.objects.filter(group__gt=0).count(), 0)
+        moved = {r for r, d in self.sent() if d.get("type") == "move"}
+        self.assertEqual(moved - {self.session.livekit_name}, {self.session.room_name(1), self.session.room_name(2)})
+
+    @override_settings(LIVE_RECORDING_BUCKET="c4k", LIVE_RECORDING_ACCESS_KEY="AK", LIVE_RECORDING_SECRET="SK",
+                       LIVE_RECORDING_ENDPOINT="https://acct.r2.cloudflarestorage.com", LIVE_RECORDING_REGION="auto")
+    def test_recording_teacher_only_and_playback(self):
+        self.api.side_effect = lambda method, payload, grant, **kw: {"egress_id": "EG_1"} if method == "StartTrackCompositeEgress" else {}
+        self.login(self.teacher)
+        self.assertTrue(self.client.post(self.url("control"), {"action": "record_start", "audio": "TR_a", "video": "TR_v"}).json()["settings"]["rec"])
+        started = self.calls("StartTrackCompositeEgress")[0]
+        self.assertEqual((started["audio_track_id"], started["video_track_id"]), ("TR_a", "TR_v"))
+        self.assertEqual(started["file_outputs"][0]["s3"]["bucket"], "c4k")
+        # LiveKit reports the finished file
+        WebhookTests.post_event(self, {"event": "egress_ended", "egressInfo": {
+            "egressId": "EG_1", "status": "EGRESS_COMPLETE", "fileResults": [{"filename": "live/x.mp4", "duration": "65000000000", "size": "1000"}]}})
+        rec = self.session.recordings.get()
+        self.assertEqual((rec.status, rec.duration_seconds, rec.filepath), ("ready", 65, "live/x.mp4"))
+        self.room.refresh_from_db()
+        self.assertFalse(self.room.recording)
+        self.login(self.kid)
+        response = self.client.get(reverse("live:recording", args=[rec.pk]))
+        self.assertTrue(response["Location"].startswith("https://acct.r2.cloudflarestorage.com/c4k/live/x.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256"))
+        self.assertIn("X-Amz-Signature=", response["Location"])
+        self.login(self.outsider)
+        self.assertEqual(self.client.get(reverse("live:recording", args=[rec.pk])).status_code, 404)
+
+    def test_recording_needs_storage(self):
+        self.login(self.teacher)
+        self.assertEqual(self.client.post(self.url("control"), {"action": "record_start"}).status_code, 400)
+
+    def test_teacher_room_page_lists_lessons(self):
+        self.login(self.teacher)
+        response = self.client.get(self.url("room"))
+        self.assertContains(response, "Open a lesson or quiz for everyone")
+        self.assertContains(response, "Recording is not switched on")
+        self.assertTrue(response.context["config"]["lessons"])
+
+    def test_report_page(self):
+        LiveChatMessage.objects.create(session=self.session, user=self.kid, text="bad", flagged=True, reason="language")
+        self.login(self.teacher)
+        response = self.client.get(reverse("live:report", args=[self.session.pk]))
+        self.assertContains(response, "Blocked (language)")
+        self.assertContains(response, "Came")
+        self.login(self.kid)
+        self.assertEqual(self.client.get(reverse("live:report", args=[self.session.pk])).status_code, 404)
+
+    def test_plan_required(self):
+        with override_settings(LIVE_CLASSES_REQUIRE_PLAN=True):
+            self.login(self.kid)
+            self.assertEqual(self.client.post(self.url("token")).status_code, 402)
+            self.assertContains(self.client.get(self.url("room")), "part of a plan", status_code=402)
+            from billing import services as billing
+            from billing.models import Plan
+
+            billing.grant(self.kid, Plan.objects.get(slug="starter"))
+            self.assertEqual(self.client.post(self.url("token")).status_code, 200)
+
+
+class AfterClassTests(LiveTestBase):
+    def test_end_gives_badges_xp_and_tells_parents_of_absent_learners(self):
+        from accounts.models import ParentLink
+        from courses.models import LearnerBadge
+        from dashboard.stats import learner_stats
+
+        absent = User.objects.create_user("juma", password=PASSWORD, role="learner", first_name="Juma")
+        ClassMembership.objects.create(classroom=self.classroom, learner=absent)
+        parent = User.objects.create_user("mama", password=PASSWORD, role="parent", email="mama@example.com")
+        ParentLink.objects.create(parent=parent, child=absent)
+        session = self.go_live()
+        LiveSession.objects.filter(pk=session.pk).update(started_at=timezone.now() - timedelta(minutes=45))
+        LiveAttendance.objects.create(session=session, user=self.kid)
+        self.login(self.teacher)
+        self.client.post(reverse("live:control", args=[self.room.code]), {"action": "end"})
+        self.assertTrue(LearnerBadge.objects.filter(learner=self.kid, badge__name="Live Learner").exists())
+        self.assertEqual(learner_stats(self.kid)["xp"], 20)
+        self.assertEqual([m.to for m in mail.outbox], [["mama@example.com"]])
+        self.assertIn("missed", mail.outbox[0].subject)
+        # Ending again (or the webhook arriving later) does not send twice
+        from .services import finish_session, run_followups
+
+        finish_session(LiveSession.objects.get(pk=session.pk))
+        run_followups()
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_short_test_calls_send_nothing(self):
+        absent = User.objects.create_user("juma", password=PASSWORD, role="learner", email="juma@example.com")
+        ClassMembership.objects.create(classroom=self.classroom, learner=absent)
+        self.go_live()
+        self.login(self.teacher)
+        self.client.post(reverse("live:control", args=[self.room.code]), {"action": "end"})
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_forgotten_class_is_finished_by_the_cron(self):
+        session = self.go_live()
+        LiveSession.objects.filter(pk=session.pk).update(started_at=timezone.now() - timedelta(hours=5))
+        from .services import run_followups
+
+        self.assertEqual(run_followups(), 1)
+        session.refresh_from_db()
+        self.assertTrue(session.followup_done)
+        self.assertIsNotNone(session.ended_at)
+
+    def test_reminder_once_before_a_scheduled_live_class(self):
+        import io
+
+        from django.core.management import call_command
+
+        from accounts.models import ClassSession
+
+        self.kid.email = "amani@example.com"
+        self.kid.save()
+        ClassSession.objects.create(classroom=self.classroom, starts_at=timezone.now() + timedelta(minutes=20), is_live=True)
+        ClassSession.objects.create(classroom=self.classroom, starts_at=timezone.now() + timedelta(hours=3), is_live=True)
+        call_command("send_notifications", "--live", stdout=io.StringIO())
+        call_command("send_notifications", "--live", stdout=io.StringIO())
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(f"/r/{self.room.code}/", mail.outbox[0].body)

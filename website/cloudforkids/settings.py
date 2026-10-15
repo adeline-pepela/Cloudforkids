@@ -227,6 +227,14 @@ LIVEKIT_API_KEY = os.environ.get('LIVEKIT_API_KEY', '').strip()
 LIVEKIT_API_SECRET = os.environ.get('LIVEKIT_API_SECRET', '').strip()
 LIVE_MAX_MINUTES = int(os.environ.get('LIVE_MAX_MINUTES', '180'))  # a class nobody ended counts as over after this long
 LIVE_MAX_PARTICIPANTS = int(os.environ.get('LIVE_MAX_PARTICIPANTS', '60'))
+LIVE_CLASSES_REQUIRE_PLAN = _env_bool('LIVE_CLASSES_REQUIRE_PLAN', False)  # on = learners need a plan with live classes
+LIVE_BLOCKED_WORDS = _env_list('LIVE_BLOCKED_WORDS')  # extra words the class chat refuses, on top of live/moderation.py
+# Recordings of the teacher go to S3-compatible storage (AWS S3, Cloudflare R2, Backblaze B2...). Empty = no recording.
+LIVE_RECORDING_BUCKET = os.environ.get('LIVE_RECORDING_BUCKET', '').strip()
+LIVE_RECORDING_ACCESS_KEY = os.environ.get('LIVE_RECORDING_ACCESS_KEY', '').strip()
+LIVE_RECORDING_SECRET = os.environ.get('LIVE_RECORDING_SECRET', '').strip()
+LIVE_RECORDING_REGION = os.environ.get('LIVE_RECORDING_REGION', 'auto').strip()
+LIVE_RECORDING_ENDPOINT = os.environ.get('LIVE_RECORDING_ENDPOINT', '').strip()  # e.g. https://<account>.r2.cloudflarestorage.com
 
 SITE_NAME = 'Cloud for Kids'
 SITE_TAGLINE = "Building Kenya's Cloud-Ready Generation"

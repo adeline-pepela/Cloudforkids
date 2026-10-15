@@ -64,8 +64,9 @@
   <div class="fm-row ok">
     <div>
       <strong>{{ s.started_at|date:"D j M Y" }}, {{ s.started_at|time:"H:i" }} to {{ s.ended_at|time:"H:i" }}</strong>
-      <small>{% with n=s.attendance.all|length %}{{ n }} attended (including you){% endwith %}{% if s.participant_minutes %} &middot; {{ s.participant_minutes }} participant minutes{% endif %}</small>
+      <small>{% with n=s.attendance.all|length %}{{ n }} attended (including you){% endwith %}{% if s.participant_minutes %} &middot; {{ s.participant_minutes }} participant minutes{% endif %}{% for rec in s.recordings.all %}{% if rec.status == "ready" %} &middot; <a href="{% url 'live:recording' rec.pk %}" target="_blank" rel="noopener">Recording</a>{% endif %}{% endfor %}</small>
     </div>
+    <a href="{% url 'live:report' s.pk %}" class="btn btn-sm btn-outline-cloud">Report</a>
   </div>
   {% endfor %}
   {% endif %}

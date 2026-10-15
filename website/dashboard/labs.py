@@ -6,6 +6,7 @@ from django.template.loader import get_template
 
 XP_PER_LESSON = 10
 XP_PER_LAB = 15
+XP_PER_LIVE_CLASS = 20
 XP_PER_LEVEL = 100
 LEVEL_NAMES = ["Cloud Seed", "Sprout", "Explorer", "Builder", "Navigator", "Architect", "Cloud Hero"]
 

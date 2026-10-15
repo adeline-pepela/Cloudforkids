@@ -89,3 +89,13 @@ def lab_limit_text(user):
     if plan.labs == Plan.Labs.GUIDED:
         return "Your Core plan includes the guided labs (levels 1 and 2). Advanced unlocks the level 3 cloud sandbox labs."
     return ""
+
+
+def can_join_live(user):
+    """Live classes are open to every learner in a class unless LIVE_CLASSES_REQUIRE_PLAN is on."""
+    from django.conf import settings
+
+    if has_full_access(user) or not settings.LIVE_CLASSES_REQUIRE_PLAN:
+        return True
+    plan = current_plan(user)
+    return bool(plan and plan.live_classes)

@@ -49,6 +49,15 @@
       {% endfor %}
     </div>
     <div class="col-lg-6">
+      {% if card.recordings %}
+      <h6 class="fw-bold"><i class="bi bi-play-btn-fill text-danger" aria-hidden="true"></i> Class recordings</h6>
+      {% for rec in card.recordings %}
+      <a class="tc-task" href="{% url 'live:recording' rec.pk %}" target="_blank" rel="noopener">
+        <i class="bi bi-play-circle-fill big" aria-hidden="true"></i>
+        <div class="flex-grow-1"><strong>{{ rec.session.started_at|date:"l j M" }}</strong><small>Live class recording</small></div>
+      </a>
+      {% endfor %}
+      {% endif %}
       <h6 class="fw-bold"><i class="bi bi-clipboard-check-fill text-success" aria-hidden="true"></i> Work from your teacher</h6>
       {% for t in card.tasks %}
       <a class="tc-task" href="{{ t.a.course.get_absolute_url }}">

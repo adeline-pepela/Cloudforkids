@@ -40,6 +40,16 @@ envVarGroups:
         sync: false
       - key: LIVEKIT_API_SECRET
         sync: false
+      - key: LIVE_RECORDING_BUCKET
+        sync: false                # optional: S3/R2 bucket for teacher recordings (leave empty to turn recording off)
+      - key: LIVE_RECORDING_ACCESS_KEY
+        sync: false
+      - key: LIVE_RECORDING_SECRET
+        sync: false
+      - key: LIVE_RECORDING_REGION
+        sync: false                # "auto" for Cloudflare R2
+      - key: LIVE_RECORDING_ENDPOINT
+        sync: false                # https://<account-id>.r2.cloudflarestorage.com for R2; empty for AWS S3
       - key: MPESA_ACCOUNT_REFERENCE
         value: CloudForKids            # the account name on the PIN prompt (12 characters at most)
       - key: MPESA_INITIATOR_NAME
@@ -71,6 +81,20 @@ services:
     schedule: "0 6 * * *"          # 06:00 UTC = 09:00 in Nairobi
     buildCommand: pip install -r requirements.txt
     startCommand: python manage.py send_notifications --nudges --plans
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - fromGroup: cloudforkids-shared
+
+  # Live classes: reminder emails shortly before each scheduled live class, and after-class badges and missed-class notes
+  - type: cron
+    name: cloudforkids-live
+    runtime: python
+    plan: starter
+    rootDir: website
+    schedule: "*/15 * * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py send_notifications --live
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9

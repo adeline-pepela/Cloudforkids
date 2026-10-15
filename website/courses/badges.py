@@ -36,6 +36,16 @@ def check_and_award_badges(user):
     if labs_done >= lab_count() > 0:
         award("Lab Master", "Finished every Practice Lab.", "stars", "Finish all Practice Labs")
 
+    from live.services import live_classes_attended
+
+    live = live_classes_attended(user)
+    if live >= 1:
+        award("Live Learner", "Came to your first live class.", "broadcast", "Join 1 live class")
+    if live >= 5:
+        award("Class Regular", "Came to 5 live classes.", "people-fill", "Join 5 live classes")
+    if live >= 15:
+        award("Live Class Star", "Came to 15 live classes.", "star-fill", "Join 15 live classes")
+
     streak = learning_streak(user)
     if streak >= 3:
         award("3-Day Streak", "Learned three days in a row.", "fire", "Learn 3 days in a row")
