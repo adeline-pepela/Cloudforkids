@@ -105,6 +105,9 @@ class Classroom(models.Model):
     location = models.CharField(max_length=150, blank=True, help_text="Where the class meets, e.g. Computer lab, Room 4")
     meeting_link = models.URLField(blank=True, help_text="Optional link for online sessions (Google Meet, Zoom, Teams)")
     join_code = models.CharField(max_length=8, unique=True, editable=False)
+    discussion_enabled = models.BooleanField(
+        "Class discussion", default=True, help_text="Learners in the class can post and reply on the class discussion board"
+    )
     archived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -185,6 +188,27 @@ class ClassMembership(models.Model):
 
     def __str__(self):
         return f"{self.learner} in {self.classroom}"
+
+
+class ClassPost(models.Model):
+    """A post (or a reply) on a class's discussion board. Only the class and its teacher can see it.
+    Posts pass the same filter as the live class chat; blocked ones are kept, flagged, for the teacher to review."""
+
+    classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE, related_name="posts")
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="class_posts")
+    parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.CASCADE, related_name="replies")
+    body = models.TextField(max_length=1500)
+    created_at = models.DateTimeField(auto_now_add=True)
+    pinned = models.BooleanField(default=False)
+    hidden = models.BooleanField(default=False, help_text="Removed by the teacher or the author")
+    flagged = models.BooleanField(default=False, help_text="Blocked by the filter, never shown to the class")
+    reason = models.CharField(max_length=40, blank=True)
+
+    class Meta:
+        ordering = ["-pinned", "-created_at"]
+
+    def __str__(self):
+        return f"{self.author} in {self.classroom}: {self.body[:40]}"
 
 
 class Assignment(models.Model):

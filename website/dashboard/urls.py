@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import class_views, views
 
 app_name = "dashboard"
 
@@ -9,6 +9,9 @@ urlpatterns = [
     path("path/", views.path, name="path"),
     path("courses/", views.my_courses, name="courses"),
     path("classes/", views.my_classes, name="classes"),
+    path("classes/<int:class_id>/", class_views.class_detail, name="class"),
+    path("classes/<int:class_id>/discussion/post/", class_views.discussion_post, name="discussion_post"),
+    path("classes/<int:class_id>/discussion/<int:post_id>/<str:action>/", class_views.discussion_action, name="discussion_action"),
     path("achievements/", views.achievements, name="achievements"),
     path("labs/", views.labs, name="labs"),
     path("labs/<slug:slug>/", views.lab, name="lab"),

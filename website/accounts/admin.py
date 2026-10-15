@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
 from core import notify
 
-from .models import Assignment, ClassMembership, Classroom, ClassSession, LearnerProfile, Message, ParentalConsent, ParentLink, User
+from .models import Assignment, ClassMembership, Classroom, ClassPost, ClassSession, LearnerProfile, Message, ParentalConsent, ParentLink, User
 
 
 @admin.register(User)
@@ -148,3 +148,17 @@ class MessageAdmin(admin.ModelAdmin):
     list_filter = ("classroom",)
     search_fields = ("subject", "body", "sender__username", "recipient__username")
     raw_id_fields = ("sender", "recipient", "about_learner", "reply_to")
+
+
+@admin.register(ClassPost)
+class ClassPostAdmin(admin.ModelAdmin):
+    """Class discussion posts. Filter by "flagged" to review what the filter blocked."""
+
+    list_display = ("classroom", "author", "short_body", "created_at", "pinned", "hidden", "flagged", "reason")
+    list_filter = ("flagged", "hidden", "pinned", "classroom")
+    search_fields = ("body", "author__username", "classroom__name")
+    raw_id_fields = ("author", "parent")
+
+    @admin.display(description="Post")
+    def short_body(self, obj):
+        return obj.body[:80]

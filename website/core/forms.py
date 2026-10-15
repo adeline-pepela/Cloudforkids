@@ -10,7 +10,9 @@ class BootstrapFormMixin:
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             existing = field.widget.attrs.get("class", "")
-            if isinstance(field.widget, forms.Select):
+            if isinstance(field.widget, forms.CheckboxInput):
+                field.widget.attrs["class"] = (existing + " form-check-input").strip()
+            elif isinstance(field.widget, forms.Select):
                 field.widget.attrs["class"] = (existing + " form-select rounded-3").strip()
             else:
                 field.widget.attrs["class"] = (existing + " form-control rounded-3").strip()

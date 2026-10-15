@@ -19,6 +19,7 @@
   <div class="d-flex flex-wrap gap-2 no-print">
     <a href="{% url 'teach:class_export' c.pk %}" class="btn btn-outline-cloud"><i class="bi bi-file-earmark-spreadsheet-fill" aria-hidden="true"></i> Export CSV</a>
     <button type="button" class="btn btn-outline-cloud" onclick="window.print()"><i class="bi bi-printer-fill" aria-hidden="true"></i> Print</button>
+    <a href="{% url 'teach:discussion' c.pk %}" class="btn btn-outline-cloud"><i class="bi bi-chat-square-text-fill" aria-hidden="true"></i> Discussion</a>
     <a href="{% url 'messaging:compose' %}?class={{ c.pk }}" class="btn btn-outline-cloud"><i class="bi bi-envelope-fill" aria-hidden="true"></i> Message</a>
     <a href="{% url 'teach:class_edit' c.pk %}" class="btn btn-outline-cloud"><i class="bi bi-pencil-fill" aria-hidden="true"></i> Edit</a>
   </div>

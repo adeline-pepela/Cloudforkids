@@ -6,7 +6,9 @@ app_name = "teach"
 
 urlpatterns = [
     path("", views.home, name="home"),
+    path("classes/", views.classes, name="classes"),
     path("class/new/", views.class_new, name="class_new"),
+    path("class/<int:class_id>/discussion/", views.discussion, name="discussion"),
     path("class/<int:class_id>/", views.class_detail, name="class"),
     path("class/<int:class_id>/edit/", views.class_edit, name="class_edit"),
     path("class/<int:class_id>/archive/", views.class_archive, name="class_archive"),

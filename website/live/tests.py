@@ -53,7 +53,7 @@ class LiveTestBase(TestCase):
 class TokenTests(TestCase):
     @override_settings(**LK)
     def test_join_token_is_signed_with_the_grant(self):
-        claims = decode(livekit.join_token("u1", "Amani O", {"room": "c4k-X-1", "canPublish": False}))
+        claims = decode(livekit.join_token("u1", "Amani O.", {"room": "c4k-X-1", "canPublish": False}))
         self.assertEqual(claims["iss"], "APIkey123")
         self.assertEqual(claims["sub"], "u1")
         self.assertEqual(claims["video"], {"roomJoin": True, "room": "c4k-X-1", "canPublish": False})
@@ -100,7 +100,7 @@ class AccessTests(LiveTestBase):
         claims = decode(data["token"])
         self.assertEqual(data["url"], LK["LIVEKIT_URL"])
         self.assertEqual(claims["sub"], f"u{self.kid.pk}")
-        self.assertEqual(claims["name"], "Amani O")
+        self.assertEqual(claims["name"], "Amani O.")
         self.assertFalse(claims["video"]["canPublish"])
         self.assertFalse(claims["video"]["canUpdateOwnMetadata"])
         self.assertNotIn("roomAdmin", claims["video"])
@@ -321,7 +321,7 @@ class ClassActivityTests(LiveTestBase):
         room_name, data = self.sent()[-1]
         self.assertEqual(room_name, self.session.livekit_name)
         self.assertEqual(data["msg"]["text"], "Hello class")
-        self.assertEqual(data["msg"]["name"], "Amani O")
+        self.assertEqual(data["msg"]["name"], "Amani O.")
         response = self.client.post(self.url("chat"), {"text": "my number is 0712345678"})
         self.assertEqual(response.status_code, 429)  # too fast
         cache.clear()
@@ -367,7 +367,7 @@ class ClassActivityTests(LiveTestBase):
         self.assertEqual(self.sent()[-1][1]["type"], "launch")
         QuizResult.objects.create(learner=self.kid, lesson=lesson, score_percent=80, passed=True)
         rows = self.client.get(self.url("results")).json()["rows"]
-        self.assertEqual(rows[0]["name"], "Amani O")
+        self.assertEqual(rows[0]["name"], "Amani O.")
         self.assertEqual(rows[0]["score"], 80)
         self.assertTrue(rows[0]["here"])
         self.login(self.kid)

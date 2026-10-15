@@ -1,0 +1,19 @@
+{% extends "teach/base.html" %}
+{% block title %}Discussion: {{ classroom.name }}{% endblock %}
+{% block content %}
+<a href="{% url 'teach:class' classroom.pk %}" class="cd-back"><i class="bi bi-arrow-left" aria-hidden="true"></i> {{ classroom.name }}</a>
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+  <div>
+    <h1 class="l-title">Class discussion</h1>
+    <p class="l-sub mb-0">Post announcements and answer questions. Learners in {{ classroom.name }} can post and reply{% if not classroom.discussion_enabled %} <strong>(switched off: they can read but not post)</strong>{% endif %}.</p>
+  </div>
+  <a href="{% url 'teach:class_edit' classroom.pk %}" class="btn btn-outline-cloud"><i class="bi bi-toggles" aria-hidden="true"></i> {% if classroom.discussion_enabled %}Turn off learner posts{% else %}Turn on learner posts{% endif %}</a>
+</div>
+{% if blocked %}
+<div class="alert alert-warning rounded-4"><i class="bi bi-shield-exclamation" aria-hidden="true"></i> The filter blocked {{ blocked }} post{{ blocked|pluralize }} (shown below in red, never to the class). Remove them, or show one to the class if the filter got it wrong.</div>
+{% endif %}
+<div class="l-card mb-4" style="height:auto;">
+  {% url 'teach:discussion' classroom.pk as here %}
+  {% with next_url=here teacher_view=True can_post=True %}{% include "partials/discussion.html" %}{% endwith %}
+</div>
+{% endblock %}

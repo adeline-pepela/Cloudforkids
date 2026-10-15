@@ -1,0 +1,77 @@
+{% comment %}
+Class discussion board. Needs: classroom, posts, can_post, teacher_view (bool), next_url.
+{% endcomment %}
+<div class="cd-board">
+  {% if can_post %}
+  <form method="post" action="{% url 'dashboard:discussion_post' classroom.pk %}" class="cd-compose">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next_url }}">
+    <textarea name="body" rows="3" maxlength="1500" class="form-control rounded-4" required
+              placeholder="{% if teacher_view %}Post an announcement or a question for the class{% else %}Ask a question or share something with your class{% endif %}" aria-label="New post"></textarea>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+      <small class="text-secondary"><i class="bi bi-shield-check" aria-hidden="true"></i> Be kind. Phone numbers, emails and links are not allowed{% if not teacher_view %}, and your teacher sees every post{% endif %}.</small>
+      <button type="submit" class="btn btn-cloud"><i class="bi bi-send-fill" aria-hidden="true"></i> Post</button>
+    </div>
+  </form>
+  {% elif not classroom.discussion_enabled %}
+  <p class="cd-note"><i class="bi bi-chat-square-text" aria-hidden="true"></i> The teacher has turned the class discussion off. You can still read the posts.</p>
+  {% endif %}
+
+  {% for post in posts %}
+  <article class="cd-post{% if post.pinned %} pinned{% endif %}{% if post.flagged %} flagged{% endif %}{% if post.author_id == classroom.facilitator_id %} teacher{% endif %}">
+    <header class="cd-head">
+      <span class="cd-avatar" aria-hidden="true">{{ post.author.first_name|default:post.author.username|slice:":1"|upper }}</span>
+      <div class="flex-grow-1">
+        <strong>{% if post.author_id == classroom.facilitator_id %}{{ post.author.get_full_name|default:post.author.username }} <span class="cd-tag">Teacher</span>{% elif teacher_view %}{{ post.author.get_full_name|default:post.author.username }}{% else %}{{ post.author.first_name|default:post.author.username }}{% if post.author.last_name %} {{ post.author.last_name|slice:":1" }}.{% endif %}{% endif %}</strong>
+        <small>{{ post.created_at|date:"D j M, H:i" }}{% if post.pinned %} &middot; <i class="bi bi-pin-angle-fill" aria-hidden="true"></i> Pinned{% endif %}</small>
+      </div>
+      {% if post.flagged %}<span class="cd-flag">Blocked by the filter ({{ post.reason }})</span>{% endif %}
+    </header>
+    <div class="cd-body">{{ post.body|linebreaksbr }}</div>
+    <div class="cd-actions">
+      {% if teacher_view and post.flagged %}
+      <form method="post" action="{% url 'dashboard:discussion_action' classroom.pk post.pk 'allow' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ next_url }}"><button class="btn btn-link btn-sm p-0">Show to the class</button></form>
+      {% endif %}
+      {% if teacher_view and not post.flagged %}
+      <form method="post" action="{% url 'dashboard:discussion_action' classroom.pk post.pk 'pin' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ next_url }}"><button class="btn btn-link btn-sm p-0">{% if post.pinned %}Unpin{% else %}Pin to top{% endif %}</button></form>
+      {% endif %}
+      {% if teacher_view or post.author_id == user.pk %}
+      <form method="post" action="{% url 'dashboard:discussion_action' classroom.pk post.pk 'delete' %}" onsubmit="return confirm('Remove this post?');">{% csrf_token %}<input type="hidden" name="next" value="{{ next_url }}"><button class="btn btn-link btn-sm p-0 text-danger">Remove</button></form>
+      {% endif %}
+    </div>
+
+    {% for r in post.visible_replies %}
+    <div class="cd-reply{% if r.flagged %} flagged{% endif %}{% if r.author_id == classroom.facilitator_id %} teacher{% endif %}">
+      <strong>{% if r.author_id == classroom.facilitator_id %}{{ r.author.get_full_name|default:r.author.username }} <span class="cd-tag">Teacher</span>{% elif teacher_view %}{{ r.author.get_full_name|default:r.author.username }}{% else %}{{ r.author.first_name|default:r.author.username }}{% if r.author.last_name %} {{ r.author.last_name|slice:":1" }}.{% endif %}{% endif %}</strong>
+      <small>{{ r.created_at|date:"D j M, H:i" }}{% if r.flagged %} &middot; <span class="text-danger fw-bold">Blocked ({{ r.reason }})</span>{% endif %}</small>
+      <div>{{ r.body|linebreaksbr }}</div>
+      <div class="cd-actions">
+        {% if teacher_view and r.flagged %}
+        <form method="post" action="{% url 'dashboard:discussion_action' classroom.pk r.pk 'allow' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ next_url }}"><button class="btn btn-link btn-sm p-0">Show to the class</button></form>
+        {% endif %}
+        {% if teacher_view or r.author_id == user.pk %}
+        <form method="post" action="{% url 'dashboard:discussion_action' classroom.pk r.pk 'delete' %}" onsubmit="return confirm('Remove this reply?');">{% csrf_token %}<input type="hidden" name="next" value="{{ next_url }}"><button class="btn btn-link btn-sm p-0 text-danger">Remove</button></form>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+
+    {% if can_post and not post.flagged %}
+    <details class="cd-reply-form">
+      <summary>Reply</summary>
+      <form method="post" action="{% url 'dashboard:discussion_post' classroom.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next_url }}">
+        <input type="hidden" name="parent" value="{{ post.pk }}">
+        <div class="d-flex gap-2 mt-2">
+          <input type="text" name="body" maxlength="1500" class="form-control rounded-pill" required placeholder="Write a reply" aria-label="Reply">
+          <button type="submit" class="btn btn-cloud btn-sm"><i class="bi bi-reply-fill" aria-hidden="true"></i></button>
+        </div>
+      </form>
+    </details>
+    {% endif %}
+  </article>
+  {% empty %}
+  <p class="fm-empty"><i class="bi bi-chat-heart" aria-hidden="true"></i> No posts yet.{% if can_post %} Start the conversation!{% endif %}</p>
+  {% endfor %}
+</div>

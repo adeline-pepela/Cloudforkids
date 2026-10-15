@@ -39,7 +39,7 @@ def teacher_only(view):
 class ClassroomForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:
         model = Classroom
-        fields = ["name", "description", "tier", "school_name", "location", "meeting_link"]
+        fields = ["name", "description", "tier", "school_name", "location", "meeting_link", "discussion_enabled"]
         widgets = {
             "name": forms.TextInput(attrs={"placeholder": "e.g. Grade 6 Cloud Club"}),
             "description": forms.TextInput(attrs={"placeholder": "Optional: when and where you meet"}),
@@ -114,6 +114,27 @@ def home(request):
 
 
 @teacher_only
+def classes(request):
+    """All the teacher's classes in one place (the sidebar shows a single "My classes" link, not one per class)."""
+    show_archived = request.GET.get("archived") == "1"
+    rows = request.user.classrooms.filter(archived=show_archived).select_related("tier")
+    reports = [class_report(c) for c in rows]
+    archived_count = request.user.classrooms.filter(archived=True).count()
+    return render(request, "teach/classes.html", _ctx(request, nav="classes", reports=reports, show_archived=show_archived,
+                                                       archived_count=archived_count))
+
+
+@teacher_only
+def discussion(request, class_id):
+    from .classroom import discussion as class_discussion
+
+    classroom = _classroom(request, class_id)
+    posts = class_discussion(classroom, teacher_view=True)
+    blocked = classroom.posts.filter(flagged=True, hidden=False).count()
+    return render(request, "teach/discussion.html", _ctx(request, nav="classes", classroom=classroom, posts=posts, blocked=blocked))
+
+
+@teacher_only
 def class_new(request):
     form = ClassroomForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -122,7 +143,7 @@ def class_new(request):
         classroom.save()
         messages.success(request, f"{classroom.name} is ready. Share the join code {classroom.join_code} with your learners.")
         return redirect("teach:class", class_id=classroom.pk)
-    return render(request, "teach/class_form.html", _ctx(request, form=form, nav="new", editing=None))
+    return render(request, "teach/class_form.html", _ctx(request, form=form, nav="classes", editing=None))
 
 
 @teacher_only
@@ -133,7 +154,7 @@ def class_edit(request, class_id):
         form.save()
         messages.success(request, "Class updated.")
         return redirect("teach:class", class_id=classroom.pk)
-    return render(request, "teach/class_form.html", _ctx(request, form=form, nav=classroom.pk, editing=classroom))
+    return render(request, "teach/class_form.html", _ctx(request, form=form, nav="classes", editing=classroom))
 
 
 @teacher_only
@@ -144,7 +165,7 @@ def class_detail(request, class_id, session_form=None):
         request,
         "teach/class.html",
         _ctx(
-            request, r=report, tips=teacher_tips(report), assignment_form=AssignmentForm(), nav=classroom.pk,
+            request, r=report, tips=teacher_tips(report), assignment_form=AssignmentForm(), nav="classes",
             session_form=session_form or SessionForm(),
             upcoming=classroom.sessions.filter(starts_at__gte=timezone.now() - timedelta(hours=2))[:12],
             past_count=classroom.sessions.filter(starts_at__lt=timezone.now() - timedelta(hours=2)).count(),
@@ -229,7 +250,7 @@ def learner_report(request, class_id, learner_id):
     return render(
         request,
         "parent/child.html",
-        _ctx(request, r=child_report(membership.learner), viewer="teacher", classroom=classroom, nav=classroom.pk,
+        _ctx(request, r=child_report(membership.learner), viewer="teacher", classroom=classroom, nav="classes",
              base_tpl="teach/base.html"),
     )
 

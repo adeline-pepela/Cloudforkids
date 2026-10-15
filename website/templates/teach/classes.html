@@ -1,0 +1,57 @@
+{% extends "teach/base.html" %}
+{% block title %}My classes{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+  <div>
+    <h1 class="l-title">{% if show_archived %}Archived classes{% else %}My classes{% endif %}</h1>
+    <p class="l-sub mb-0">{% if show_archived %}Classes you archived. Open one to restore it.{% else %}Open a class to see its learners, schedule, live classes and discussion.{% endif %}</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    {% if show_archived %}
+    <a href="{% url 'teach:classes' %}" class="btn btn-outline-cloud">Back to my classes</a>
+    {% elif archived_count %}
+    <a href="?archived=1" class="btn btn-outline-cloud"><i class="bi bi-archive" aria-hidden="true"></i> Archived ({{ archived_count }})</a>
+    {% endif %}
+    <a href="{% url 'teach:class_new' %}" class="btn btn-cloud"><i class="bi bi-plus-circle-fill" aria-hidden="true"></i> New class</a>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  {% for r in reports %}
+  <div class="col-md-6 col-xl-4">
+    <a href="{% url 'teach:class' r.classroom.pk %}" class="fm-card">
+      <div class="d-flex align-items-start gap-3 mb-3">
+        <div class="fm-avatar sm" aria-hidden="true"><i class="bi bi-easel2-fill"></i></div>
+        <div class="flex-grow-1">
+          <h3 class="mb-0">{{ r.classroom.name }}</h3>
+          <small class="text-secondary">{{ r.classroom.tier.display_name|default:"All tiers" }}{% if r.classroom.school_name %} &middot; {{ r.classroom.school_name }}{% endif %}</small>
+        </div>
+        <span class="tc-code" title="Join code">{{ r.classroom.join_code }}</span>
+      </div>
+      <div class="d-flex justify-content-between align-items-end">
+        <span class="fm-eyebrow">Average progress</span><span class="fm-percent sm">{{ r.avg_progress }}<small>%</small></span>
+      </div>
+      <div class="fm-meter slim"><div class="fm-meter-fill" style="width: {{ r.avg_progress }}%"></div></div>
+      <div class="fm-mini">
+        <span><i class="bi bi-people-fill" aria-hidden="true"></i><b>{{ r.count }}</b> learner{{ r.count|pluralize }}</span>
+        <span><i class="bi bi-bell-fill" aria-hidden="true"></i><b>{{ r.attention|length }}</b> need attention</span>
+      </div>
+      <span class="fm-more">Open class <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+    </a>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="l-card text-center py-5" style="height:auto;">
+      <div class="fm-empty-ico"><i class="bi bi-easel2-fill" aria-hidden="true"></i></div>
+      {% if show_archived %}
+      <h3>No archived classes</h3>
+      {% else %}
+      <h3>Create your first class</h3>
+      <p class="text-secondary mx-auto" style="max-width:520px;">A class is a group of learners, like a club or a grade. You get a join code, learners enter it on their profile page, and then you can teach them live, set assignments and follow their progress.</p>
+      <a href="{% url 'teach:class_new' %}" class="btn btn-cloud btn-big"><i class="bi bi-plus-circle-fill" aria-hidden="true"></i> Create a class</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

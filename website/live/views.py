@@ -58,7 +58,7 @@ def display_name(user, host=False):
     if host:
         return user.get_full_name() or user.username
     if user.first_name:
-        return f"{user.first_name} {user.last_name[:1]}.".strip(" .") if user.last_name else user.first_name
+        return f"{user.first_name} {user.last_name[:1]}." if user.last_name else user.first_name
     return user.username
 
 
@@ -103,7 +103,7 @@ def _gate(request, room, reason, status=200, **extra):
     ctx = {"room": room, "reason": reason, "base_tpl": base, "nav": "classes", **extra}
     if request.user.role == User.Role.FACILITATOR:
         ctx["classes"] = list(request.user.classrooms.filter(archived=False))
-        ctx["nav"] = room.classroom.pk if room else None
+        ctx["nav"] = "classes"
     return render(request, "live/gate.html", ctx, status=status)
 
 
@@ -717,7 +717,7 @@ def report(request, session_id):
         "s": session, "classroom": classroom, "roster": roster, "came": came, "missed": len(roster) - came,
         "chat": session.chat.select_related("user"), "polls": session.polls.prefetch_related("votes"),
         "launches": session.launches.select_related("lesson"), "recordings": session.recordings.filter(status=LiveRecording.Status.READY),
-        "nav": classroom.pk, "classes": list(request.user.classrooms.filter(archived=False)) if request.user.role == User.Role.FACILITATOR else [],
+        "nav": "classes", "classes": list(request.user.classrooms.filter(archived=False)) if request.user.role == User.Role.FACILITATOR else [],
     }
     return render(request, "live/report.html", ctx)
 

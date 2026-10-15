@@ -1,0 +1,138 @@
+{% extends "learner/base.html" %}
+{% block title %}{{ classroom.name }}{% endblock %}
+{% block content %}
+<a href="{% url 'dashboard:classes' %}" class="cd-back"><i class="bi bi-arrow-left" aria-hidden="true"></i> My Classes</a>
+
+<div class="cd-hero">
+  <div class="cd-hero-ico" aria-hidden="true"><i class="bi bi-easel2-fill"></i></div>
+  <div class="flex-grow-1">
+    <h1 class="l-title mb-1">{{ classroom.name }}</h1>
+    <div class="cls-meta">
+      <span><i class="bi bi-person-badge-fill" aria-hidden="true"></i> Teacher: <strong>{{ teacher.get_full_name|default:teacher.username }}</strong></span>
+      {% if classroom.tier %}<span><i class="bi bi-signpost-split-fill" aria-hidden="true"></i> {{ classroom.tier.display_name }}</span>{% endif %}
+      {% if classroom.school_name %}<span><i class="bi bi-building-fill" aria-hidden="true"></i> {{ classroom.school_name }}</span>{% endif %}
+      {% if classroom.location %}<span><i class="bi bi-geo-alt-fill" aria-hidden="true"></i> {{ classroom.location }}</span>{% endif %}
+      <span><i class="bi bi-people-fill" aria-hidden="true"></i> {{ member_count }} learner{{ member_count|pluralize }}</span>
+    </div>
+    {% if classroom.description %}<p class="small text-secondary mt-2 mb-0">{{ classroom.description }}</p>{% endif %}
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    {% if live_room %}
+      {% if live_now %}
+      <a href="{% url 'live:room' live_room.code %}" class="btn btn-danger rounded-pill fw-bold"><i class="bi bi-broadcast" aria-hidden="true"></i> Join live class now</a>
+      {% else %}
+      <a href="{% url 'live:room' live_room.code %}" class="btn btn-outline-cloud"><i class="bi bi-broadcast" aria-hidden="true"></i> Live classroom</a>
+      {% endif %}
+    {% endif %}
+    {% if classroom.meeting_link %}<a href="{{ classroom.meeting_link }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-cloud"><i class="bi bi-camera-video-fill" aria-hidden="true"></i> Join online</a>{% endif %}
+    <a href="{% url 'messaging:compose' %}?to={{ teacher.pk }}" class="btn btn-outline-cloud"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i> Message teacher</a>
+  </div>
+</div>
+
+{% with next=upcoming.0 %}{% if next %}
+<div class="cd-next{% if next.is_live and next.is_open_now %} now{% endif %}">
+  <i class="bi bi-{% if next.is_live %}broadcast{% else %}calendar-event-fill{% endif %}" aria-hidden="true"></i>
+  <div class="flex-grow-1">
+    <small>Next class</small>
+    <strong>{{ next.display_title }}: {{ next.starts_at|date:"l j M" }}, {{ next.starts_at|time:"H:i" }}{% if next.is_live %} &middot; Live online{% elif next.where %} &middot; {{ next.where }}{% endif %}</strong>
+  </div>
+  {% if next.is_live %}<a href="{{ next.link }}" class="btn btn-sm {% if next.is_open_now %}btn-danger{% else %}btn-outline-cloud{% endif %}">Live class</a>{% endif %}
+</div>
+{% endif %}{% endwith %}
+
+<nav class="cd-tabs" aria-label="Class sections">
+  <a href="?tab=discussion" class="{% if tab == 'discussion' %}active{% endif %}"{% if tab == 'discussion' %} aria-current="page"{% endif %}><i class="bi bi-chat-square-text-fill" aria-hidden="true"></i> Discussion</a>
+  <a href="?tab=assignments" class="{% if tab == 'assignments' %}active{% endif %}"{% if tab == 'assignments' %} aria-current="page"{% endif %}><i class="bi bi-clipboard-check-fill" aria-hidden="true"></i> Assignments{% if assignments_open %} <span class="l-badge">{{ assignments_open }}</span>{% endif %}</a>
+  <a href="?tab=quizzes" class="{% if tab == 'quizzes' %}active{% endif %}"{% if tab == 'quizzes' %} aria-current="page"{% endif %}><i class="bi bi-patch-question-fill" aria-hidden="true"></i> Quizzes</a>
+  <a href="?tab=schedule" class="{% if tab == 'schedule' %}active{% endif %}"{% if tab == 'schedule' %} aria-current="page"{% endif %}><i class="bi bi-calendar-event-fill" aria-hidden="true"></i> Schedule</a>
+  <a href="?tab=recordings" class="{% if tab == 'recordings' %}active{% endif %}"{% if tab == 'recordings' %} aria-current="page"{% endif %}><i class="bi bi-play-btn-fill" aria-hidden="true"></i> Recordings</a>
+  <a href="?tab=people" class="{% if tab == 'people' %}active{% endif %}"{% if tab == 'people' %} aria-current="page"{% endif %}><i class="bi bi-people-fill" aria-hidden="true"></i> People</a>
+</nav>
+
+<div class="l-card mb-4" style="height:auto;">
+{% if tab == "discussion" %}
+  <h3><i class="bi bi-chat-square-text-fill text-primary" aria-hidden="true"></i> Class discussion</h3>
+  <p class="small text-secondary">Questions, ideas and news for {{ classroom.name }}. Only your class and your teacher can see this.</p>
+  {% url 'dashboard:class' classroom.pk as here %}
+  {% with next_url=here|add:"?tab=discussion" teacher_view=False %}{% include "partials/discussion.html" %}{% endwith %}
+
+{% elif tab == "assignments" %}
+  <h3><i class="bi bi-clipboard-check-fill text-success" aria-hidden="true"></i> Assignments</h3>
+  {% for t in assignments %}
+  <a class="tc-task" href="{{ t.a.course.get_absolute_url }}">
+    <i class="bi bi-{{ t.a.course.icon }} big" aria-hidden="true"></i>
+    <div class="flex-grow-1">
+      <strong>{{ t.a.course.display_title }}</strong>
+      <small>{% if t.done %}<span class="text-success fw-bold">Finished</span>{% elif t.a.due_date %}{% if t.overdue %}<span class="text-danger fw-bold">was due {{ t.a.due_date|date:"j M" }}</span>{% elif t.days_left == 0 %}<strong>due today</strong>{% else %}due {{ t.a.due_date|date:"j M" }} ({{ t.days_left }} day{{ t.days_left|pluralize }} left){% endif %}{% else %}No due date{% endif %}{% if t.a.note %} &middot; {{ t.a.note }}{% endif %}</small>
+      <span class="fm-bar mt-1"><span style="width: {{ t.percent }}%"></span></span>
+    </div>
+    <b>{{ t.percent }}%</b>
+  </a>
+  {% empty %}
+  <p class="fm-empty"><i class="bi bi-clipboard" aria-hidden="true"></i> Your teacher has not set any assignments yet.</p>
+  {% endfor %}
+
+{% elif tab == "quizzes" %}
+  <h3><i class="bi bi-patch-question-fill text-warning" aria-hidden="true"></i> Quizzes</h3>
+  <p class="small text-secondary">Quizzes in the courses your teacher set{% if not assignments and classroom.tier %} (or in {{ classroom.tier.display_name }}){% endif %}. Passed {{ quiz_done }} of {{ quizzes|length }}.</p>
+  {% for q in quizzes %}
+  <a class="tc-task" href="{{ q.lesson.get_absolute_url }}">
+    <i class="bi bi-{% if q.result.passed %}patch-check-fill text-success{% elif q.result %}arrow-repeat text-warning{% else %}patch-question{% endif %} big" aria-hidden="true"></i>
+    <div class="flex-grow-1">
+      <strong>{{ q.lesson.display_title }}</strong>
+      <small>{{ q.course.display_title }}{% if q.lesson.is_exam %} &middot; Exam{% endif %}</small>
+    </div>
+    <b>{% if q.result %}{{ q.result.score_percent }}%{% else %}Start{% endif %}</b>
+  </a>
+  {% empty %}
+  <p class="fm-empty"><i class="bi bi-patch-question" aria-hidden="true"></i> No quizzes here yet. They appear when your teacher assigns a course.</p>
+  {% endfor %}
+
+{% elif tab == "schedule" %}
+  <h3><i class="bi bi-calendar-event-fill text-primary" aria-hidden="true"></i> Upcoming classes</h3>
+  {% for ses in upcoming %}
+  <div class="cls-ses">
+    <div class="cls-date"><b>{{ ses.starts_at|date:"j" }}</b><span>{{ ses.starts_at|date:"M" }}</span></div>
+    <div class="flex-grow-1">
+      <strong>{{ ses.display_title }}</strong>
+      <small>{{ ses.starts_at|date:"l" }}, {{ ses.starts_at|time:"H:i" }} to {{ ses.ends_at|time:"H:i" }}{% if ses.is_live %} &middot; Live online{% elif ses.where %} &middot; {{ ses.where }}{% endif %}{% if ses.notes %} &middot; {{ ses.notes }}{% endif %}</small>
+    </div>
+    {% if ses.is_live %}<a href="{{ ses.link }}" class="btn btn-sm {% if ses.is_open_now %}btn-danger{% else %}btn-outline-cloud{% endif %}"><i class="bi bi-broadcast" aria-hidden="true"></i> Live class</a>
+    {% elif ses.link %}<a href="{{ ses.link }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-cloud">Join</a>{% endif %}
+  </div>
+  {% empty %}
+  <p class="fm-empty"><i class="bi bi-calendar" aria-hidden="true"></i> Nothing scheduled yet. Your teacher's sessions appear here and in your calendar.</p>
+  {% endfor %}
+  {% if attended %}
+  <h6 class="fw-bold mt-4"><i class="bi bi-check2-circle text-success" aria-hidden="true"></i> Live classes you came to</h6>
+  {% for a in attended %}
+  <div class="fm-row ok"><div><strong>{{ a.session.started_at|date:"l j M Y" }}</strong><small>joined at {{ a.first_joined_at|time:"H:i" }}{% if a.seconds %} &middot; {% widthratio a.seconds 60 1 %} min{% endif %} &middot; +20 XP</small></div></div>
+  {% endfor %}
+  {% endif %}
+
+{% elif tab == "recordings" %}
+  <h3><i class="bi bi-play-btn-fill text-danger" aria-hidden="true"></i> Recordings</h3>
+  <p class="small text-secondary">Recordings of your teacher from live classes. Learners are never recorded.</p>
+  {% for rec in recordings %}
+  <a class="tc-task" href="{% url 'live:recording' rec.pk %}" target="_blank" rel="noopener">
+    <i class="bi bi-play-circle-fill big" aria-hidden="true"></i>
+    <div class="flex-grow-1"><strong>{{ rec.session.started_at|date:"l j M Y" }}</strong><small>Live class recording</small></div>
+  </a>
+  {% empty %}
+  <p class="fm-empty"><i class="bi bi-camera-reels" aria-hidden="true"></i> No recordings yet.</p>
+  {% endfor %}
+
+{% elif tab == "people" %}
+  <h3><i class="bi bi-people-fill text-primary" aria-hidden="true"></i> People</h3>
+  <h6 class="fw-bold mt-3">Teacher</h6>
+  <div class="fm-row ok">
+    <div><strong>{{ teacher.get_full_name|default:teacher.username }}</strong><small>Your teacher</small></div>
+    <a href="{% url 'messaging:compose' %}?to={{ teacher.pk }}" class="btn btn-sm btn-outline-cloud">Message</a>
+  </div>
+  <h6 class="fw-bold mt-4">Classmates ({{ classmates|length }})</h6>
+  <div class="cd-people">
+    {% for name in classmates %}<span class="cd-person"><span class="cd-avatar" aria-hidden="true">{{ name|slice:":1"|upper }}</span>{{ name }}</span>{% empty %}<p class="text-secondary small">You are the first one here.</p>{% endfor %}
+  </div>
+{% endif %}
+</div>
+{% endblock %}
