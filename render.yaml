@@ -19,7 +19,11 @@ envVarGroups:
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM
-        sync: false                # e.g. Cloud for Kids <no-reply@cloudforkids.co.ke> (a domain verified in Resend)
+        sync: false                # Cloud for Kids <hello@cloudforkids.co.ke> (a domain verified in Resend)
+      - key: EMAIL_REPLY_TO
+        sync: false                # where replies go; leave empty to use the contact email in Admin > Site settings
+      - key: RESEND_WEBHOOK_SECRET
+        sync: false                # Resend > Webhooks: https://cloudforkids.co.ke/email/webhook/, all email events; paste its whsec_ secret
       - key: MPESA_ENV
         sync: false                # sandbox while testing, production once Safaricom has taken the app live
       - key: MPESA_CONSUMER_KEY
@@ -80,7 +84,7 @@ services:
     rootDir: website
     schedule: "0 6 * * *"          # 06:00 UTC = 09:00 in Nairobi
     buildCommand: pip install -r requirements.txt
-    startCommand: python manage.py send_notifications --nudges --plans
+    startCommand: python manage.py send_notifications --nudges --plans --monthly   # --monthly only sends on the 1st-3rd
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9

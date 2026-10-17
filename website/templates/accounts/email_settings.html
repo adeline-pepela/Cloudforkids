@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Email settings{% endblock %}
+{% block content %}
+<section class="container py-5" style="max-width:640px;">
+  <div class="text-center mb-4">
+    <h1 class="section-title">Email settings</h1>
+    <p class="text-secondary mb-0">For <strong>{{ target.email }}</strong></p>
+  </div>
+
+  {% if stop %}
+  <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 text-center">
+    <h2 class="h5 fw-bold">Stop these emails?</h2>
+    <p class="fs-5 mb-2"><strong>{{ stop_name }}</strong></p>
+    <p class="text-secondary">You will still get the other emails you have switched on below.</p>
+    <form method="post" action="?stop={{ stop }}">{% csrf_token %}<button class="btn btn-cloud btn-lg" name="action" value="stop">Yes, stop these emails</button></form>
+  </div>
+  {% endif %}
+
+  <form method="post" class="card border-0 shadow-sm rounded-4 p-4">
+    {% csrf_token %}
+    <h2 class="h5 fw-bold mb-3">Which emails would you like?</h2>
+    {% if not target.email_notifications %}<div class="alert alert-warning rounded-4">All of these are switched off at the moment. Saving this form switches back on the ones you tick.</div>{% endif %}
+    {% for c in categories %}
+    <div class="form-check form-switch mb-3">
+      <input class="form-check-input" type="checkbox" role="switch" name="{{ c.key }}" id="cat-{{ c.key }}" {% if c.on and target.email_notifications %}checked{% endif %}>
+      <label class="form-check-label" for="cat-{{ c.key }}"><strong>{{ c.name }}</strong><br><span class="text-secondary small">{{ c.help }}</span></label>
+    </div>
+    {% endfor %}
+    <p class="small text-secondary">Account emails are always sent: password resets, security alerts, parent approvals, receipts and plan renewals.</p>
+
+    <h2 class="h5 fw-bold mt-2 mb-2">Email language</h2>
+    <div class="d-flex gap-3 mb-4">
+      <div class="form-check"><input class="form-check-input" type="radio" name="language" value="en" id="lang-en" {% if target.language != 'sw' %}checked{% endif %}><label class="form-check-label" for="lang-en">English</label></div>
+      <div class="form-check"><input class="form-check-input" type="radio" name="language" value="sw" id="lang-sw" {% if target.language == 'sw' %}checked{% endif %}><label class="form-check-label" for="lang-sw">Kiswahili</label></div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+      <button class="btn btn-cloud btn-lg" name="action" value="save">Save my settings</button>
+      <button class="btn btn-outline-secondary btn-lg" name="action" value="none">Turn all of these off</button>
+    </div>
+  </form>
+  <p class="mt-4 text-center"><a href="{% url 'core:home' %}" class="fw-bold text-decoration-none">Back to Cloud for Kids</a></p>
+</section>
+{% endblock %}

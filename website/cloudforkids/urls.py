@@ -6,6 +6,7 @@ from core import admin_tools
 from django.urls import include, path, re_path
 from django.conf import settings
 from core.media import serve_media
+from core.email_views import resend_webhook
 from live import views as live_views
 
 urlpatterns = [
@@ -22,6 +23,7 @@ urlpatterns = [
     path('live/', include('live.urls')),
     path('assistant/', include('assistant.urls')),
     path('r/<str:code>/', live_views.short_link, name='live_short'),
+    path('email/webhook/', resend_webhook, name='resend_webhook'),
     re_path(r'^%s(?P<path>.*)$' % settings.MEDIA_URL.lstrip('/'), serve_media),
     path('', include('core.urls')),
 ]

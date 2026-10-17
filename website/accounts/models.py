@@ -27,13 +27,37 @@ class User(AbstractUser):
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.LEARNER)
     phone_number = models.CharField(max_length=20, blank=True)
     terms_accepted_at = models.DateTimeField(null=True, blank=True, help_text="When they accepted the Terms and Privacy Policy")
-    email_notifications = models.BooleanField(default=True, help_text="Progress summaries and reminders by email")
+    email_notifications = models.BooleanField(default=True, help_text="Optional emails at all (each kind can also be turned off below)")
+    email_progress = models.BooleanField("Progress reports", default=True, help_text="Weekly and monthly summaries")
+    email_reminders = models.BooleanField("Reminders", default=True, help_text="Study nudges and live class reminders")
+    email_class = models.BooleanField("Class updates", default=True, help_text="Assignments, live class dates, teacher messages")
+    email_celebrations = models.BooleanField("Celebrations", default=True, help_text="Badges and certificates")
+    email_news = models.BooleanField("News", default=True, help_text="Announcements from Cloud for Kids")
+    email_verified = models.BooleanField(default=False, help_text="They opened the confirmation link we emailed")
+    language = models.CharField(max_length=2, choices=[("en", "English"), ("sw", "Kiswahili")], default="en",
+                                help_text="Language of their emails (follows the language they last used on the site)")
     is_approved = models.BooleanField(
         default=True, help_text="Facilitators need an admin's approval before they can use classes"
     )
 
     def __str__(self):
         return self.get_full_name() or self.username
+
+    def save(self, *args, **kwargs):
+        # set_password() leaves the new password in _password; Django clears it for silent hash upgrades at login,
+        # so this only fires for a real change (reset link, admin, teacher) on an existing account.
+        changed = self._password is not None and self.pk is not None and bool(self.email)
+        super().save(*args, **kwargs)
+        if changed:
+            from django.db import transaction
+
+            from core import notify
+
+            transaction.on_commit(lambda: notify.send_password_changed(self))
+
+    def wants_email(self, category):
+        """Optional emails: the master switch and the switch for that kind."""
+        return self.email_notifications and getattr(self, f"email_{category}", True)
 
     @property
     def awaiting_approval(self):

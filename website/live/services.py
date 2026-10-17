@@ -5,7 +5,6 @@ import logging
 from datetime import timedelta
 
 from django.conf import settings
-from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import ClassSession, ParentLink
@@ -46,22 +45,9 @@ def finish_session(session):
             except Exception:  # a badge problem must never stop the other learners' follow-ups
                 logger.exception("Could not award live-class badges to %s", learner.pk)
             continue
-        when = timezone.localtime(session.started_at)
         for link in ParentLink.objects.filter(child=learner).select_related("parent"):
-            parent = link.parent
-            if not parent.email:
-                continue
-            notify.send_email(
-                parent.email, f"{notify._name(learner)} missed today's live class",
-                "Missed live class",
-                [
-                    f"{notify._name(learner)} did not join the live class for {classroom.name} on {when:%A %d %B} at {when:%H:%M}.",
-                    "If something got in the way (internet, a device, or another activity), the teacher's next live class is on "
-                    "the class calendar. You can also message the teacher from your family dashboard.",
-                ],
-                cta=("Open the family dashboard", notify.absolute(reverse("family:child", args=[learner.pk]))),
-                user=parent, optional=True,
-            )
+            if link.parent.email:
+                notify.send_missed_live(link.parent, learner, classroom, session.started_at)
 
 
 def send_reminders(now=None):
@@ -76,23 +62,12 @@ def send_reminders(now=None):
         room = ses.live_room_obj
         if room is None:
             continue
-        url = notify.absolute(reverse("live_short", args=[room.code]))
-        code_line = f" The passcode is {room.passcode}." if room.passcode else ""
         start = timezone.localtime(ses.starts_at)
         for member in ses.classroom.memberships.select_related("learner"):
             for person in notify.family_recipients(member.learner):
-                if not notify._log(person, "live-reminder", f"{ses.pk}-{member.learner_id}"):
+                if not person.wants_email("reminders") or not notify._log(person, "live-reminder", f"{ses.pk}-{member.learner_id}"):
                     continue
-                mine = person.pk == member.learner_id
-                sent += notify.send_email(
-                    person.email, f"Live class at {start:%H:%M}: {ses.display_title}", "Your live class starts soon",
-                    [
-                        (f"Your live class for {ses.classroom.name} starts at {start:%H:%M} today." if mine
-                         else f"{notify._name(member.learner)}'s live class for {ses.classroom.name} starts at {start:%H:%M} today."),
-                        "Open the link a few minutes early and use headphones if you have them." + code_line,
-                    ],
-                    cta=("Join the live class", url), user=person, optional=True, background=False,
-                )
+                sent += notify.send_live_reminder(person, member.learner, ses, room, start)
     return sent
 
 

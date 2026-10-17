@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -247,3 +248,68 @@ class SitePhoto(models.Model):
         if "images.unsplash.com" in self.url and "?" not in self.url:
             return self.url + "?auto=format&fit=crop&w=1400&q=75"
         return self.url
+
+
+class EmailLog(models.Model):
+    """Every email the site hands to Resend, and what happened to it (Resend reports back through the webhook)."""
+
+    class Status(models.TextChoices):
+        SENT = "sent", "Sent"
+        DELIVERED = "delivered", "Delivered"
+        DELAYED = "delayed", "Delayed"
+        BOUNCED = "bounced", "Bounced"
+        COMPLAINED = "complained", "Marked as spam"
+        FAILED = "failed", "Failed"
+        SKIPPED = "skipped", "Not sent (address blocked)"
+
+    to = models.CharField(max_length=500)
+    subject = models.CharField(max_length=300)
+    kind = models.CharField(max_length=40, blank=True, db_index=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="email_log")
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.SENT, db_index=True)
+    resend_id = models.CharField(max_length=64, blank=True, db_index=True)
+    error = models.TextField(blank=True)
+    attempts = models.PositiveSmallIntegerField(default=1)
+    opened_at = models.DateTimeField(null=True, blank=True)
+    text_body = models.TextField(blank=True)
+    html_body = models.TextField(blank=True)
+    headers = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "email"
+        verbose_name_plural = "email log"
+
+    def __str__(self):
+        return f"{self.subject} to {self.to}"
+
+
+class EmailSuppression(models.Model):
+    """An address we must not email: it bounced, its owner marked us as spam, or an admin blocked it."""
+
+    class Reason(models.TextChoices):
+        BOUNCED = "bounced", "Bounced (address does not exist)"
+        COMPLAINED = "complained", "Marked our email as spam"
+        MANUAL = "manual", "Blocked by an admin"
+
+    email = models.EmailField(unique=True)
+    reason = models.CharField(max_length=12, choices=Reason.choices, default=Reason.MANUAL)
+    detail = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "blocked email address"
+
+    def __str__(self):
+        return self.email
+
+    def save(self, *args, **kwargs):
+        self.email = self.email.strip().lower()
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def blocked(cls, addresses):
+        return set(cls.objects.filter(email__in=[a.strip().lower() for a in addresses]).values_list("email", flat=True))

@@ -1,23 +1,30 @@
 """Branded emails sent through the configured email backend (Resend in production).
 
-Account emails (consent, approval, assignments) are sent always. Progress summaries and reminders respect
-`User.email_notifications`, and each carries a one-click "stop these emails" link.
+The wording of every email lives in core.email_text, in English and Kiswahili; each person gets their own language.
+Account emails (sign-up, consent, approval, password, receipts) are always sent. The rest belong to a category that
+people can turn off on their email settings page; those carry a one-click unsubscribe header for Gmail and Yahoo.
 """
 
 import logging
 import threading
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
 from django.conf import settings
 from django.core import signing
 from django.core.mail import EmailMultiAlternatives
+from django.db import close_old_connections
 from django.template.loader import render_to_string
+from django.templatetags.static import static
 from django.urls import reverse
 from django.utils import timezone
+
+from . import email_text as T
 
 logger = logging.getLogger(__name__)
 TAGLINE = "Learn the cloud, one step at a time"
 UNSUB_SALT = "c4k-unsubscribe"
+CONFIRM_SALT = "c4k-confirm-email"
+CONFIRM_MAX_AGE = 60 * 60 * 24 * 14
 
 
 def site_url():
@@ -28,16 +35,87 @@ def absolute(path):
     return f"{site_url()}{path}"
 
 
-def unsubscribe_url(user):
-    token = signing.dumps({"u": user.pk}, salt=UNSUB_SALT)
-    return absolute(reverse("accounts:unsubscribe", args=[token]))
+def email_header_url():
+    """The animated header (logo and drifting clouds) at the top of every email. Built by scripts/make_email_header.py."""
+    return absolute(static("img/email/header.gif"))
+
+
+# ---------------- links: email settings, one-click unsubscribe, confirming an address ----------------
+
+def settings_token(user, category=None):
+    data = {"u": user.pk}
+    if category:
+        data["c"] = category
+    return signing.dumps(data, salt=UNSUB_SALT)
+
+
+def read_settings_token(token):
+    """(user id, category or None) from an email settings link, or (None, None)."""
+    try:
+        data = signing.loads(token, salt=UNSUB_SALT, max_age=60 * 60 * 24 * 365)
+        return data["u"], data.get("c")
+    except (signing.BadSignature, KeyError, TypeError):
+        return None, None
 
 
 def read_unsubscribe_token(token):
+    return read_settings_token(token)[0]
+
+
+def unsubscribe_url(user, category=None):
+    """The email settings page for this person (no login needed); with a category it offers to stop that kind."""
+    url = absolute(reverse("accounts:email_settings", args=[settings_token(user)]))
+    return f"{url}?stop={category}" if category else url
+
+
+def one_click_url(user, category):
+    return absolute(reverse("accounts:one_click_unsubscribe", args=[settings_token(user, category)]))
+
+
+def confirm_url(user, next_path=""):
+    token = signing.dumps({"u": user.pk, "e": user.email.strip().lower()}, salt=CONFIRM_SALT)
+    url = absolute(reverse("accounts:confirm_email", args=[token]))
+    return f"{url}?next={next_path}" if next_path else url
+
+
+def read_confirm_token(token):
     try:
-        return signing.loads(token, salt=UNSUB_SALT, max_age=60 * 60 * 24 * 365)["u"]
-    except (signing.BadSignature, KeyError):
-        return None
+        data = signing.loads(token, salt=CONFIRM_SALT, max_age=CONFIRM_MAX_AGE)
+        return data["u"], data["e"]
+    except (signing.BadSignature, KeyError, TypeError):
+        return None, None
+
+
+# ---------------- composing and sending ----------------
+
+def lang_for(person):
+    return T.lang_of(getattr(person, "language", "en"))
+
+
+def _fmt(value, values):
+    return value.format(**values) if isinstance(value, str) else value
+
+
+def compose(kind, lang, values=None, *, extra=(), bullets=None, stats=None, cta_url="", cta_text=None, user=None, note=None, preview=None):
+    """The subject and the template context of one email. `extra` paragraphs are added as written (a teacher's note)."""
+    entry = T.EMAILS[kind]
+    words = entry[lang]
+    values = values or {}
+    category = entry["category"]
+    paragraphs = [_fmt(p, values) for p in words.get("paragraphs", [])] + [p for p in extra if p]
+    stat_labels = words.get("stats", [])
+    ctx = {
+        "lang": lang, "chrome": T.CHROME[lang], "header_url": email_header_url(),
+        "heading": _fmt(words.get("heading", ""), values), "paragraphs": paragraphs,
+        "stats": [{"value": v, "label": label} for v, label in zip(stats or [], stat_labels)] or None,
+        "bullets": bullets or None,
+        "cta_text": (cta_text or _fmt(words.get("cta", ""), values)) if cta_url else "", "cta_url": cta_url,
+        "note": note if note is not None else _fmt(words.get("note", ""), values),
+        "preview": preview or (paragraphs[0] if paragraphs else ""),
+        "settings_url": unsubscribe_url(user) if user is not None and user.pk else "",
+        "stop_url": unsubscribe_url(user, category) if (category and user is not None and user.pk) else "",
+    }
+    return _fmt(words.get("subject", ""), values), ctx, category
 
 
 def _deliver(message):
@@ -47,108 +125,136 @@ def _deliver(message):
     except Exception:
         logger.exception("Could not send '%s' to %s", message.subject, message.to)
         return False
+    finally:
+        if threading.current_thread() is not threading.main_thread():
+            close_old_connections()  # the email log write opened a connection in this thread
 
 
-def send_email(to, subject, heading, paragraphs, *, cta=None, stats=None, bullets=None, note=None, user=None, optional=False, background=True):
-    """Send one branded email. Returns True if it was handed to the mail service."""
+def send(kind, to, *, lang="en", values=None, user=None, extra=(), bullets=None, stats=None, cta_url="", cta_text=None, note=None,
+         background=True):
+    """Send one email from the catalog. `user` is the account it is for (their settings and unsubscribe links).
+    Returns True if it was handed to the mail service."""
     recipients = [to] if isinstance(to, str) else [t for t in to if t]
     if not recipients:
         return False
-    if optional and user is not None and not user.email_notifications:
+    category = T.EMAILS[kind]["category"]
+    if category and user is not None and not user.wants_email(category):
         return False
-    ctx = {
-        "tagline": TAGLINE, "heading": heading, "paragraphs": paragraphs, "stats": stats, "bullets": bullets, "note": note,
-        "cta_text": cta[0] if cta else "", "cta_url": cta[1] if cta else "",
-        "unsubscribe_url": unsubscribe_url(user) if (optional and user is not None) else "",
-    }
+    subject, ctx, category = compose(kind, lang, values, extra=extra, bullets=bullets, stats=stats, cta_url=cta_url, cta_text=cta_text,
+                                     user=user, note=note)
     text = render_to_string("emails/branded.txt", ctx)
     html = render_to_string("emails/branded.html", ctx)
-    message = EmailMultiAlternatives(subject, text, settings.DEFAULT_FROM_EMAIL, recipients)
+    headers = {}
+    if category and user is not None and user.pk:
+        headers = {"List-Unsubscribe": f"<{one_click_url(user, category)}>", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"}
+    message = EmailMultiAlternatives(subject, text, settings.DEFAULT_FROM_EMAIL, recipients, headers=headers)
     message.attach_alternative(html, "text/html")
+    message.c4k_kind = kind
+    message.c4k_user_id = getattr(user, "pk", None)
     if background and not settings.TESTING:  # do not make a visitor wait for the mail service
         threading.Thread(target=_deliver, args=(message,), daemon=True).start()
         return True
     return _deliver(message)
 
 
+def send_email(to, subject, heading, paragraphs, *, cta=None, user=None, optional=False, background=True, lang="en"):
+    """A one-off email written by a person (the assistant's announcements). Optional ones count as News."""
+    return send("announcement", to, lang=lang, values={"subject": subject, "heading": heading}, user=user if optional else None,
+                extra=paragraphs, cta_url=cta[1] if cta else "", cta_text=cta[0] if cta else None, note="", background=background)
+
+
 def _name(user):
     return user.first_name or user.username
+
+
+def course_title(course, lang):
+    return (course.title_sw if lang == "sw" else "") or course.title
+
+
+def ui(text, lang):
+    """Website wording (a badge name, a certificate level) in Kiswahili when the site has a translation for it."""
+    if lang != "sw" or not text:
+        return text
+    from .translation import _lookup, load_map
+
+    return _lookup(text, load_map()) or text
+
+
+def _when(dt, lang):
+    local = timezone.localtime(dt)
+    return f"{T.day(local, lang)} {'at' if lang == 'en' else 'saa'} {local:%H:%M}"
 
 
 # ---------------- account emails ----------------
 
 def send_welcome(user):
+    lang = lang_for(user)
     if user.role == "facilitator":
-        paragraphs = [
-            f"Welcome, {_name(user)}. Your facilitator account has been created.",
-            "Our team checks every new facilitator before class tools are switched on. This usually takes a day or two. "
-            "We will email you as soon as you are approved.",
-        ]
-        cta = None
+        kind, path = "welcome_facilitator", reverse("teach:home")
     elif user.role == "parent":
-        paragraphs = [
-            f"Welcome, {_name(user)}. Your parent account is ready.",
-            "Ask your child to open My Profile and read out their family code. Then use Add a child to follow their progress from 0 to 100%.",
-        ]
-        cta = ("Add my child", absolute(reverse("family:add")))
+        kind, path = "welcome_parent", reverse("family:add")
     else:
-        paragraphs = [
-            f"Welcome to Cloud for Kids, {_name(user)}!",
-            "Start your first lesson, try a Practice Lab and keep your learning streak going.",
-        ]
-        cta = ("Start learning", absolute(reverse("dashboard:home")))
-    return send_email(user.email, "Welcome to Cloud for Kids", "You're in!", paragraphs, cta=cta)
+        kind, path = "welcome_learner", reverse("dashboard:home")
+    extra, cta, url = [], None, absolute(path)
+    if user.email and not user.email_verified:  # the welcome email doubles as the confirmation email
+        extra = T.EMAILS["confirm_line"][lang]["paragraphs"]
+        url = confirm_url(user, path)
+        cta = T.EMAILS["confirm_line"][lang]["cta"]
+    return send(kind, user.email, lang=lang, values={"name": _name(user)}, user=user, extra=extra, cta_url=url, cta_text=cta)
+
+
+def send_confirm_email(user):
+    return send("confirm_email", user.email, lang=lang_for(user), values={"name": _name(user), "email": user.email},
+                user=user, cta_url=confirm_url(user))
+
+
+def send_password_changed(user):
+    if not user.email:
+        return False
+    lang = lang_for(user)
+    return send("password_changed", user.email, lang=lang, user=user,
+                values={"name": _name(user), "username": user.username, "when": _when(timezone.now(), lang)},
+                cta_url=absolute(reverse("accounts:password_reset")))
 
 
 def send_consent_request(consent):
     child = consent.user
-    link = absolute(reverse("accounts:consent", args=[consent.token]))
-    return send_email(
-        consent.parent_email,
-        f"Please approve {_name(child)}'s Cloud for Kids account",
-        f"{_name(child)} would like to join Cloud for Kids",
-        [
-            f"Hello{(' ' + consent.parent_name) if consent.parent_name else ''},",
-            f"{child.get_full_name() or child.username} has asked to join Cloud for Kids, a free cloud-computing learning programme for children in Kenya. "
-            "Because they are under 13, we need your permission before the account can be used.",
-            "The next page explains what we collect and why. You can approve or decline there. If you do nothing, the account stays locked.",
-        ],
-        cta=("Review and decide", link),
-        note="If you do not know this child or did not expect this email, just ignore it.",
+    return send(
+        "consent_request", consent.parent_email, lang=lang_for(child),
+        values={"child": _name(child), "child_full": child.get_full_name() or child.username,
+                "parent": f" {consent.parent_name}" if consent.parent_name else ""},
+        cta_url=absolute(reverse("accounts:consent", args=[consent.token])),
     )
 
 
 def send_consent_result(consent, approved):
     child = consent.user
     if approved:
-        return send_email(
-            consent.parent_email, f"{_name(child)} can now use Cloud for Kids", "Thank you for approving",
-            [f"{_name(child)}'s account is now active and can log in with the username {child.username}.",
-             "Want to follow their progress? Create a free parent account, choose Parent / Guardian, and link with the family code on your child's profile page."],
-            cta=("Create a parent account", absolute(reverse("accounts:signup"))),
-        )
-    return send_email(
-        consent.parent_email, "Cloud for Kids account declined", "The account has been removed",
-        ["As you asked, we have deleted the Cloud for Kids account request and the details that came with it. Nothing else is kept."],
-    )
+        return send("consent_approved", consent.parent_email, lang=lang_for(child),
+                    values={"child": _name(child), "username": child.username}, cta_url=absolute(reverse("accounts:signup")))
+    return send("consent_declined", consent.parent_email, lang=lang_for(child))
 
 
 def notify_admins_new_facilitator(user):
     from .models import SiteSetting
 
-    return send_email(
-        SiteSetting.load().contact_email, "New facilitator waiting for approval", "A facilitator needs approval",
-        [f"{user.get_full_name() or user.username} ({user.email}) signed up as a facilitator or teacher."],
-        cta=("Review in the admin", absolute(reverse("admin:accounts_user_changelist") + "?role__exact=facilitator&is_approved__exact=0")),
-    )
+    return send("admin_new_facilitator", SiteSetting.load().contact_email,
+                values={"name": user.get_full_name() or user.username, "email": user.email},
+                cta_url=absolute(reverse("admin:accounts_user_changelist") + "?role__exact=facilitator&is_approved__exact=0"))
 
 
 def send_teacher_approved(user):
-    return send_email(
-        user.email, "Your facilitator account is approved", "You're approved!",
-        [f"Good news, {_name(user)}. You can now create classes, share join codes and follow your learners' progress."],
-        cta=("Open my dashboard", absolute(reverse("teach:home"))),
-    )
+    return send("teacher_approved", user.email, lang=lang_for(user), values={"name": _name(user)}, user=user,
+                cta_url=absolute(reverse("teach:home")))
+
+
+def send_parent_linked(parent, child):
+    if parent.email:
+        send("parent_linked_parent", parent.email, lang=lang_for(parent), values={"child": _name(child)}, user=parent,
+             cta_url=absolute(reverse("family:child", args=[child.pk])))
+    if child.email:
+        send("parent_linked_learner", child.email, lang=lang_for(child), values={"parent": parent.get_full_name() or parent.username},
+             user=child)
 
 
 # ---------------- classes and messages ----------------
@@ -162,21 +268,25 @@ def family_recipients(learner):
     return people
 
 
+def _for(person, learner, kind_base):
+    """('…_learner', link to the learner's page) for the learner, ('…_parent', the family page) for a parent."""
+    mine = person.pk == learner.pk
+    url = absolute(reverse("dashboard:home") if mine else reverse("family:child", args=[learner.pk]))
+    return f"{kind_base}_{'learner' if mine else 'parent'}", url
+
+
 def notify_assignment(assignment):
     classroom, course = assignment.classroom, assignment.course
-    due = f" Please finish it by {assignment.due_date:%d %B %Y}." if assignment.due_date else ""
     sent = 0
     for member in classroom.memberships.select_related("learner"):
         for person in family_recipients(member.learner):
-            subject = f"New assignment from {classroom.facilitator.first_name or 'your teacher'}: {course.title}"
-            paragraphs = [
-                f"Your teacher set a new assignment for {classroom.name}: {course.title}.{due}" if person.pk == member.learner_id
-                else f"{_name(member.learner)}'s teacher set a new assignment for {classroom.name}: {course.title}.{due}",
-            ]
-            if assignment.note:
-                paragraphs.append(f"Message from the teacher: {assignment.note}")
-            url = absolute(reverse("dashboard:home") if person.pk == member.learner_id else reverse("family:child", args=[member.learner_id]))
-            sent += send_email(person.email, subject, "New assignment", paragraphs, cta=("Open Cloud for Kids", url), user=person, optional=True)
+            kind, url = _for(person, member.learner, "assignment")
+            lang = lang_for(person)
+            due = T.text(kind, lang, "due", date=T.long_date(assignment.due_date, lang)) if assignment.due_date else ""
+            extra = [T.text(kind, lang, "teacher_note", note=assignment.note)] if assignment.note else []
+            sent += send(kind, person.email, lang=lang, user=person, cta_url=url, extra=extra, values={
+                "teacher": classroom.facilitator.first_name or ("your teacher" if lang == "en" else "mwalimu wako"),
+                "course": course_title(course, lang), "classroom": classroom.name, "child": _name(member.learner), "due": due})
     return sent
 
 
@@ -185,44 +295,102 @@ def notify_live_scheduled(classroom, sessions):
     if not sessions:
         return 0
     first = timezone.localtime(sessions[0].starts_at)
-    when = f"{first:%A %d %B} at {first:%H:%M}"
-    more = f" It repeats every week for {len(sessions)} weeks." if len(sessions) > 1 else ""
     room = sessions[0].live_room_obj
     url = absolute(reverse("live_short", args=[room.code]))
-    code_line = f" The passcode to get in is {room.passcode}." if room.passcode else ""
-    topic = f" ({sessions[0].title})" if sessions[0].title else ""
     sent = 0
     for member in classroom.memberships.select_related("learner"):
         for person in family_recipients(member.learner):
-            mine = person.pk == member.learner_id
-            paragraphs = [
-                (f"Your teacher scheduled a live online class for {classroom.name}{topic} on {when} (Kenyan time).{more}" if mine
-                 else f"{_name(member.learner)}'s teacher scheduled a live online class for {classroom.name}{topic} on {when} (Kenyan time).{more}"),
-                "Open the link a few minutes early. Learners join with their microphone and camera off and raise a hand to speak." + code_line,
-            ]
-            sent += send_email(person.email, f"Live class: {classroom.name} on {first:%a %d %b}", "A live class is coming up",
-                               paragraphs, cta=("Open the live class", url), user=person, optional=True)
+            kind, _ = _for(person, member.learner, "live_scheduled")
+            lang = lang_for(person)
+            sent += send(kind, person.email, lang=lang, user=person, cta_url=url, values={
+                "classroom": classroom.name, "child": _name(member.learner),
+                "topic": f" ({sessions[0].title})" if sessions[0].title else "",
+                "short": T.short_day(first, lang), "when": T.day(first, lang), "time": f"{first:%H:%M}",
+                "repeat": T.text(kind, lang, "repeat", n=len(sessions)) if len(sessions) > 1 else "",
+                "passcode": T.text(kind, lang, "passcode_line", code=room.passcode) if room.passcode else ""})
     return sent
 
 
+def send_live_reminder(person, learner, session, room, start):
+    kind, _ = _for(person, learner, "live_reminder")
+    lang = lang_for(person)
+    return send(kind, person.email, lang=lang, user=person, background=False,
+                cta_url=absolute(reverse("live_short", args=[room.code])), values={
+                    "classroom": session.classroom.name, "title": session.display_title, "time": f"{start:%H:%M}",
+                    "child": _name(learner),
+                    "passcode": T.text(kind, lang, "passcode_line", code=room.passcode) if room.passcode else ""})
+
+
+def send_missed_live(parent, learner, classroom, started_at):
+    lang = lang_for(parent)
+    when = timezone.localtime(started_at)
+    return send("missed_live", parent.email, lang=lang, user=parent,
+                cta_url=absolute(reverse("family:child", args=[learner.pk])),
+                values={"child": _name(learner), "classroom": classroom.name, "when": T.day(when, lang), "time": f"{when:%H:%M}"})
+
+
 def send_message_email(message):
-    recipient = message.recipient
-    sender = message.sender
-    url = absolute(reverse("messaging:inbox"))
-    return send_email(
-        recipient.email, f"Message from {_name(sender)}: {message.subject}", message.subject,
-        [f"{sender.get_full_name() or sender.username} wrote:", message.body],
-        cta=("Open my messages", url), user=recipient, optional=True,
-    )
+    recipient, sender = message.recipient, message.sender
+    return send("message", recipient.email, lang=lang_for(recipient), user=recipient, extra=[message.body],
+                cta_url=absolute(reverse("messaging:inbox")),
+                values={"sender": _name(sender), "sender_full": sender.get_full_name() or sender.username, "topic": message.subject})
 
 
-# ---------------- scheduled: weekly summary and nudges ----------------
+# ---------------- celebrations ----------------
+
+def badge_bullets(kind, lang, badges):
+    return [T.text(kind, lang, "bullet", badge=ui(b.name, lang), description=ui(b.description, lang)) for b in badges]
+
+
+def send_badges(learner, badges):
+    """One email per person for the badges a learner just earned (a lesson can unlock several at once)."""
+    if not badges:
+        return 0
+    from courses.models import Course
+
+    graduate = next((b for b in badges if b.name.endswith(" Graduate")), None)
+    course = Course.objects.filter(title=graduate.name[: -len(" Graduate")]).first() if graduate else None
+    sent = 0
+    for person in family_recipients(learner):
+        kind, url = _for(person, learner, "badges")
+        lang = lang_for(person)
+        if person.pk == learner.pk:
+            url = absolute(reverse("dashboard:achievements"))
+        extra = [T.text(kind, lang, "course_done", child=_name(learner), course=course_title(course, lang))] if course else []
+        sent += send(kind, person.email, lang=lang, user=person, cta_url=url, extra=extra,
+                     bullets=badge_bullets(kind, lang, badges),
+                     values={"name": _name(learner), "child": _name(learner), "first": ui(badges[0].name, lang)})
+    return sent
+
+
+def send_certificate(cert):
+    learner = cert.learner
+    url = absolute(reverse("billing:certificate", args=[cert.code]))
+    sent = 0
+    for person in family_recipients(learner):
+        kind, _ = _for(person, learner, "certificate")
+        lang = lang_for(person)
+        sent += send(kind, person.email, lang=lang, user=person, cta_url=url, values={
+            "name": _name(learner), "child": _name(learner), "course": course_title(cert.course, lang),
+            "level": ui(cert.get_level_display(), lang), "code": cert.code})
+    return sent
+
+
+# ---------------- scheduled: weekly and monthly reports, nudges ----------------
 
 def _log(user, kind, key):
     from accounts.models import NotificationLog
 
     _, created = NotificationLog.objects.get_or_create(user=user, kind=kind, key=key)
     return created
+
+
+def weekly_bullet(lang, r):
+    words = T.EMAILS["weekly"][lang]
+    score = words["score"].format(n=r["avg_score"]) if r["avg_score"] is not None else ""
+    last = T.ago(r["last_active"], timezone.now(), lang)
+    return words["bullet"].format(child=r["name"], percent=r["percent"], week=r["this_week"], streak=r["stats"]["streak"],
+                                  score=score, last=last)
 
 
 def run_weekly_summaries(dry_run=False):
@@ -233,32 +401,86 @@ def run_weekly_summaries(dry_run=False):
     year, week, _ = timezone.now().isocalendar()
     key = f"{year}-W{week:02d}"
     sent = 0
-    for parent in User.objects.filter(role="parent", is_active=True, email_notifications=True).exclude(email=""):
-        links = ParentLink.objects.filter(parent=parent).select_related("child")
+    for parent in User.objects.filter(role="parent", is_active=True, email_notifications=True, email_progress=True).exclude(email=""):
+        links = list(ParentLink.objects.filter(parent=parent).select_related("child"))
         if not links:
             continue
         if not dry_run and not _log(parent, "weekly", key):
             continue
-        bullets, stats = [], None
-        for link in links:
-            r = child_report(link.child)
-            bullets.append(
-                f"{r['name']}: {r['percent']}% of the path done, {r['this_week']} lesson or lab"
-                f"{'s' if r['this_week'] != 1 else ''} this week, {r['stats']['streak']}-day streak"
-                + (f", quiz average {r['avg_score']}%" if r["avg_score"] is not None else "") + f". Last active {r['last_active_text']}."
-            )
-        if len(links) == 1:
-            r = child_report(links[0].child)
-            stats = [{"value": f"{r['percent']}%", "label": "of path done"}, {"value": r["this_week"], "label": "done this week"},
-                     {"value": r["stats"]["streak"], "label": "day streak"}]
         if dry_run:
             sent += 1
             continue
-        ok = send_email(
-            parent.email, "Your child's week on Cloud for Kids", f"Here is the week, {_name(parent)}",
-            ["A quick look at how your child is doing:"], bullets=bullets, stats=stats,
-            cta=("See the full report", absolute(reverse("family:home"))), user=parent, optional=True, background=False,
-        )
+        lang = lang_for(parent)
+        reports = [child_report(link.child) for link in links]
+        stats = None
+        if len(reports) == 1:
+            r = reports[0]
+            stats = [f"{r['percent']}%", r["this_week"], r["stats"]["streak"]]
+        ok = send("weekly", parent.email, lang=lang, user=parent, values={"name": _name(parent)}, stats=stats,
+                  bullets=[weekly_bullet(lang, r) for r in reports], cta_url=absolute(reverse("family:home")), background=False)
+        sent += bool(ok)
+    return sent
+
+
+def _last_month(now):
+    first_this = timezone.localtime(now).date().replace(day=1)
+    first_last = (first_this - timedelta(days=1)).replace(day=1)
+    tz = timezone.get_current_timezone()
+    return first_last, timezone.make_aware(datetime.combine(first_last, time.min), tz), timezone.make_aware(datetime.combine(first_this, time.min), tz)
+
+
+def month_numbers(child, start, end):
+    from billing.models import Certificate
+    from courses.models import LearnerBadge, LessonCompletion
+    from dashboard.models import LabCompletion
+
+    return {
+        "lessons": LessonCompletion.objects.filter(enrollment__learner=child, completed_at__gte=start, completed_at__lt=end).count(),
+        "labs": LabCompletion.objects.filter(learner=child, completed_at__gte=start, completed_at__lt=end).count(),
+        "badges": LearnerBadge.objects.filter(learner=child, earned_at__gte=start, earned_at__lt=end).count(),
+        "certs": Certificate.objects.filter(learner=child, issued_at__gte=start, issued_at__lt=end).count(),
+    }
+
+
+def monthly_bullet(lang, name, numbers, percent, avg_score):
+    words = T.EMAILS["monthly"][lang]
+    if not (numbers["lessons"] or numbers["labs"] or numbers["badges"] or numbers["certs"]):
+        return words["quiet"].format(child=name)
+    score = words["score"].format(n=avg_score) if avg_score is not None else ""
+    return words["bullet"].format(child=name, percent=percent, score=score, **numbers)
+
+
+def run_monthly_reports(dry_run=False, now=None, any_day=False):
+    """On the first days of a month: one review of the month before per parent, covering all their children.
+    The daily job calls it every day; it only sends on the 1st to the 3rd (once per parent, thanks to the log)."""
+    from accounts.models import ParentLink, User
+    from dashboard.family import child_report
+
+    now = now or timezone.now()
+    if not any_day and timezone.localtime(now).day > 3:
+        return 0
+    month, start, end = _last_month(now)
+    key = f"{month:%Y-%m}"
+    sent = 0
+    for parent in User.objects.filter(role="parent", is_active=True, email_notifications=True, email_progress=True).exclude(email=""):
+        links = list(ParentLink.objects.filter(parent=parent).select_related("child"))
+        if not links:
+            continue
+        if dry_run:
+            sent += 1
+            continue
+        if not _log(parent, "monthly", key):
+            continue
+        lang = lang_for(parent)
+        bullets, stats = [], None
+        for link in links:
+            numbers, r = month_numbers(link.child, start, end), child_report(link.child)
+            bullets.append(monthly_bullet(lang, _name(link.child), numbers, r["percent"], r["avg_score"]))
+            if len(links) == 1:
+                stats = [numbers["lessons"], numbers["labs"], numbers["badges"]]
+        ok = send("monthly", parent.email, lang=lang, user=parent, bullets=bullets, stats=stats,
+                  values={"name": _name(parent), "month": T.month_name(month, lang)},
+                  cta_url=absolute(reverse("family:home")), background=False)
         sent += bool(ok)
     return sent
 
@@ -276,22 +498,69 @@ def run_nudges(days=4, dry_run=False):
         if last is None:
             if now - child.date_joined < timedelta(days=days - 1):
                 continue
-            key, line = "never", f"{_name(child)} has not finished a lesson yet. A first 10-minute lesson is the best way to start."
+            key, base, quiet = "never", "nudge_start", 0
         elif (now - last) >= timedelta(days=days) and r["percent"] < 100:
-            key, line = last.date().isoformat(), f"{_name(child)} has not studied for {(now - last).days} days. Keep the streak alive with one short lesson."
+            key, base, quiet = last.date().isoformat(), "nudge", (now - last).days
         else:
             continue
         for person in family_recipients(child):
             if dry_run:
                 sent += 1
                 continue
-            if not person.email_notifications or not _log(person, "nudge", f"{child.pk}:{key}"):
+            if not person.wants_email("reminders") or not _log(person, "nudge", f"{child.pk}:{key}"):
                 continue
-            to_child = person.pk == child.pk
-            sent += bool(send_email(
-                person.email, "A little nudge from Cloud for Kids", "Time for a short lesson?",
-                [line.replace(f"{_name(child)} has", "You have").replace(f"{_name(child)}'s", "your") if to_child else line],
-                cta=("Open Cloud for Kids", absolute(reverse("dashboard:home") if to_child else reverse("family:child", args=[child.pk]))),
-                user=person, optional=True, background=False,
-            ))
+            kind, url = _for(person, child, base)
+            sent += bool(send(kind, person.email, lang=lang_for(person), user=person, cta_url=url, background=False,
+                              values={"child": _name(child), "days": quiet}))
     return sent
+
+
+# ---------------- the admin preview page ----------------
+
+def preview(kind, lang, user=None, header_url=None):
+    """(subject, html, text) of one email with sample values, exactly as the template renders it."""
+    entry = T.EMAILS[kind]
+    sample = dict(entry.get("sample", {}))
+    extra = sample.pop(f"_paragraphs_{lang}", None) or sample.pop("_paragraphs", [])
+    sample.pop("_paragraphs_sw", None)
+    bullets = sample.pop("_bullets", None)
+    stats = sample.pop("stats", None)
+    rows = sample.pop("bullets", None)
+    if rows and kind == "weekly":
+        bullets = [weekly_bullet(lang, {"name": b["child"], "percent": b["percent"], "this_week": b["week"], "stats": {"streak": b["streak"]},
+                                        "avg_score": b["score"], "last_active": timezone.now()}) for b in rows]
+    elif rows and kind == "monthly":
+        bullets = [monthly_bullet(lang, b["child"], {k: b[k] for k in ("lessons", "labs", "badges", "certs")}, b["percent"], b["score"]) for b in rows]
+    elif rows:
+        bullets = [T.text(kind, lang, "bullet", **b) for b in rows]
+    # sample dates and set phrases in the reader's language
+    sample_day = timezone.make_aware(datetime(2026, 10, 19, 16, 0))
+    if "date" in sample:
+        sample["date"] = T.day(sample_day + timedelta(days=1), lang) if kind.startswith("plan_") else T.long_date(sample_day + timedelta(days=4), lang)
+    if "month" in sample:
+        sample["month"] = T.month_name(sample_day - timedelta(days=40), lang)
+    if "when" in sample:
+        sample["when"] = (_when(sample_day, lang) if kind == "password_changed" else T.text(kind, lang, "tomorrow")
+                          if kind.startswith("plan_ending") else T.day(sample_day, lang))
+    if "short" in sample:
+        sample["short"] = T.short_day(sample_day, lang)
+    if kind == "payment_failed":
+        sample["reason"] = T.text(kind, lang, "cancelled")
+    if "level" in sample:
+        sample["level"] = ui(sample["level"], lang)
+    if "due" in entry[lang]:
+        sample["due"] = T.text(kind, lang, "due", date=sample["date"])
+        extra = [T.text(kind, lang, "teacher_note", note="Finish the quiz before Friday's class." if lang == "en" else "Maliza jaribio kabla ya darasa la Ijumaa.")]
+    cta_text = None
+    if kind.startswith("welcome_"):
+        extra, cta_text = T.EMAILS["confirm_line"][lang]["paragraphs"], T.EMAILS["confirm_line"][lang]["cta"]
+    if kind == "receipt":
+        bullets = [T.text(kind, lang, "receipt_no", n="C4K-000123"), T.text(kind, lang, "mpesa_code", n="TJK8XYZ123")]
+    if kind == "announcement":
+        cta_text = "See the calendar" if lang == "en" else "Ona kalenda"
+    subject, ctx, _ = compose(kind, lang, sample, extra=extra, bullets=bullets, stats=stats, cta_url=absolute("/"), cta_text=cta_text, user=user)
+    if not (cta_text or T.EMAILS[kind][lang].get("cta")):
+        ctx["cta_url"] = ""
+    if header_url:  # the admin page shows the header from this server, even before it is deployed
+        ctx["header_url"] = header_url
+    return subject, render_to_string("emails/branded.html", ctx), render_to_string("emails/branded.txt", ctx)

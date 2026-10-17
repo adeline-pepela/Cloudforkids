@@ -226,7 +226,8 @@ class NotificationTests(TestCase):
         self.assertEqual(len(weekly), 1)
         self.assertEqual(weekly[0].to, ["mum@example.com"])
         self.assertIn("Kid", weekly[0].body)
-        self.assertIn("Stop these emails", weekly[0].body)
+        self.assertIn("Stop emails like this", weekly[0].body)
+        self.assertIn("List-Unsubscribe", weekly[0].extra_headers)
 
     def test_unsubscribed_parent_gets_nothing(self):
         self.mum.email_notifications = False

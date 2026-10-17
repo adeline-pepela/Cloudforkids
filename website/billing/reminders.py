@@ -18,20 +18,26 @@ def _plan_end(learner, now):
     return latest
 
 
-def _send(learner, sub, kind, subject, heading, line):
-    """One email per person per period and kind (NotificationLog keeps them from repeating)."""
+def _send(learner, sub, kind, days=None):
+    """One email per person per period and kind (NotificationLog keeps them from repeating). `days` = days left, or None
+    when the plan has ended."""
+    from core import email_text as T
+
     sent = 0
     key = f"{sub.pk}:{kind}"
     for person in notify.family_recipients(learner):
         if not notify._log(person, "plan", key):
             continue
         to_child = person.pk == learner.pk
+        email_kind = f"plan_{'ending' if days else 'ended'}_{'learner' if to_child else 'parent'}"
+        lang = notify.lang_for(person)
         url = reverse("billing:checkout", args=[sub.plan.slug]) + ("" if to_child else f"?learner={learner.pk}")
-        sent += bool(notify.send_email(
-            person.email, subject, heading,
-            [line.replace(f"{notify._name(learner)}'s", "your") if to_child else line],
-            cta=(f"Renew {sub.plan.name}", notify.absolute(url)), background=False,
-        ))
+        values = {"child": notify._name(learner), "plan": sub.plan.name}
+        if days:
+            values["when"] = T.text(email_kind, lang, "tomorrow") if days == 1 else T.text(email_kind, lang, "in_days", n=days)
+            values["date"] = T.day(timezone.localtime(sub.ends_at), lang)
+        sent += bool(notify.send(email_kind, person.email, lang=lang, user=person, values=values,
+                                 cta_url=notify.absolute(url), background=False))
     return sent
 
 
@@ -47,13 +53,7 @@ def run_plan_reminders(dry_run=False):
             if dry_run:
                 sent += 1
                 continue
-            when = "tomorrow" if days == 1 else f"in {days} days"
-            sent += _send(
-                sub.learner, sub, f"{days}d", f"{notify._name(sub.learner)}'s {sub.plan.name} plan ends {when}",
-                "Time to renew?",
-                f"{notify._name(sub.learner)}'s {sub.plan.name} plan ends on {timezone.localtime(sub.ends_at):%A %d %B}. "
-                f"Renew now to keep lessons, quizzes and labs open without a break.",
-            )
+            sent += _send(sub.learner, sub, f"{days}d", days=days)
     # just ended (in the last day) with nothing after it
     for sub in Subscription.objects.filter(ends_at__gt=now - timedelta(days=1), ends_at__lte=now).select_related("learner", "plan"):
         if _plan_end(sub.learner, now) is not None or "(refunded)" in sub.note:
@@ -61,10 +61,5 @@ def run_plan_reminders(dry_run=False):
         if dry_run:
             sent += 1
             continue
-        sent += _send(
-            sub.learner, sub, "ended", f"{notify._name(sub.learner)}'s {sub.plan.name} plan has ended",
-            "The plan has ended",
-            f"{notify._name(sub.learner)}'s {sub.plan.name} plan ended today, so lessons are locked for now. "
-            f"Progress, badges and certificates are all kept. Renew any time to carry on.",
-        )
+        sent += _send(sub.learner, sub, "ended")
     return sent

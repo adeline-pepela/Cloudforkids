@@ -81,6 +81,10 @@ def add_child(request):
             return redirect("family:add")
         _, created = ParentLink.objects.get_or_create(parent=request.user, child=profile.user)
         cache.delete(key)
+        if created:
+            from core import notify
+
+            notify.send_parent_linked(request.user, profile.user)
         messages.success(
             request,
             f"You are now following {profile.user.first_name or profile.user.username}." if created else "You already follow this learner.",

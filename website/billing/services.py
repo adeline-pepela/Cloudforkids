@@ -164,6 +164,8 @@ def settle(payment, result_code, result_desc="", receipt="", amount=None):
         payment.save()
     if payment.status == Payment.Status.PAID:
         send_receipt(payment)
+    elif payment.status in (Payment.Status.FAILED, Payment.Status.CANCELLED) and payment.method == Payment.Method.MPESA:
+        send_payment_failed(payment)
     return payment
 
 
@@ -306,36 +308,69 @@ def receipt_url(payment):
 
 
 def send_receipt(payment):
+    from core import email_text as T
+
     sub = payment.subscription
-    name = payment.learner.first_name or payment.learner.username
-    lines = [p for p in (
-        f"We received KES {payment.amount:,} for {name}'s {payment.plan.name} plan." if payment.amount
-        else f"{name}'s {payment.plan.name} plan is free with {payment.discount_note}.",
-        f"It is active until {timezone.localtime(sub.ends_at):%d %B %Y}." if sub else "",
-    ) if p]
-    bullets = [f"Receipt number: {payment.receipt_number}"]
-    if payment.mpesa_receipt:
-        bullets.append(f"M-Pesa code: {payment.mpesa_receipt}")
-    if payment.discount:
-        bullets.append(f"{payment.discount_note}: KES {payment.discount:,} off")
-    family = {u for u in (payment.payer, payment.learner) if u and u.email}
-    gift = []
+    learner = payment.learner
+    name = notify._name(learner)
+    family = {u for u in (payment.payer, learner) if u and u.email}
     if payment.sponsor_name:
-        family.update(link.parent for link in payment.learner.parent_links.select_related("parent") if link.parent.email)
-        gift = [f"This plan is a gift from {payment.sponsor_name}."
-                + (f" Their message: “{payment.sponsor_message}”" if payment.sponsor_message else "")]
+        family.update(link.parent for link in learner.parent_links.select_related("parent") if link.parent.email)
+    reader = payment.payer or learner
+    lang = notify.lang_for(reader)
+
+    def words(lang):
+        lines = [T.text("receipt", lang, "paid", amount=f"{payment.amount:,}", child=name, plan=payment.plan.name) if payment.amount
+                 else T.text("receipt", lang, "free", child=name, plan=payment.plan.name, discount_note=payment.discount_note)]
+        if sub:
+            lines.append(T.text("receipt", lang, "until", date=T.long_date(timezone.localtime(sub.ends_at), lang)))
+        bullets = [T.text("receipt", lang, "receipt_no", n=payment.receipt_number)]
+        if payment.mpesa_receipt:
+            bullets.append(T.text("receipt", lang, "mpesa_code", n=payment.mpesa_receipt))
+        if payment.discount:
+            bullets.append(T.text("receipt", lang, "discount", note=payment.discount_note, n=f"{payment.discount:,}"))
+        return lines, bullets
+
     if family:
-        notify.send_email(
-            [u.email for u in family], f"Payment received: {payment.plan.name} plan", "Thank you! The plan is active",
-            lines + gift, bullets=bullets,
-            cta=("See the receipt", notify.absolute(reverse("billing:receipt", args=[payment.pk]))),
-        )
+        lines, bullets = words(lang)
+        if payment.sponsor_name:
+            gift = T.text("receipt", lang, "gift", sponsor=payment.sponsor_name)
+            if payment.sponsor_message:
+                gift += T.text("receipt", lang, "gift_message", message=payment.sponsor_message)
+            lines.append(gift)
+        notify.send("receipt", [u.email for u in family], lang=lang, values={"plan": payment.plan.name}, extra=lines,
+                    bullets=bullets, cta_url=notify.absolute(reverse("billing:receipt", args=[payment.pk])))
     if payment.sponsor_email:
-        notify.send_email(
-            payment.sponsor_email, "Thank you for sponsoring a learner", f"Thank you, {payment.sponsor_name}!",
-            [f"Your gift of KES {payment.amount:,} gives {name} the {payment.plan.name} plan on Cloud for Kids."] + lines[1:],
-            bullets=bullets, cta=("See the receipt", notify.absolute(receipt_url(payment))),
-        )
+        lines, bullets = words("en")
+        until = T.text("sponsor_thanks", "en", "until", date=T.long_date(timezone.localtime(sub.ends_at), "en")) if sub else ""
+        notify.send("sponsor_thanks", payment.sponsor_email, values={
+            "sponsor": payment.sponsor_name, "amount": f"{payment.amount:,}", "child": name, "plan": payment.plan.name, "until": until},
+            bullets=bullets, cta_url=notify.absolute(receipt_url(payment)))
+
+
+def send_payment_failed(payment):
+    """The M-Pesa prompt was cancelled, timed out or failed: tell whoever was paying, with a link to try again."""
+    from core import email_text as T
+
+    learner = payment.learner
+    if payment.sponsor_email and payment.payer is None:
+        to, lang, url = [payment.sponsor_email], "en", reverse("billing:sponsor", args=[sponsor_token(learner)]) + f"?plan={payment.plan.slug}"
+    else:
+        payer = payment.payer or learner
+        to = [payer.email] if payer.email else []
+        lang = notify.lang_for(payer)
+        url = reverse("billing:checkout", args=[payment.plan.slug]) + ("" if payer.pk == learner.pk else f"?learner={learner.pk}")
+    if not to:
+        return False
+    detail = (payment.result_desc or "").strip().rstrip(".")
+    if payment.result_code == "1037" or "timeout" in detail.lower() or "timed out" in detail.lower():
+        reason = T.text("payment_failed", lang, "timeout")
+    elif payment.status == Payment.Status.CANCELLED:
+        reason = T.text("payment_failed", lang, "cancelled")
+    else:
+        reason = T.text("payment_failed", lang, "other", detail=detail) if detail else ""
+    return notify.send("payment_failed", to, lang=lang, cta_url=notify.absolute(url), values={
+        "amount": f"{payment.amount:,}", "child": notify._name(learner), "plan": payment.plan.name, "reason": reason})
 
 
 # ---------------- sponsor links ----------------
@@ -381,10 +416,10 @@ def issue_certificate(user, enrollment):
     cert, created = Certificate.objects.get_or_create(
         learner=user, course=enrollment.course, defaults={"level": plan.credential}
     )
-    if created:
-        return cert
-    if CREDENTIAL_RANK[plan.credential] > CREDENTIAL_RANK[cert.level]:
+    if not created:
+        if CREDENTIAL_RANK[plan.credential] <= CREDENTIAL_RANK[cert.level]:
+            return None
         cert.level = plan.credential
         cert.save(update_fields=["level"])
-        return cert
-    return None
+    notify.send_certificate(cert)
+    return cert

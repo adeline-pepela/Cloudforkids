@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import reverse
 
-from .models import ContactMessage, SitePhoto, UITranslation, LegalPage, ImpactStat, InfoCard, NewsletterSubscriber, Partner, SiteSetting, TeamMember, Testimonial
+from .models import ContactMessage, EmailLog, EmailSuppression, SitePhoto, UITranslation, LegalPage, ImpactStat, InfoCard, NewsletterSubscriber, Partner, SiteSetting, TeamMember, Testimonial
 
 admin.site.site_header = "Cloud for Kids Admin"
 admin.site.site_title = "Cloud for Kids Admin"
@@ -275,3 +275,56 @@ def _each_context(request):
 
 
 admin.site.each_context = _each_context
+
+
+@admin.register(EmailLog)
+class EmailLogAdmin(admin.ModelAdmin):
+    list_display = ("created_at", "to", "subject", "kind", "status", "opened", "attempts")
+    list_filter = ("status", "kind", "created_at")
+    search_fields = ("to", "subject", "resend_id")
+    date_hierarchy = "created_at"
+    readonly_fields = ("to", "subject", "kind", "user", "status", "resend_id", "error", "attempts", "opened_at", "headers",
+                       "created_at", "updated_at", "preview", "text_body")
+    exclude = ("html_body",)
+    actions = ["send_again"]
+    list_per_page = 50
+
+    def has_add_permission(self, request):
+        return False
+
+    @admin.display(boolean=True, description="Opened")
+    def opened(self, obj):
+        return obj.opened_at is not None
+
+    @admin.display(description="Email")
+    def preview(self, obj):
+        from django.utils.html import format_html
+
+        if not obj.html_body:
+            return "-"
+        return format_html('<iframe sandbox srcdoc="{}" style="width:100%;max-width:640px;height:700px;border:1px solid #ddd;border-radius:12px;"></iframe>', obj.html_body)
+
+    @admin.action(description="Send these emails again")
+    def send_again(self, request, queryset):
+        from django.conf import settings
+        from django.core.mail import EmailMultiAlternatives
+
+        sent = 0
+        for log in queryset[:50]:
+            message = EmailMultiAlternatives(log.subject, log.text_body, settings.DEFAULT_FROM_EMAIL,
+                                             [a.strip() for a in log.to.split(",") if a.strip()], headers=log.headers or None)
+            if log.html_body:
+                message.attach_alternative(log.html_body, "text/html")
+            message.c4k_kind, message.c4k_user_id = log.kind, log.user_id
+            try:
+                sent += message.send()
+            except Exception as err:
+                self.message_user(request, f"Could not send '{log.subject}' to {log.to}: {err}", level="error")
+        self.message_user(request, f"Sent {sent} email{'s' if sent != 1 else ''} again. They appear at the top of the log.")
+
+
+@admin.register(EmailSuppression)
+class EmailSuppressionAdmin(admin.ModelAdmin):
+    list_display = ("email", "reason", "detail", "created_at")
+    list_filter = ("reason",)
+    search_fields = ("email",)

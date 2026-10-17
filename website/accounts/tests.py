@@ -334,15 +334,55 @@ class LegalAndUnsubscribeTests(TestCase):
             self.assertEqual(self.client.get(reverse(name)).status_code, 200)
         self.assertContains(self.client.get(reverse("core:privacy")), "Data Protection Act")
 
-    def test_unsubscribe_link(self):
+    def test_old_unsubscribe_links_open_the_settings_page(self):
         from core import notify
 
         user = make("mum", "parent")
-        token = notify.unsubscribe_url(user).rsplit("/", 2)[-2]
-        self.client.post(reverse("accounts:unsubscribe", args=[token]))
+        token = notify.settings_token(user)
+        self.assertRedirects(self.client.get(reverse("accounts:unsubscribe", args=[token])), reverse("accounts:email_settings", args=[token]))
+        self.assertEqual(self.client.get(reverse("accounts:email_settings", args=["garbage"])).status_code, 404)
+
+    def test_email_settings_page(self):
+        from core import notify
+
+        user = make("mum", "parent")
+        url = reverse("accounts:email_settings", args=[notify.settings_token(user)])
+        self.assertContains(self.client.get(url), "Progress reports")
+        self.client.post(url, {"action": "save", "progress": "on", "class": "on", "language": "sw"})
+        user.refresh_from_db()
+        self.assertEqual((user.email_progress, user.email_class, user.email_reminders, user.email_news, user.language),
+                         (True, True, False, False, "sw"))
+        self.client.post(url, {"action": "none"})
         user.refresh_from_db()
         self.assertFalse(user.email_notifications)
-        self.assertEqual(self.client.get(reverse("accounts:unsubscribe", args=["garbage"])).status_code, 404)
+        self.assertFalse(user.wants_email("progress"))
+
+    def test_stop_one_kind_from_the_email_link(self):
+        from core import notify
+
+        user = make("mum", "parent")
+        url = notify.unsubscribe_url(user, "reminders").split(notify.site_url())[-1]
+        self.assertContains(self.client.get(url), "Stop these emails?")
+        self.client.post(url, {"action": "stop"})
+        user.refresh_from_db()
+        self.assertFalse(user.email_reminders)
+        self.assertTrue(user.email_progress and user.email_notifications)
+
+    def test_one_click_unsubscribe_needs_post_and_no_csrf(self):
+        from django.test import Client
+
+        from core import notify
+
+        user = make("mum", "parent")
+        url = notify.one_click_url(user, "news").split(notify.site_url())[-1]
+        self.assertEqual(self.client.get(url).status_code, 302)  # link scanners only look
+        user.refresh_from_db()
+        self.assertTrue(user.email_news)
+        response = Client(enforce_csrf_checks=True).post(url, {"List-Unsubscribe": "One-Click"})
+        self.assertEqual(response.status_code, 200)
+        user.refresh_from_db()
+        self.assertFalse(user.email_news)
+        self.assertTrue(user.email_notifications)
 
 
 class ClassScheduleTests(TestCase):

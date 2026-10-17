@@ -10,6 +10,7 @@
 
 {% endif %}{% if note %}{{ note }}
 
-{% endif %}Cloud for Kids - Every Kenyan child, cloud-ready by 2030.
-{% if unsubscribe_url %}Stop these emails: {{ unsubscribe_url }}
+{% endif %}{{ chrome.footer }}
+{% if settings_url %}{{ chrome.settings }}: {{ settings_url }}
+{% endif %}{% if stop_url %}{{ chrome.stop }}: {{ stop_url }}
 {% endif %}{% endautoescape %}

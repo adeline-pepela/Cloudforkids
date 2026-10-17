@@ -54,6 +54,7 @@
       <a class="c4k-link{% if '/admin/tools/report' in request.path %} active{% endif %}" href="{% url 'tools:monthly_report' %}"><i class="bi bi-bar-chart-line-fill"></i> Monthly report</a>
       <a class="c4k-link{% if '/admin/tools/billing' in request.path %} active{% endif %}" href="{% url 'tools:billing_report' %}"><i class="bi bi-cash-coin"></i> Billing report</a>
       <a class="c4k-link{% if '/admin/tools/import' in request.path %} active{% endif %}" href="{% url 'tools:import_learners' %}"><i class="bi bi-file-earmark-arrow-up-fill"></i> Import learners</a>
+      <a class="c4k-link{% if '/admin/tools/emails' in request.path %} active{% endif %}" href="{% url 'tools:email_previews' %}"><i class="bi bi-envelope-paper-heart-fill"></i> Email previews</a>
       {% if user.is_superuser %}<a class="c4k-link{% if '/admin/tools/assistant' in request.path %} active{% endif %}" href="{% url 'tools:assistant_settings' %}"><i class="bi bi-stars"></i> AI assistant</a>{% endif %}
 
       <div class="c4k-group">Site</div>

@@ -3,7 +3,7 @@
 from .models import Badge, Enrollment, LearnerBadge, LessonCompletion
 
 
-def check_and_award_badges(user):
+def check_and_award_badges(user, notify_family=True):
     # Imported here: the dashboard app depends on courses, so a top-level import would be circular.
     from dashboard.labs import lab_count
     from dashboard.models import LabCompletion
@@ -61,4 +61,8 @@ def check_and_award_badges(user):
                 f"Complete all lessons in {enrollment.course.title}",
             )
 
+    if newly_awarded and notify_family:
+        from core import notify
+
+        notify.send_badges(user, newly_awarded)
     return newly_awarded

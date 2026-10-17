@@ -114,4 +114,4 @@ class Command(BaseCommand):
         for lab in rng.sample(labs, min(lab_count, len(labs))):
             done = LabCompletion.objects.create(learner=user, slug=lab.slug)
             LabCompletion.objects.filter(pk=done.pk).update(completed_at=now - timedelta(days=rng.randint(0, 6)))
-        check_and_award_badges(user)
+        check_and_award_badges(user, notify_family=False)

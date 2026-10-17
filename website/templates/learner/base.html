@@ -44,6 +44,7 @@
         <img src="{% static 'img/nimbus.svg' %}" alt="" width="54">
         <p>{% block side_tip %}Nimbus says: learn a little every day to keep your streak going!{% endblock %}</p>
       </div>
+      <a class="l-link small" href="{% url 'accounts:my_email_settings' %}"><i class="bi bi-envelope-paper-fill" aria-hidden="true"></i> Email settings</a>
       <form method="post" action="{% url 'accounts:logout' %}">
         {% csrf_token %}
         <button type="submit" class="l-logout"><i class="bi bi-box-arrow-left" aria-hidden="true"></i> Log out</button>
@@ -65,6 +66,7 @@
       {% endif %}
     </header>
 
+    {% if user.email and not user.email_verified %}<div class="l-content pb-0">{% include "partials/email_banner.html" %}</div>{% endif %}
     {% if messages %}
     <div class="l-content pb-0">
       {% for message in messages %}

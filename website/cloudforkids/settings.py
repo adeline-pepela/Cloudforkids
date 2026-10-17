@@ -201,6 +201,8 @@ EMAIL_BACKEND = (
     else 'django.core.mail.backends.console.EmailBackend'
 )
 DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_FROM', 'Cloud for Kids <onboarding@resend.dev>')
+EMAIL_REPLY_TO = os.environ.get('EMAIL_REPLY_TO', '').strip()  # blank = the contact email in Site settings
+RESEND_WEBHOOK_SECRET = os.environ.get('RESEND_WEBHOOK_SECRET', '').strip()  # whsec_... from Resend > Webhooks
 SITE_URL = os.environ.get('SITE_URL', 'http://127.0.0.1:8000')  # used for links in emails sent outside a web request
 PASSWORD_RESET_TIMEOUT = 60 * 60 * 2  # reset links work for 2 hours
 
