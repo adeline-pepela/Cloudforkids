@@ -242,7 +242,7 @@ def monthly_report(request):
 def urls():
     from assistant import settings_views as assistant
 
-    from . import email_views
+    from . import email_views, progress
 
     wrap = admin.site.admin_view
     return [
@@ -255,6 +255,8 @@ def urls():
         path("assistant/<int:pk>/remove/", wrap(assistant.remove), name="assistant_remove"),
         path("import-learners/", wrap(import_learners), name="import_learners"),
         path("learners-template.csv", wrap(sample_csv), name="learners_template"),
+        path("learners/", wrap(progress.learner_list), name="learner_list"),
+        path("learners/<int:pk>/", wrap(progress.learner_detail), name="learner_detail"),
         path("report/", wrap(monthly_report), name="monthly_report"),
         path("billing/", wrap(billing_report), name="billing_report"),
         path("emails/", wrap(email_views.email_previews), name="email_previews"),

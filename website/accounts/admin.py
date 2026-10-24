@@ -8,9 +8,18 @@ from .models import Assignment, ClassMembership, Classroom, ClassPost, ClassSess
 
 @admin.register(User)
 class UserAdmin(DjangoUserAdmin):
-    list_display = ("username", "first_name", "last_name", "email", "role", "is_approved", "is_active", "is_staff")
+    list_display = ("username", "first_name", "last_name", "email", "role", "is_approved", "is_active", "is_staff", "progress")
     list_filter = ("role", "is_approved") + tuple(DjangoUserAdmin.list_filter)
     actions = ["approve_facilitators"]
+
+    @admin.display(description="Progress")
+    def progress(self, obj):
+        if obj.role != User.Role.LEARNER:
+            return "-"
+        from django.urls import reverse
+        from django.utils.html import format_html
+
+        return format_html('<a href="{}">View progress</a>', reverse("tools:learner_detail", args=[obj.pk]))
 
     @admin.action(description="Approve selected facilitators (and email them)")
     def approve_facilitators(self, request, queryset):

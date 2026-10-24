@@ -89,7 +89,7 @@
     <ul class="d-list">
       {% for u in c4k.recent_users %}
       <li><span class="c4k-avatar sm">{{ u.get_username|slice:":1"|upper }}</span>
-        <span><a href="{% url 'admin:accounts_user_change' u.pk %}">{{ u.get_full_name|default:u.get_username }}</a><small>{{ u.get_role_display }} &middot; {{ u.date_joined|timesince }} ago</small></span></li>
+        <span><a href="{% if u.role == 'learner' %}{% url 'tools:learner_detail' u.pk %}{% else %}{% url 'admin:accounts_user_change' u.pk %}{% endif %}">{{ u.get_full_name|default:u.get_username }}</a><small>{{ u.get_role_display }} &middot; {{ u.date_joined|timesince }} ago</small></span></li>
       {% empty %}<li class="d-empty">No members yet.</li>{% endfor %}
     </ul>
   </section>

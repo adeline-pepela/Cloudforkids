@@ -312,3 +312,42 @@ class CsrfFailureTests(TestCase):
         self.assertContains(page, "had expired")
         c.post(reverse("accounts:logout"))
         self.assertNotIn("_auth_user_id", c.session)
+
+
+class LearnerProgressTests(TestCase):
+    def setUp(self):
+        from courses.models import Enrollment, LessonCompletion, QuizResult
+
+        self.admin = User.objects.create_superuser("boss2", "b2@example.com", PASSWORD, role="admin")
+        self.client.force_login(self.admin)
+        tier = Tier.objects.create(name="Foundational", slug="found", grade_range="4-6", summary="s")
+        course = Course.objects.create(tier=tier, title="Cloud 101", slug="cloud-101", summary="s")
+        self.lessons = [Lesson.objects.create(course=course, title=f"L{i}", slug=f"l{i}", content="x", order=i) for i in range(1, 4)]
+        self.kid = User.objects.create_user("amani", password=PASSWORD, role="learner", first_name="Amani", last_name="Kamau")
+        self.idle_kid = User.objects.create_user("baraka", password=PASSWORD, role="learner", first_name="Baraka")
+        enrollment = Enrollment.objects.create(learner=self.kid, course=course)
+        LessonCompletion.objects.create(enrollment=enrollment, lesson=self.lessons[0], score_percent=80)
+        QuizResult.objects.create(learner=self.kid, lesson=self.lessons[0], score_percent=80, passed=True)
+
+    def test_list_shows_progress_and_filters(self):
+        page = self.client.get(reverse("tools:learner_list"))
+        self.assertContains(page, "Amani Kamau")
+        self.assertContains(page, "1 / 3")
+        self.assertContains(page, "33%")
+        idle = self.client.get(reverse("tools:learner_list") + "?status=not_started")
+        self.assertContains(idle, "baraka")
+        self.assertNotContains(idle, "Amani Kamau")
+        self.assertContains(self.client.get(reverse("tools:learner_list") + "?q=amani&tier=1&sort=-lessons"), "No learners match")
+
+    def test_detail_report_and_csv(self):
+        page = self.client.get(reverse("tools:learner_detail", args=[self.kid.pk]))
+        self.assertContains(page, "Up next")
+        self.assertContains(page, "L2")
+        csv_reply = self.client.get(reverse("tools:learner_detail", args=[self.kid.pk]) + "?format=csv")
+        self.assertIn("Lessons completed,1 of 3", csv_reply.content.decode())
+        self.assertContains(self.client.get(reverse("tools:learner_list") + "?format=csv"), "amani")
+
+    def test_detail_404_for_non_learner_and_admin_only(self):
+        self.assertEqual(self.client.get(reverse("tools:learner_detail", args=[self.admin.pk])).status_code, 404)
+        self.client.logout()
+        self.assertEqual(self.client.get(reverse("tools:learner_list")).status_code, 302)

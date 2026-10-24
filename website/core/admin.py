@@ -196,6 +196,7 @@ def _dashboard_data():
 
     cards = [
         {"label": "Learners", "value": User.objects.filter(role=User.Role.LEARNER).count(), "sub": f"{signups_week} joined this week", "icon": "bi-people-fill", "tone": "t-sky", "url": url("accounts_user") + "?role__exact=learner"},
+        {"label": "Learner progress", "value": "Open", "sub": "see where each student is and print reports", "icon": "bi-person-lines-fill", "tone": "t-purple", "url": reverse("tools:learner_list")},
         {"label": "Enrollments", "value": total_enrollments, "sub": f"{Course.objects.count()} courses available", "icon": "bi-person-check-fill", "tone": "t-grass", "url": url("courses_enrollment")},
         {"label": "Lessons completed", "value": total_completions, "sub": f"{done_week} this week", "icon": "bi-check2-circle", "tone": "t-purple", "url": url("courses_lessoncompletion")},
         {"label": "Avg. course completion", "value": f"{round(total_completions / possible * 100) if possible else 0}%", "sub": f"{total_lessons} lessons in total", "icon": "bi-graph-up-arrow", "tone": "t-sun", "url": url("courses_course")},

@@ -1,0 +1,117 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% block bodyclass %}dashboard{% endblock %}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Home</a> &rsaquo; <a href="{% url 'tools:learner_list' %}">Learner progress</a> &rsaquo; {{ r.user.get_full_name|default:r.user.username }}</div>{% endblock %}
+{% block content_title %}{% endblock %}
+{% block coltype %}colDash{% endblock %}
+
+{% block content %}
+<div class="d-hero">
+  <div>
+    <h1>{{ r.user.get_full_name|default:r.user.username }}</h1>
+    <p>
+      {{ r.user.username }}{% if r.profile.grade %} &middot; {{ r.profile.grade }}{% endif %}{% if r.profile.school_name %} &middot; {{ r.profile.school_name }}{% endif %}{% if r.profile.county %} &middot; {{ r.profile.county }}{% endif %}
+      &middot; {{ r.profile.tier.name|default:"No tier chosen" }} &middot; joined {{ r.user.date_joined|date:"j M Y" }}
+    </p>
+    <p>Report prepared {{ r.generated|date:"j M Y, H:i" }}</p>
+  </div>
+  <div class="d-actions no-print">
+    <a href="?format=csv"><i class="bi bi-file-earmark-spreadsheet-fill"></i> Download CSV</a>
+    <a class="alt" href="#" onclick="window.print();return false;"><i class="bi bi-printer-fill"></i> Print / save as PDF</a>
+    <a href="{% url 'admin:accounts_user_change' r.user.pk %}"><i class="bi bi-pencil-fill"></i> Edit account</a>
+  </div>
+</div>
+
+{% if r.idle %}<p style="color:#E8743B;"><i class="bi bi-exclamation-circle-fill"></i> {% if r.last_seen %}Last seen {{ r.last_seen|timesince }} ago.{% else %}Has never signed in or finished anything.{% endif %} This learner may need a nudge.</p>{% endif %}
+
+<div class="d-cards">
+  <div class="d-card"><span class="ico t-green"><i class="bi bi-journal-check"></i></span><span class="txt"><span class="num">{{ r.percent }}%</span><span class="lbl">Overall progress</span><span class="sub">{{ r.lessons_done }} of {{ r.lessons_total }} lessons</span></span></div>
+  <div class="d-card"><span class="ico t-sky"><i class="bi bi-calendar-check-fill"></i></span><span class="txt"><span class="num">{{ r.active_days }}</span><span class="lbl">Days learned</span><span class="sub">{{ r.activities }} things finished, {{ r.streak }}-day streak</span></span></div>
+  <div class="d-card"><span class="ico t-purple"><i class="bi bi-mortarboard-fill"></i></span><span class="txt"><span class="num">{{ r.courses_finished }}</span><span class="lbl">Courses finished</span><span class="sub">{{ r.courses|length }} enrolled</span></span></div>
+  <div class="d-card"><span class="ico t-orange"><i class="bi bi-patch-check-fill"></i></span><span class="txt"><span class="num">{% if r.quiz_avg is not None %}{{ r.quiz_avg }}%{% else %}-{% endif %}</span><span class="lbl">Average quiz score</span><span class="sub">{{ r.quiz_passed }} of {{ r.quiz_count }} passed</span></span></div>
+  <div class="d-card"><span class="ico t-pink"><i class="bi bi-joystick"></i></span><span class="txt"><span class="num">{{ r.labs_done }}</span><span class="lbl">Practice labs</span><span class="sub">{{ r.live_done }} live class{{ r.live_done|pluralize:"es" }}, {{ r.live_minutes }} min</span></span></div>
+  <div class="d-card"><span class="ico t-sky"><i class="bi bi-trophy-fill"></i></span><span class="txt"><span class="num">{{ r.badges|length }}</span><span class="lbl">Badges</span><span class="sub">Level {{ r.level }} {{ r.level_name }}, {{ r.xp }} XP</span></span></div>
+</div>
+
+<div class="d-grid">
+  <section class="d-panel span-2">
+    <h3>Activity in the last 30 days</h3>
+    <div class="chart-box"><canvas id="ch-learner" aria-label="Bar chart of things finished per day" role="img"></canvas></div>
+  </section>
+  <section class="d-panel">
+    <h3>At a glance</h3>
+    <ul class="d-list">
+      <li><div>First activity</div><em style="margin-left:auto;">{% if r.first_activity %}{{ r.first_activity|date:"j M Y" }}{% else %}-{% endif %}</em></li>
+      <li><div>Last seen</div><em style="margin-left:auto;">{% if r.last_seen %}{{ r.last_seen|date:"j M Y" }}{% else %}Never{% endif %}</em></li>
+      <li><div>Last sign-in</div><em style="margin-left:auto;">{% if r.user.last_login %}{{ r.user.last_login|date:"j M Y" }}{% else %}Never{% endif %}</em></li>
+      {% for month, n in r.months %}<li><div>{{ month }}</div><em style="margin-left:auto;">{{ n }} finished</em></li>{% endfor %}
+    </ul>
+  </section>
+</div>
+
+<h2 style="margin:26px 0 12px;">Where they are in each course</h2>
+{% for c in r.courses %}
+<section class="d-panel" style="margin-bottom:16px;">
+  <h3>{{ c.course.title }} <small>{{ c.course.tier.name }}{% if c.complete %} &middot; completed{% endif %}</small></h3>
+  <p style="margin:0 0 10px;">
+    <span style="display:inline-block;width:160px;height:10px;border-radius:99px;background:var(--darkened-bg);overflow:hidden;vertical-align:middle;"><span style="display:block;height:100%;width:{{ c.percent }}%;background:linear-gradient(90deg,#2FBF71,#1CA7EC);"></span></span>
+    <strong>{{ c.percent }}%</strong> &middot; {{ c.done }} of {{ c.total }} done
+    &middot; enrolled {{ c.enrollment.enrolled_at|date:"j M Y" }}{% if c.last %} &middot; last lesson {{ c.last|date:"j M Y" }}{% endif %}
+    {% if c.next %}<br>Up next: <strong>{{ c.next.title }}</strong>{% endif %}
+  </p>
+  <table class="d-table">
+    <thead><tr><th>Lesson</th><th>Status</th><th>Completed</th><th class="num">Score</th><th class="num">Best quiz</th></tr></thead>
+    <tbody>
+    {% for row in c.rows %}
+      <tr>
+        <td>{{ row.lesson.title }}{% if row.lesson.is_exam %} <small>(module exam)</small>{% endif %}</td>
+        <td>{% if row.done_at %}<i class="bi bi-check-circle-fill" style="color:#2FBF71;"></i> Done{% elif row.best is not None %}<i class="bi bi-hourglass-split" style="color:#E8A23B;"></i> Tried quiz{% else %}<span style="color:var(--body-quiet-color);">Not started</span>{% endif %}</td>
+        <td>{% if row.done_at %}{{ row.done_at|date:"j M Y" }}{% else %}-{% endif %}</td>
+        <td class="num">{% if row.score is not None %}{{ row.score }}%{% else %}-{% endif %}</td>
+        <td class="num">{% if row.best is not None %}{{ row.best }}%{% if row.passed %} &#10003;{% endif %}{% else %}-{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% empty %}
+<p class="d-empty">Not enrolled in any course yet.</p>
+{% endfor %}
+
+<div class="d-grid">
+  <section class="d-panel">
+    <h3>Practice labs</h3>
+    <ul class="d-list">{% for l in r.labs %}<li><div>{{ l.lab.title }}</div><em style="margin-left:auto;">{% if l.done_at %}{{ l.done_at|date:"j M Y" }}{% else %}not yet{% endif %}</em></li>{% empty %}<li class="d-empty">No labs published.</li>{% endfor %}</ul>
+  </section>
+  <section class="d-panel">
+    <h3>Live classes attended</h3>
+    <ul class="d-list">{% for a in r.live %}<li><div>{{ a.session }}</div><em style="margin-left:auto;">{{ a.first_joined_at|date:"j M Y" }} &middot; {% widthratio a.seconds 60 1 %} min</em></li>{% empty %}<li class="d-empty">None yet.</li>{% endfor %}</ul>
+  </section>
+  <section class="d-panel">
+    <h3>Badges</h3>
+    <ul class="d-list">{% for b in r.badges %}<li><div><strong>{{ b.badge.name }}</strong><small>{{ b.badge.description }}</small></div><em style="margin-left:auto;">{{ b.earned_at|date:"j M Y" }}</em></li>{% empty %}<li class="d-empty">No badges yet.</li>{% endfor %}</ul>
+  </section>
+  <section class="d-panel">
+    <h3>Classes and family</h3>
+    <ul class="d-list">
+      {% for m in r.classes %}<li><div><strong>{{ m.classroom.name }}</strong><small>Teacher: {{ m.classroom.facilitator.get_full_name|default:m.classroom.facilitator.username }}</small></div></li>{% empty %}<li class="d-empty">Not in a class.</li>{% endfor %}
+      {% for p in r.parents %}<li><div>Parent: {{ p.parent.get_full_name|default:p.parent.username }}</div></li>{% endfor %}
+      {% if r.profile.parent_guardian_name %}<li><div>Guardian: {{ r.profile.parent_guardian_name }}<small>{{ r.profile.parent_guardian_email }} {{ r.profile.parent_guardian_phone }}</small></div></li>{% endif %}
+      {% if r.consent %}<li><div>Parent consent: {{ r.consent.get_status_display }}</div></li>{% endif %}
+    </ul>
+  </section>
+</div>
+
+<script src="{% static 'vendor/chartjs/chart.umd.js' %}"></script>
+<script>
+(function () {
+  var labels = [{% for d in r.chart %}"{{ d.label }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+  var data = [{% for d in r.chart %}{{ d.value }}{% if not forloop.last %},{% endif %}{% endfor %}];
+  new Chart(document.getElementById('ch-learner'), {
+    type: 'bar', data: { labels: labels, datasets: [{ label: 'Finished', data: data, backgroundColor: '#1CA7EC', borderRadius: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+})();
+</script>
+<style>@media print { .c4k-side, .c4k-top, .no-print { display: none !important; } }</style>
+{% endblock %}
