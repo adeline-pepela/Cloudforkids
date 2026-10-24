@@ -45,9 +45,25 @@ class UserAdmin(DjangoUserAdmin):
 
 @admin.register(LearnerProfile)
 class LearnerProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "tier", "grade", "school_name", "county")
+    list_display = ("user", "tier", "grade", "school_name", "county", "progress")
     list_filter = ("tier", "county")
     search_fields = ("user__username", "user__first_name", "user__last_name", "school_name")
+
+    @admin.display(description="Progress")
+    def progress(self, obj):
+        from django.urls import reverse
+        from django.utils.html import format_html
+
+        return format_html('<a href="{}"><i class="bi bi-graph-up-arrow"></i> View progress</a>', reverse("tools:learner_detail", args=[obj.user_id]))
+
+    def change_view(self, request, object_id, form_url="", extra_context=None):
+        """The learner's progress, charts and strong and weak areas show above the profile form."""
+        from core.progress import build_learner_report
+
+        profile = self.get_object(request, object_id)
+        if profile is not None:
+            extra_context = {**(extra_context or {}), "r": build_learner_report(profile.user)}
+        return super().change_view(request, object_id, form_url, extra_context)
 
 
 class MembershipInline(admin.TabularInline):

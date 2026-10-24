@@ -351,3 +351,19 @@ class LearnerProgressTests(TestCase):
         self.assertEqual(self.client.get(reverse("tools:learner_detail", args=[self.admin.pk])).status_code, 404)
         self.client.logout()
         self.assertEqual(self.client.get(reverse("tools:learner_list")).status_code, 302)
+
+    def test_strong_weak_areas_and_profile_page(self):
+        from courses.models import QuizResult
+
+        QuizResult.objects.create(learner=self.kid, lesson=self.lessons[1], score_percent=40, passed=False)
+        QuizResult.objects.filter(learner=self.kid, lesson=self.lessons[0]).update(score_percent=95)
+        page = self.client.get(reverse("tools:learner_detail", args=[self.kid.pk])).content.decode()
+        self.assertIn("Strong areas", page)
+        self.assertIn("not passed yet", page)
+        self.assertIn("Stuck on 1 lesson", page)
+        profile = self.kid.learner_profile
+        change = self.client.get(reverse("admin:accounts_learnerprofile_change", args=[profile.pk]))
+        self.assertContains(change, "Learning progress")
+        self.assertContains(change, "ch-growth")
+        self.assertContains(change, "Weak areas")
+        self.assertContains(self.client.get(reverse("admin:accounts_learnerprofile_changelist")), "View progress")

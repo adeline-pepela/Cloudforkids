@@ -1,0 +1,17 @@
+{% extends "admin/change_form.html" %}
+
+{% block object-tools-items %}
+  {% if r %}<li><a href="{% url 'tools:learner_detail' r.user.pk %}"><i class="bi bi-file-earmark-bar-graph-fill"></i> Full progress report</a></li>{% endif %}
+  {{ block.super }}
+{% endblock %}
+
+{% block form_top %}
+{% if r %}
+<div class="c4k-learner-insights" style="margin-bottom:26px;">
+  <h2 style="margin:0 0 12px;">Learning progress</h2>
+  {% include "admin/_learner_insights.html" %}
+  <p style="margin-top:14px;"><a href="{% url 'tools:learner_detail' r.user.pk %}">See every lesson, lab and live class, or print and download the report &rsaquo;</a></p>
+</div>
+<h2 style="margin:0 0 12px;">Profile details</h2>
+{% endif %}
+{% endblock %}

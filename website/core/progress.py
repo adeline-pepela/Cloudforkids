@@ -189,6 +189,49 @@ def build_learner_report(user):
     scores = [q.score_percent for q in quizzes.values()]
     total = sum(c["total"] for c in courses)
     seen = _last_seen(user, stamps)
+
+    # Which weekdays they learn on, and how their completed lessons have grown over the last 90 days.
+    weekdays = [0] * 7
+    for s in stamps:
+        weekdays[s.weekday()] += 1
+    span = 90
+    growth_start = today - timedelta(days=span - 1)
+    lesson_days = sorted(c.completed_at.date() for c in completions)
+    before = sum(1 for d in lesson_days if d < growth_start)
+    lesson_per_day = defaultdict(int)
+    for d in lesson_days:
+        if d >= growth_start:
+            lesson_per_day[d] += 1
+    growth, running = [], before
+    for i in range(span):
+        day = growth_start + timedelta(days=i)
+        running += lesson_per_day.get(day, 0)
+        growth.append({"label": day.strftime("%d %b"), "value": running})
+
+    # Strong and weak areas, from quiz and exam scores.
+    results = list(QuizResult.objects.filter(learner=user).select_related("lesson", "lesson__course"))
+    by_course = defaultdict(list)
+    for q in results:
+        by_course[q.lesson.course].append(q.score_percent)
+    course_scores = sorted(({"course": c, "avg": round(sum(v) / len(v)), "n": len(v)} for c, v in by_course.items()), key=lambda r: -r["avg"])
+    strong = sorted((q for q in results if q.passed and q.score_percent >= 85), key=lambda q: -q.score_percent)[:6]
+    weak = sorted((q for q in results if not q.passed or q.score_percent < max(q.lesson.pass_score_percent, 70)), key=lambda q: q.score_percent)[:6]
+    stuck = [q for q in weak if q.lesson_id not in done_at]
+    names = ["Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays", "Sundays"]
+    insights = []
+    if course_scores:
+        insights.append(f"Strongest course: {course_scores[0]['course'].title} ({course_scores[0]['avg']}% average).")
+        if len(course_scores) > 1 and course_scores[-1]["avg"] < course_scores[0]["avg"]:
+            insights.append(f"Needs most help in: {course_scores[-1]['course'].title} ({course_scores[-1]['avg']}% average).")
+    if stuck:
+        insights.append(f"Stuck on {len(stuck)} lesson{'s' if len(stuck) != 1 else ''}: tried the quiz but has not passed yet ({stuck[0].lesson.title}).")
+    if stamps:
+        insights.append(f"Learns most on {names[weekdays.index(max(weekdays))]}.")
+    in_progress = [c for c in courses if c["next"] and c["done"]]
+    if in_progress:
+        insights.append(f"Currently working on {in_progress[0]['course'].title}: next is {in_progress[0]['next'].title}.")
+    if not stamps:
+        insights.append("Has not finished any lesson, lab or live class yet.")
     return {
         "user": user, "profile": profile, "courses": courses,
         "labs": labs, "live": live, "labs_done": labs_done, "live_done": live_done, "live_minutes": round(sum(a.seconds for a in live) / 60),
@@ -205,6 +248,8 @@ def build_learner_report(user):
         "quiz_avg": round(sum(scores) / len(scores)) if scores else None,
         "xp": xp, "level": level, "level_name": LEVEL_NAMES[min(level - 1, len(LEVEL_NAMES) - 1)],
         "chart": chart, "months": sorted(by_month.items(), reverse=True)[:6],
+        "weekdays": [{"label": n[:3], "value": v} for n, v in zip(names, weekdays)], "growth": growth,
+        "course_scores": course_scores, "strong": strong, "weak": weak, "stuck": stuck, "insights": insights,
         "recent": sorted(((c.completed_at, c.lesson, c.score_percent) for c in completions), key=lambda t: t[0], reverse=True)[:8],
         "generated": timezone.now(),
     }

@@ -22,32 +22,7 @@
   </div>
 </div>
 
-{% if r.idle %}<p style="color:#E8743B;"><i class="bi bi-exclamation-circle-fill"></i> {% if r.last_seen %}Last seen {{ r.last_seen|timesince }} ago.{% else %}Has never signed in or finished anything.{% endif %} This learner may need a nudge.</p>{% endif %}
-
-<div class="d-cards">
-  <div class="d-card"><span class="ico t-green"><i class="bi bi-journal-check"></i></span><span class="txt"><span class="num">{{ r.percent }}%</span><span class="lbl">Overall progress</span><span class="sub">{{ r.lessons_done }} of {{ r.lessons_total }} lessons</span></span></div>
-  <div class="d-card"><span class="ico t-sky"><i class="bi bi-calendar-check-fill"></i></span><span class="txt"><span class="num">{{ r.active_days }}</span><span class="lbl">Days learned</span><span class="sub">{{ r.activities }} things finished, {{ r.streak }}-day streak</span></span></div>
-  <div class="d-card"><span class="ico t-purple"><i class="bi bi-mortarboard-fill"></i></span><span class="txt"><span class="num">{{ r.courses_finished }}</span><span class="lbl">Courses finished</span><span class="sub">{{ r.courses|length }} enrolled</span></span></div>
-  <div class="d-card"><span class="ico t-orange"><i class="bi bi-patch-check-fill"></i></span><span class="txt"><span class="num">{% if r.quiz_avg is not None %}{{ r.quiz_avg }}%{% else %}-{% endif %}</span><span class="lbl">Average quiz score</span><span class="sub">{{ r.quiz_passed }} of {{ r.quiz_count }} passed</span></span></div>
-  <div class="d-card"><span class="ico t-pink"><i class="bi bi-joystick"></i></span><span class="txt"><span class="num">{{ r.labs_done }}</span><span class="lbl">Practice labs</span><span class="sub">{{ r.live_done }} live class{{ r.live_done|pluralize:"es" }}, {{ r.live_minutes }} min</span></span></div>
-  <div class="d-card"><span class="ico t-sky"><i class="bi bi-trophy-fill"></i></span><span class="txt"><span class="num">{{ r.badges|length }}</span><span class="lbl">Badges</span><span class="sub">Level {{ r.level }} {{ r.level_name }}, {{ r.xp }} XP</span></span></div>
-</div>
-
-<div class="d-grid">
-  <section class="d-panel span-2">
-    <h3>Activity in the last 30 days</h3>
-    <div class="chart-box"><canvas id="ch-learner" aria-label="Bar chart of things finished per day" role="img"></canvas></div>
-  </section>
-  <section class="d-panel">
-    <h3>At a glance</h3>
-    <ul class="d-list">
-      <li><div>First activity</div><em style="margin-left:auto;">{% if r.first_activity %}{{ r.first_activity|date:"j M Y" }}{% else %}-{% endif %}</em></li>
-      <li><div>Last seen</div><em style="margin-left:auto;">{% if r.last_seen %}{{ r.last_seen|date:"j M Y" }}{% else %}Never{% endif %}</em></li>
-      <li><div>Last sign-in</div><em style="margin-left:auto;">{% if r.user.last_login %}{{ r.user.last_login|date:"j M Y" }}{% else %}Never{% endif %}</em></li>
-      {% for month, n in r.months %}<li><div>{{ month }}</div><em style="margin-left:auto;">{{ n }} finished</em></li>{% endfor %}
-    </ul>
-  </section>
-</div>
+{% include "admin/_learner_insights.html" %}
 
 <h2 style="margin:26px 0 12px;">Where they are in each course</h2>
 {% for c in r.courses %}
@@ -102,16 +77,5 @@
   </section>
 </div>
 
-<script src="{% static 'vendor/chartjs/chart.umd.js' %}"></script>
-<script>
-(function () {
-  var labels = [{% for d in r.chart %}"{{ d.label }}"{% if not forloop.last %},{% endif %}{% endfor %}];
-  var data = [{% for d in r.chart %}{{ d.value }}{% if not forloop.last %},{% endif %}{% endfor %}];
-  new Chart(document.getElementById('ch-learner'), {
-    type: 'bar', data: { labels: labels, datasets: [{ label: 'Finished', data: data, backgroundColor: '#1CA7EC', borderRadius: 6 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
-  });
-})();
-</script>
 <style>@media print { .c4k-side, .c4k-top, .no-print { display: none !important; } }</style>
 {% endblock %}
