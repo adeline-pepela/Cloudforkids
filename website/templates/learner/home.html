@@ -71,6 +71,19 @@
 </div>
 {% endif %}
 
+{% if next_steps %}
+<div class="l-card mb-4" style="height:auto;">
+  <h3><i class="bi bi-signpost-2-fill text-primary" aria-hidden="true"></i> Your next steps</h3>
+  {% for s in next_steps %}
+  <a class="tc-task" href="{{ s.url }}">
+    <i class="bi {{ s.icon }} big" aria-hidden="true"></i>
+    <div class="flex-grow-1"><strong>{{ s.text }}</strong></div>
+    <i class="bi bi-chevron-right" aria-hidden="true"></i>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
 <div class="row g-3 mb-4">
   <div class="col-6 col-lg-3"><div class="l-tile"><span class="ico tone-orange"><i class="bi bi-fire" aria-hidden="true"></i></span><div><div class="num">{{ stats.streak }}</div><div class="lbl">day streak</div></div></div></div>
   <div class="col-6 col-lg-3"><div class="l-tile"><span class="ico tone-grass"><i class="bi bi-journal-check" aria-hidden="true"></i></span><div><div class="num">{{ stats.lessons_done }}</div><div class="lbl">lessons done</div></div></div></div>

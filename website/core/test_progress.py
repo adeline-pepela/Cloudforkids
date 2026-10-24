@@ -136,6 +136,12 @@ class ProgressFeaturesTests(TestCase):
         self.assertContains(family, "Recommended next steps")
         self.assertNotContains(family, "Paired with Baraka")
 
+    def test_learner_dashboard_shows_next_steps(self):
+        self.client.force_login(self.kid)
+        page = self.client.get(reverse("dashboard:home"))
+        self.assertContains(page, "Your next steps")
+        self.assertContains(page, "Redo the quiz in")
+
     def test_monthly_email_names_strong_and_weak_lessons(self):
         lines = notify.area_bullets("monthly", "en", "Amani", list(QuizResult.objects.filter(passed=True)), list(QuizResult.objects.filter(passed=False)))
         self.assertEqual(lines, ["Amani is strongest in L1.", "Amani should practise L2 next."])

@@ -111,6 +111,14 @@ def _next_lesson_on_path(steps, enrollments):
     return _continue_lesson(enrollments)
 
 
+def _next_steps(user):
+    """Up to three suggestions from the learner's quiz results (redo a quiz, re-read a lesson, try a lab).
+    "Carry on" is left out because the Continue button above already does that."""
+    from core.progress import recommendations
+
+    return [s for s in recommendations(user) if s["kind"] != "next"][:3]
+
+
 @login_required
 def home(request):
     user = request.user
@@ -141,6 +149,7 @@ def home(request):
             "earned_count": len(earned),
             "next_badges": next_badges,
             "teacher_tasks": _teacher_tasks(user, enrollments),
+            "next_steps": _next_steps(user),
             "plan_sub": access.current_subscription(user),
             "nav": "home",
         },
