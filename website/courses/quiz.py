@@ -8,21 +8,26 @@ holds the answer key. The browser asks the server to check each answer (or submi
 import random
 import re
 
-from .models import QuizResult
+from django.utils.html import strip_tags
+
+from .models import QuizAttempt, QuizResult
 
 QUESTION = re.compile(
     r'<div class="mcq-question"(?P<attrs>[^>]*)>(?P<body>.*?)<div class="mcq-explain">(?P<explain>.*?)</div></div>', re.S
 )
 CORRECT = re.compile(r'\s*data-correct="(\d+)"')
 EXPLAIN_BLOCK = re.compile(r'<div class="mcq-explain">.*?</div>', re.S)
+PROMPT = re.compile(r'<p class="mcq-prompt">(.*?)</p>', re.S)
 
 
 def parse_questions(content):
-    """[{'correct': int, 'explain': html}] for every question, in page order."""
+    """[{'correct': int, 'explain': html, 'text': plain prompt}] for every question, in page order."""
     questions = []
     for match in QUESTION.finditer(content or ""):
         found = CORRECT.search(match.group("attrs"))
-        questions.append({"correct": int(found.group(1)) if found else 0, "explain": match.group("explain")})
+        prompt = PROMPT.search(match.group("body"))
+        questions.append({"correct": int(found.group(1)) if found else 0, "explain": match.group("explain"),
+                          "text": " ".join(strip_tags(prompt.group(1)).split()) if prompt else ""})
     return questions
 
 
@@ -121,10 +126,12 @@ def end_attempt(request, lesson):
     request.session.pop(_key(lesson), None)
 
 
-def record_result(user, lesson, correct, total):
-    """Save the best score for a finished attempt; returns (percent, passed_now, unlocked)."""
+def record_result(user, lesson, correct, total, wrong=()):
+    """Save the attempt and the best score; returns (percent, passed_now, unlocked). `wrong` lists the missed questions."""
     percent = round(correct / total * 100) if total else 0
     passed = percent >= lesson.pass_score_percent
+    QuizAttempt.objects.create(learner=user, lesson=lesson, correct=correct, total=total, score_percent=percent, passed=passed,
+                               wrong=sorted(wrong))
     result, _ = QuizResult.objects.get_or_create(learner=user, lesson=lesson)
     if percent >= result.score_percent:
         result.score_percent = percent

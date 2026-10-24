@@ -278,3 +278,39 @@ class QuizResult(models.Model):
 
     def __str__(self):
         return f"{self.learner} - {self.lesson}: {self.score_percent}%"
+
+
+class QuizAttempt(models.Model):
+    """Every finished quiz or exam attempt (QuizResult keeps only the best one). `wrong` lists the question numbers missed."""
+
+    learner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="quiz_attempts")
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name="quiz_attempts")
+    correct = models.PositiveSmallIntegerField(default=0)
+    total = models.PositiveSmallIntegerField(default=0)
+    score_percent = models.PositiveIntegerField(default=0)
+    passed = models.BooleanField(default=False)
+    wrong = models.JSONField(default=list, blank=True, help_text="Numbers of the questions answered wrongly (page order, from 0)")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["learner", "lesson"])]
+
+    def __str__(self):
+        return f"{self.learner} - {self.lesson}: {self.score_percent}%"
+
+
+class LessonTime(models.Model):
+    """Seconds a learner spent with a lesson open (and the tab in front) on one day."""
+
+    learner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="lesson_time")
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name="time_spent")
+    day = models.DateField()
+    seconds = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ("learner", "lesson", "day")
+        ordering = ["-day"]
+
+    def __str__(self):
+        return f"{self.learner} - {self.lesson} on {self.day}: {self.seconds}s"

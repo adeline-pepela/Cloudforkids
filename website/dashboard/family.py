@@ -171,6 +171,8 @@ def child_report(child):
 
     earned = list(child.badges.select_related("badge")[:8])
 
+    from core.progress import recommendations
+
     from billing.access import current_subscription
 
     return {
@@ -205,6 +207,7 @@ def child_report(child):
         "health": health,
         "insights": insights,
         "tips": tips[:4],
+        "next_steps": recommendations(child, limit=4),
         "badges": earned,
         "badge_total": child.badges.count(),
         "badges_available": Badge.objects.count(),

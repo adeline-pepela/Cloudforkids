@@ -353,13 +353,28 @@ def assignment_delete(request, class_id, assignment_id):
 
 @teacher_only
 def learner_report(request, class_id, learner_id):
+    from accounts.models import LearnerNote
+
     classroom = _classroom(request, class_id)
     membership = get_object_or_404(ClassMembership.objects.select_related("learner"), classroom=classroom, learner_id=learner_id)
+    learner = membership.learner
+    if request.method == "POST":
+        # Teaching notes: dated notes about the learner, shared with admins and the learner's other teachers (never the family).
+        if request.POST.get("action") == "delete_note":
+            LearnerNote.objects.filter(learner=learner, author=request.user, pk=request.POST.get("note")).delete()
+            messages.success(request, "Note removed.")
+        else:
+            body = request.POST.get("body", "").strip()[:2000]
+            if body:
+                LearnerNote.objects.create(learner=learner, author=request.user, body=body)
+                messages.success(request, "Note saved.")
+        return redirect("teach:learner", class_id=classroom.pk, learner_id=learner.pk)
+    notes = LearnerNote.objects.filter(learner=learner).select_related("author")
     return render(
         request,
         "parent/child.html",
-        _ctx(request, r=child_report(membership.learner), viewer="teacher", classroom=classroom, nav="classes",
-             base_tpl="teach/base.html"),
+        _ctx(request, r=child_report(learner), viewer="teacher", classroom=classroom, nav="classes",
+             base_tpl="teach/base.html", notes=notes),
     )
 
 

@@ -12,6 +12,8 @@
     <p>{{ total }} learner{{ total|pluralize }}. Open a learner to see where they are, how often they learn, and print their report.</p>
   </div>
   <div class="d-actions no-print">
+    <a href="{% url 'tools:at_risk' %}"><i class="bi bi-exclamation-diamond-fill"></i> Learners at risk</a>
+    <a href="{% url 'tools:group_report' %}"><i class="bi bi-people-fill"></i> Class and school reports</a>
     <a href="?{{ query }}{% if query %}&{% endif %}format=csv"><i class="bi bi-file-earmark-spreadsheet-fill"></i> Download CSV</a>
   </div>
 </div>
@@ -40,12 +42,14 @@
   <a href="{% url 'tools:learner_list' %}">Clear</a>
 </form>
 
+<form method="post">{% csrf_token %}<input type="hidden" name="action" value="nudge">
 <section class="d-panel">
   <table class="d-table">
-    <thead><tr><th>Learner</th><th>Tier</th><th>Progress</th><th class="num">Lessons</th><th class="num">Courses</th><th class="num">Days learned</th><th class="num">Streak</th><th>Last seen</th></tr></thead>
+    <thead><tr><th class="no-print"><input type="checkbox" aria-label="Select all" onclick="document.querySelectorAll('.pick').forEach(function (b) { b.checked = this.checked; }, this)"></th><th>Learner</th><th>Tier</th><th>Progress</th><th class="num">Lessons</th><th class="num">Courses</th><th class="num">Days learned</th><th class="num">Streak</th><th>Last seen</th></tr></thead>
     <tbody>
     {% for r in rows %}
       <tr>
+        <td class="no-print"><input type="checkbox" class="pick" name="learner" value="{{ r.user.pk }}" aria-label="Select {{ r.user.username }}"{% if r.idle and g.status == "idle" %} checked{% endif %}></td>
         <td><a href="{% url 'tools:learner_detail' r.user.pk %}"><strong>{{ r.user.get_full_name|default:r.user.username }}</strong></a><br><small style="color:var(--body-quiet-color);">{{ r.user.username }}{% if r.profile.school_name %} &middot; {{ r.profile.school_name }}{% endif %}</small></td>
         <td>{{ r.profile.tier.name|default:"-" }}</td>
         <td><span class="bar"><span style="width:{{ r.percent }}%"></span></span>{{ r.percent }}%</td>
@@ -56,11 +60,16 @@
         <td>{% if r.last_seen %}{{ r.last_seen|timesince }} ago{% else %}Never{% endif %}{% if r.idle %} <i class="bi bi-exclamation-circle-fill" style="color:#E8743B;" title="Idle for {{ idle_days }}+ days"></i>{% endif %}</td>
       </tr>
     {% empty %}
-      <tr><td colspan="8" class="d-empty">No learners match.</td></tr>
+      <tr><td colspan="9" class="d-empty">No learners match.</td></tr>
     {% endfor %}
     </tbody>
   </table>
 </section>
+{% if rows %}<p class="no-print" style="margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+  <button type="submit" class="button"><i class="bi bi-bell-fill"></i> Send a study reminder to the ticked learners</button>
+  {% if idle_on_page %}<small style="color:var(--body-quiet-color);">{{ idle_on_page|length }} on this page have been idle for {{ idle_days }}+ days. Filter by &ldquo;Idle&rdquo; to tick them all.</small>{% endif %}
+</p>{% endif %}
+</form>
 
 {% if page.paginator.num_pages > 1 %}
 <p class="no-print" style="margin-top:14px;display:flex;gap:14px;align-items:center;">

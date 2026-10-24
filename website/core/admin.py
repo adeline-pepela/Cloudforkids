@@ -248,6 +248,11 @@ def _dashboard_data():
         attention.append({"icon": "bi-chat-quote-fill", "text": f"{pending_testimonials} testimonial{'s' if pending_testimonials != 1 else ''} waiting to be published", "url": url("core_testimonial") + "?published__exact=0"})
     if not Testimonial.objects.filter(published=True).exists():
         attention.append({"icon": "bi-megaphone-fill", "text": "No testimonials are live on the home page yet", "url": reverse("admin:core_testimonial_add")})
+    from .progress_groups import at_risk_count
+
+    risky = at_risk_count()
+    if risky:
+        attention.append({"icon": "bi-exclamation-diamond-fill", "text": f"{risky} learner{'s' if risky != 1 else ''} may be falling behind", "url": reverse("tools:at_risk")})
     if signups_week < signups_prev:
         attention.append({"icon": "bi-graph-down-arrow", "text": f"Sign-ups are down: {signups_week} this week vs {signups_prev} last week", "url": url("accounts_user")})
 

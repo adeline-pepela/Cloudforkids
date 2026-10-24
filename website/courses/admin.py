@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 
 from .exams import ensure_exam
-from .models import Badge, Course, Enrollment, Lesson, LearnerBadge, LessonCompletion, QuizResult, Tier
+from .models import Badge, Course, Enrollment, Lesson, LearnerBadge, LessonCompletion, LessonTime, QuizAttempt, QuizResult, Tier
 
 
 def _icon_chip(obj):
@@ -111,3 +111,20 @@ class QuizResultAdmin(admin.ModelAdmin):
     list_filter = ("passed", "lesson__course")
     search_fields = ("learner__username", "lesson__title")
     list_select_related = ("learner", "lesson")
+
+
+@admin.register(QuizAttempt)
+class QuizAttemptAdmin(admin.ModelAdmin):
+    list_display = ("learner", "lesson", "score_percent", "passed", "created_at")
+    list_filter = ("passed", "lesson__course")
+    search_fields = ("learner__username", "learner__first_name", "lesson__title")
+    date_hierarchy = "created_at"
+    raw_id_fields = ("learner",)
+
+
+@admin.register(LessonTime)
+class LessonTimeAdmin(admin.ModelAdmin):
+    list_display = ("learner", "lesson", "day", "seconds")
+    search_fields = ("learner__username", "lesson__title")
+    date_hierarchy = "day"
+    raw_id_fields = ("learner",)

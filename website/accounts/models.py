@@ -334,3 +334,18 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.sender} -> {self.recipient}: {self.subject}"
+
+
+class LearnerNote(models.Model):
+    """A dated note about a learner by an admin or one of their teachers (e.g. "Spoke to parent"). Parents and learners never see these."""
+
+    learner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notes_about")
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="notes_written")
+    body = models.TextField(max_length=2000)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Note on {self.learner} ({self.created_at:%Y-%m-%d})"

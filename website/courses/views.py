@@ -2,17 +2,21 @@ from django.contrib import messages
 import json
 from functools import wraps
 
+import time
+
 from django.contrib.auth.decorators import login_required
+from django.db.models import F
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from billing import access
 from billing.services import issue_certificate
 
 from .badges import check_and_award_badges
-from .models import Course, Enrollment, Lesson, LessonCompletion, Tier
+from .models import Course, Enrollment, Lesson, LessonCompletion, LessonTime, Tier
 from .quiz import attempt, end_attempt, new_attempt, parse_questions, public_html, quiz_status, record_result, without_quiz
 
 
@@ -92,6 +96,7 @@ def lesson_detail(request, course_slug, lesson_slug):
     else:
         quiz_total, quiz_passed, quiz_score = 0, True, None
         content_html = without_quiz(lesson.display_content)
+    request.session[_clock_key(lesson)] = time.time()  # time on the page counts from here (see lesson_time)
     next_lesson = lesson.next_lesson()
     return render(
         request,
@@ -146,6 +151,32 @@ def mark_lesson_complete(request, course_slug, lesson_slug):
     if next_lesson and (quizzes_on or not next_lesson.is_exam):
         return redirect("courses:lesson_detail", course_slug=course.slug, lesson_slug=next_lesson.slug)
     return redirect("courses:course_detail", slug=course.slug)
+
+
+TIME_PING_SECONDS = 30  # the lesson page pings this often while it is open and in front
+
+
+def _clock_key(lesson):
+    return f"lesson-clock-{lesson.pk}"
+
+
+@login_required
+@require_POST
+def lesson_time(request, course_slug, lesson_slug):
+    """Add the time since the last ping (at most a little over one ping) to today's time on this lesson.
+    The server keeps the clock, so a page can never claim more time than really passed. `resume` restarts the clock
+    after the tab was in the background, without counting the time away."""
+    lesson = get_object_or_404(Lesson, course__slug=course_slug, slug=lesson_slug)
+    key, now = _clock_key(lesson), time.time()
+    last = request.session.get(key)
+    request.session[key] = now
+    if last is None or _json_body(request).get("resume"):
+        return JsonResponse({"ok": True, "added": 0})
+    added = int(min(max(now - last, 0), TIME_PING_SECONDS + 15))
+    if added:
+        row, _ = LessonTime.objects.get_or_create(learner=request.user, lesson=lesson, day=timezone.localdate())
+        LessonTime.objects.filter(pk=row.pk).update(seconds=F("seconds") + added)
+    return JsonResponse({"ok": True, "added": added})
 
 
 def _quiz_lesson(request, course_slug, lesson_slug):
@@ -221,8 +252,9 @@ def quiz_finish(request, course_slug, lesson_slug):
     qids = current["qids"]
     if not qids or any(str(q) not in current["answers"] for q in qids):
         return JsonResponse({"error": "Answer every question first"}, status=400)
-    correct = sum(1 for q in qids if current["answers"][str(q)] == questions[q]["correct"])
-    percent, passed, unlocked = record_result(request.user, lesson, correct, len(qids))
+    wrong = [q for q in qids if current["answers"][str(q)] != questions[q]["correct"]]
+    correct = len(qids) - len(wrong)
+    percent, passed, unlocked = record_result(request.user, lesson, correct, len(qids), wrong)
     return JsonResponse(
         {"correct": correct, "total": len(qids), "score_percent": percent, "passed": passed,
          "unlocked": unlocked, "needed": lesson.pass_score_percent}
@@ -249,7 +281,8 @@ def quiz_grade(request, course_slug, lesson_slug):
         for q in qids
     }
     correct = sum(1 for r in results.values() if r["correct"])
-    percent, passed, unlocked = record_result(request.user, lesson, correct, len(qids))
+    wrong = [q for q in qids if not results[str(q)]["correct"]]
+    percent, passed, unlocked = record_result(request.user, lesson, correct, len(qids), wrong)
     end_attempt(request, lesson)
     return JsonResponse(
         {"correct": correct, "total": len(qids), "score_percent": percent, "passed": passed,

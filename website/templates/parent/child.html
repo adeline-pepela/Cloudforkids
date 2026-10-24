@@ -70,6 +70,36 @@
 </div>
 {% endif %}
 
+<!-- Next steps, from the quiz results -->
+{% if r.next_steps %}
+<div class="l-card mb-4" style="height:auto;">
+  <h3><i class="bi bi-signpost-2-fill text-primary" aria-hidden="true"></i> Recommended next steps</h3>
+  <ol class="fm-tips">
+    {% for s in r.next_steps %}<li><i class="bi {{ s.icon }}" aria-hidden="true"></i><span>{% if viewer == "teacher" %}<a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.text }}</a>{% else %}{{ s.text }}{% endif %}</span></li>{% endfor %}
+  </ol>
+</div>
+{% endif %}
+
+{% if viewer == "teacher" %}
+<!-- Teaching notes: only teachers and admins see these -->
+<div class="l-card mb-4 no-print" style="height:auto;">
+  <h3><i class="bi bi-journal-text text-primary" aria-hidden="true"></i> Your notes on {{ r.name }}</h3>
+  <p class="small text-secondary">Dated notes for you, the learner's other teachers and the Cloud for Kids team. Families never see them.</p>
+  <form method="post" class="d-flex gap-2 mb-3">
+    {% csrf_token %}
+    <textarea name="body" class="form-control" rows="2" maxlength="2000" required placeholder="e.g. Struggled with loops today, paired with Baraka"></textarea>
+    <button type="submit" class="btn btn-primary align-self-start">Save</button>
+  </form>
+  {% for n in notes %}
+  <div class="d-flex gap-2 border-top py-2">
+    <div class="flex-grow-1"><strong class="small">{{ n.created_at|date:"j M Y" }} &middot; {{ n.author.get_full_name|default:n.author.username|default:"Removed account" }}</strong><div style="white-space:pre-line;">{{ n.body }}</div></div>
+    {% if n.author_id == request.user.pk %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="delete_note"><input type="hidden" name="note" value="{{ n.pk }}">
+      <button type="submit" class="btn btn-link btn-sm text-secondary" aria-label="Remove note" onclick="return confirm('Remove this note?');"><i class="bi bi-trash" aria-hidden="true"></i></button></form>{% endif %}
+  </div>
+  {% empty %}<p class="small text-secondary mb-0">No notes yet.</p>{% endfor %}
+</div>
+{% endif %}
+
 <!-- Strengths and weak points -->
 <div class="row g-4 mb-4">
   <div class="col-lg-6">

@@ -18,4 +18,5 @@ urlpatterns = [
         views.mark_lesson_complete,
         name="mark_lesson_complete",
     ),
+    path("<slug:course_slug>/<slug:lesson_slug>/time/", views.lesson_time, name="lesson_time"),
 ]

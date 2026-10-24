@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
 from core import notify
 
-from .models import Assignment, ClassMembership, Classroom, ClassPost, ClassSession, LearnerProfile, Message, ParentalConsent, ParentLink, User
+from .models import Assignment, ClassMembership, Classroom, ClassPost, ClassSession, LearnerNote, LearnerProfile, Message, ParentalConsent, ParentLink, User
 
 
 @admin.register(User)
@@ -187,3 +187,10 @@ class ClassPostAdmin(admin.ModelAdmin):
     @admin.display(description="Post")
     def short_body(self, obj):
         return obj.body[:80]
+
+
+@admin.register(LearnerNote)
+class LearnerNoteAdmin(admin.ModelAdmin):
+    list_display = ("learner", "author", "created_at", "body")
+    search_fields = ("learner__username", "learner__first_name", "body")
+    raw_id_fields = ("learner", "author")

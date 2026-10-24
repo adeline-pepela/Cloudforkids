@@ -476,12 +476,79 @@ def run_monthly_reports(dry_run=False, now=None, any_day=False):
         for link in links:
             numbers, r = month_numbers(link.child, start, end), child_report(link.child)
             bullets.append(monthly_bullet(lang, _name(link.child), numbers, r["percent"], r["avg_score"]))
+            bullets.extend(area_bullets("monthly", lang, _name(link.child), r["strengths"], r["weak"]))
             if len(links) == 1:
                 stats = [numbers["lessons"], numbers["labs"], numbers["badges"]]
         ok = send("monthly", parent.email, lang=lang, user=parent, bullets=bullets, stats=stats,
                   values={"name": _name(parent), "month": T.month_name(month, lang)},
                   cta_url=absolute(reverse("family:home")), background=False)
         sent += bool(ok)
+    return sent
+
+
+def lesson_title(lesson, lang):
+    return (lesson.title_sw if lang == "sw" else "") or lesson.title
+
+
+def area_bullets(kind, lang, child, strong, weak):
+    """'Strong in …' and 'Needs practice …' lines from lists of QuizResults."""
+    words, out = T.EMAILS[kind][lang], []
+    if strong:
+        out.append(words["strong"].format(child=child, items=", ".join(lesson_title(q.lesson, lang) for q in strong[:3])))
+    if weak:
+        out.append(words["weak"].format(child=child, items=", ".join(lesson_title(q.lesson, lang) for q in weak[:3])))
+    return out
+
+
+def report_recipients(learner):
+    """(email, account or None, language) for each parent of a learner: linked parent accounts, then the guardian email on the profile."""
+    people, seen = [], set()
+    for link in learner.parent_links.select_related("parent"):
+        if link.parent.email and link.parent.email.lower() not in seen:
+            seen.add(link.parent.email.lower())
+            people.append((link.parent.email, link.parent, lang_for(link.parent)))
+    profile = getattr(learner, "learner_profile", None)
+    guardian = (profile.parent_guardian_email or "").strip() if profile else ""
+    if guardian and guardian.lower() not in seen:
+        people.append((guardian, None, lang_for(learner)))
+    return people
+
+
+def send_progress_report(learner, report):
+    """Email a learner's progress report (numbers, strong and weak areas, the next lesson) to their parents. Sent by an admin."""
+    sent = 0
+    for email, parent, lang in report_recipients(learner):
+        name = _name(learner)
+        if report["activities"]:
+            bullets = area_bullets("progress_report", lang, name, report["strong"], report["weak"])
+            nxt = next((c["next"] for c in report["courses"] if c["next"]), None)
+            if nxt:
+                bullets.append(T.text("progress_report", lang, "next", lesson=lesson_title(nxt, lang)))
+        else:
+            bullets = [T.text("progress_report", lang, "quiet", child=name)]
+        url = absolute(reverse("family:child", args=[learner.pk])) if parent else absolute(reverse("core:home"))
+        quiz = f"{report['quiz_avg']}%" if report["quiz_avg"] is not None else "-"
+        sent += bool(send("progress_report", email, lang=lang, user=parent, bullets=bullets, cta_url=url, background=False,
+                          stats=[f"{report['percent']}%", report["lessons_done"], quiz],
+                          values={"child": name, "parent": f" {parent.first_name}" if parent and parent.first_name else ""}))
+    return sent
+
+
+def send_manual_nudge(learner):
+    """An admin pressed "Send reminder": the usual quiet-learner reminder, to the learner and their parents, right away."""
+    from dashboard.family import child_report
+
+    last = child_report(learner)["last_active"]
+    sent = 0
+    for person in family_recipients(learner):
+        if last is None:
+            kind, url = _for(person, learner, "nudge_start")
+            days = 0
+        else:
+            kind, url = _for(person, learner, "nudge")
+            days = max((timezone.now() - last).days, 1)
+        sent += bool(send(kind, person.email, lang=lang_for(person), user=person, cta_url=url, background=False,
+                          values={"child": _name(learner), "days": days}))
     return sent
 
 
@@ -531,6 +598,10 @@ def preview(kind, lang, user=None, header_url=None):
                                         "avg_score": b["score"], "last_active": timezone.now()}) for b in rows]
     elif rows and kind == "monthly":
         bullets = [monthly_bullet(lang, b["child"], {k: b[k] for k in ("lessons", "labs", "badges", "certs")}, b["percent"], b["score"]) for b in rows]
+    elif rows and kind == "progress_report":
+        words = T.EMAILS[kind][lang]
+        bullets = [line for b in rows for line in (words["strong"].format(items=b["strong"]), words["weak"].format(items=b["weak"]),
+                                                     words["next"].format(lesson=b["next"]))]
     elif rows:
         bullets = [T.text(kind, lang, "bullet", **b) for b in rows]
     # sample dates and set phrases in the reader's language

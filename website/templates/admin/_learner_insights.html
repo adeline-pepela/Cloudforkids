@@ -4,9 +4,9 @@
 <div class="d-cards">
   <div class="d-card"><span class="ico t-green"><i class="bi bi-journal-check"></i></span><span class="txt"><span class="num">{{ r.percent }}%</span><span class="lbl">Overall progress</span><span class="sub">{{ r.lessons_done }} of {{ r.lessons_total }} lessons</span></span></div>
   <div class="d-card"><span class="ico t-sky"><i class="bi bi-calendar-check-fill"></i></span><span class="txt"><span class="num">{{ r.active_days }}</span><span class="lbl">Days learned</span><span class="sub">{{ r.activities }} things finished, {{ r.streak }}-day streak</span></span></div>
-  <div class="d-card"><span class="ico t-purple"><i class="bi bi-mortarboard-fill"></i></span><span class="txt"><span class="num">{{ r.courses_finished }}</span><span class="lbl">Courses finished</span><span class="sub">{{ r.courses|length }} enrolled</span></span></div>
-  <div class="d-card"><span class="ico t-orange"><i class="bi bi-patch-check-fill"></i></span><span class="txt"><span class="num">{% if r.quiz_avg is not None %}{{ r.quiz_avg }}%{% else %}-{% endif %}</span><span class="lbl">Average quiz score</span><span class="sub">{{ r.quiz_passed }} of {{ r.quiz_count }} passed</span></span></div>
-  <div class="d-card"><span class="ico t-pink"><i class="bi bi-joystick"></i></span><span class="txt"><span class="num">{{ r.labs_done }}</span><span class="lbl">Practice labs</span><span class="sub">{{ r.live_done }} live class{{ r.live_done|pluralize:"es" }}, {{ r.live_minutes }} min</span></span></div>
+  <div class="d-card"><span class="ico t-purple"><i class="bi bi-stopwatch-fill"></i></span><span class="txt"><span class="num">{{ r.time.minutes }} min</span><span class="lbl">Time learning</span><span class="sub">{{ r.time.week_minutes }} min in the last 7 days</span></span></div>
+  <div class="d-card"><span class="ico t-orange"><i class="bi bi-patch-check-fill"></i></span><span class="txt"><span class="num">{% if r.quiz_avg is not None %}{{ r.quiz_avg }}%{% else %}-{% endif %}</span><span class="lbl">Average quiz score</span><span class="sub">{{ r.quiz_passed }} of {{ r.quiz_count }} passed, {{ r.tries.count }} attempt{{ r.tries.count|pluralize }}</span></span></div>
+  <div class="d-card"><span class="ico t-pink"><i class="bi bi-mortarboard-fill"></i></span><span class="txt"><span class="num">{{ r.courses_finished }}</span><span class="lbl">Courses finished</span><span class="sub">{{ r.courses|length }} enrolled, {{ r.labs_done }} labs, {{ r.live_done }} live</span></span></div>
   <div class="d-card"><span class="ico t-sky"><i class="bi bi-trophy-fill"></i></span><span class="txt"><span class="num">{{ r.badges|length }}</span><span class="lbl">Badges</span><span class="sub">Level {{ r.level }} {{ r.level_name }}, {{ r.xp }} XP</span></span></div>
 </div>
 
@@ -16,13 +16,8 @@
     <ul class="d-list">{% for line in r.insights %}<li><i class="bi bi-lightbulb-fill" style="color:#E8A23B;"></i><div>{{ line }}</div></li>{% endfor %}</ul>
   </section>
   <section class="d-panel">
-    <h3>At a glance</h3>
-    <ul class="d-list">
-      <li><div>First activity</div><em style="margin-left:auto;">{% if r.first_activity %}{{ r.first_activity|date:"j M Y" }}{% else %}-{% endif %}</em></li>
-      <li><div>Last seen</div><em style="margin-left:auto;">{% if r.last_seen %}{{ r.last_seen|date:"j M Y" }}{% else %}Never{% endif %}</em></li>
-      <li><div>Last sign-in</div><em style="margin-left:auto;">{% if r.user.last_login %}{{ r.user.last_login|date:"j M Y" }}{% else %}Never{% endif %}</em></li>
-      {% for month, n in r.months %}<li><div>{{ month }}</div><em style="margin-left:auto;">{{ n }} finished</em></li>{% endfor %}
-    </ul>
+    <h3><i class="bi bi-signpost-2-fill" style="color:#1CA7EC;"></i> Recommended next steps</h3>
+    <ul class="d-list">{% for s in r.next_steps %}<li><i class="bi {{ s.icon }}" style="color:{% if s.tone == 'coral' %}#E8743B{% elif s.tone == 'sun' %}#E8A23B{% elif s.tone == 'grass' %}#2FBF71{% else %}#1CA7EC{% endif %};"></i><div><a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.text }}</a></div></li>{% empty %}<li class="d-empty">Nothing to suggest yet.</li>{% endfor %}</ul>
   </section>
 
   <section class="d-panel span-2">
@@ -35,12 +30,40 @@
   </section>
 
   <section class="d-panel span-2">
+    <h3>Time learning <small>minutes with a lesson open, last 30 days</small></h3>
+    {% if r.time.tracked %}<div class="chart-box"><canvas id="ch-time" aria-label="Bar chart of minutes learning per day" role="img"></canvas></div>
+    {% else %}<p class="d-empty">No time recorded yet. Time is counted from now on, whenever the learner has a lesson open.</p>{% endif %}
+  </section>
+  <section class="d-panel">
+    <h3>Compared with their tier</h3>
+    {% if r.compare %}
+    <p style="margin:0 0 8px;color:var(--body-quiet-color);font-size:.8rem;">Average of {{ r.compare.n }} {{ r.compare.tier.name }} learner{{ r.compare.n|pluralize }}.</p>
+    <ul class="d-list">{% for c in r.compare.rows %}
+      <li style="display:block;">
+        <div style="display:flex;justify-content:space-between;"><span>{{ c.label }}</span><strong style="color:{% if c.diff >= 0 %}#2FBF71{% else %}#E8743B{% endif %};">{{ c.mine }}{{ c.unit }} <small style="display:inline;font-weight:400;">vs {{ c.avg }}{{ c.unit }}</small></strong></div>
+        <div style="height:6px;border-radius:99px;background:var(--darkened-bg);margin-top:5px;overflow:hidden;"><div style="height:100%;width:{{ c.width }}%;background:#1CA7EC;"></div></div>
+        <div style="height:6px;border-radius:99px;background:var(--darkened-bg);margin-top:3px;overflow:hidden;"><div style="height:100%;width:{{ c.avg_width }}%;background:#B8C4CE;"></div></div>
+      </li>{% endfor %}</ul>
+    {% else %}<p class="d-empty">Choose a tier on the learner profile to compare with other learners.</p>{% endif %}
+  </section>
+
+  <section class="d-panel span-2">
     <h3>Progress over time <small>lessons completed, last 90 days</small></h3>
     <div class="chart-box"><canvas id="ch-growth" aria-label="Line chart of lessons completed over time" role="img"></canvas></div>
   </section>
   <section class="d-panel">
     <h3>Progress by course</h3>
-    <ul class="d-list">{% for c in r.courses %}<li><div><strong>{{ c.course.title }}</strong><small>{% if c.complete %}Completed{% elif c.next %}Next: {{ c.next.title }}{% endif %}</small></div><em style="margin-left:auto;white-space:nowrap;"><span class="bar" style="display:inline-block;width:70px;height:8px;border-radius:99px;background:var(--darkened-bg);overflow:hidden;vertical-align:middle;"><span style="display:block;height:100%;width:{{ c.percent }}%;background:linear-gradient(90deg,#2FBF71,#1CA7EC);"></span></span> {{ c.percent }}%</em></li>{% empty %}<li class="d-empty">Not enrolled in any course yet.</li>{% endfor %}</ul>
+    <ul class="d-list">{% for c in r.courses %}<li><div><strong>{{ c.course.title }}</strong><small>{% if c.complete %}Completed{% elif c.next %}Next: {{ c.next.title }}{% endif %}</small></div><em style="margin-left:auto;white-space:nowrap;"><span style="display:inline-block;width:70px;height:8px;border-radius:99px;background:var(--darkened-bg);overflow:hidden;vertical-align:middle;"><span style="display:block;height:100%;width:{{ c.percent }}%;background:linear-gradient(90deg,#2FBF71,#1CA7EC);"></span></span> {{ c.percent }}%</em></li>{% empty %}<li class="d-empty">Not enrolled in any course yet.</li>{% endfor %}</ul>
+  </section>
+
+  <section class="d-panel span-2">
+    <h3>Quiz scores, attempt by attempt <small>last 30 attempts</small></h3>
+    {% if r.tries.trend %}<div class="chart-box"><canvas id="ch-tries" aria-label="Line chart of quiz scores per attempt" role="img"></canvas></div>
+    {% else %}<p class="d-empty">No quiz attempts recorded yet. Every attempt is saved from now on.</p>{% endif %}
+  </section>
+  <section class="d-panel">
+    <h3>Most missed questions</h3>
+    <ul class="d-list">{% for m in r.tries.missed|slice:":5" %}<li><div><strong>{{ m.text|truncatechars:110 }}</strong><small>{{ m.lesson.title }} &middot; question {{ m.number }}</small></div><em style="margin-left:auto;color:#E8743B;white-space:nowrap;">{{ m.times }}&times; wrong</em></li>{% empty %}<li class="d-empty">None recorded yet.</li>{% endfor %}</ul>
   </section>
 
   <section class="d-panel span-2">
@@ -50,32 +73,34 @@
   <section class="d-panel">
     <h3><i class="bi bi-star-fill" style="color:#2FBF71;"></i> Strong areas <small>85% or more</small></h3>
     <ul class="d-list">{% for q in r.strong %}<li><div><strong>{{ q.lesson.title }}</strong><small>{{ q.lesson.course.title }}</small></div><em style="margin-left:auto;color:#2FBF71;">{{ q.score_percent }}%</em></li>{% empty %}<li class="d-empty">None yet.</li>{% endfor %}</ul>
-  </section>
-  <section class="d-panel">
-    <h3><i class="bi bi-exclamation-triangle-fill" style="color:#E8743B;"></i> Weak areas <small>needs practice</small></h3>
+    <h3 style="margin-top:16px;"><i class="bi bi-exclamation-triangle-fill" style="color:#E8743B;"></i> Weak areas <small>needs practice</small></h3>
     <ul class="d-list">{% for q in r.weak %}<li><div><strong>{{ q.lesson.title }}</strong><small>{{ q.lesson.course.title }}{% if not q.passed %} &middot; not passed yet{% endif %}</small></div><em style="margin-left:auto;color:#E8743B;">{{ q.score_percent }}%</em></li>{% empty %}<li class="d-empty">No weak areas found.</li>{% endfor %}</ul>
   </section>
 </div>
 
-{{ r.chart|json_script:"d-days" }}{{ r.weekdays|json_script:"d-week" }}{{ r.growth|json_script:"d-growth" }}
+{{ r.chart|json_script:"d-days" }}{{ r.weekdays|json_script:"d-week" }}{{ r.growth|json_script:"d-growth" }}{{ r.time.chart|json_script:"d-time" }}{{ r.tries.trend|json_script:"d-tries" }}
 <script id="d-scores" type="application/json">[{% for c in r.course_scores %}{"label": "{{ c.course.title|escapejs }}", "value": {{ c.avg }}}{% if not forloop.last %},{% endif %}{% endfor %}]</script>
 <script src="{% static 'vendor/chartjs/chart.umd.js' %}"></script>
 <script>
 (function () {
   function rows(id) { return JSON.parse(document.getElementById(id).textContent); }
-  function draw(id, dataId, type, color, extra) {
+  function draw(id, dataId, type, color, extra, tip) {
     var el = document.getElementById(id);
     if (!el) return;
     var d = rows(dataId);
+    var options = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } };
+    if (tip) options.plugins.tooltip = { callbacks: { title: function (items) { return d[items[0].dataIndex].lesson + ' (' + d[items[0].dataIndex].label + ')'; } } };
     new Chart(el, {
       type: type,
-      data: { labels: d.map(function (x) { return x.label; }), datasets: [{ data: d.map(function (x) { return x.value; }), backgroundColor: color, borderColor: color, borderRadius: 6, fill: type === 'line' ? { target: 'origin', above: 'rgba(28,167,236,.15)' } : false, tension: .3, pointRadius: 0 }] },
-      options: Object.assign({ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }, extra || {})
+      data: { labels: d.map(function (x) { return x.label; }), datasets: [{ data: d.map(function (x) { return x.value; }), backgroundColor: color, borderColor: color, borderRadius: 6, fill: type === 'line' && !tip ? { target: 'origin', above: 'rgba(28,167,236,.15)' } : false, tension: .3, pointRadius: tip ? 3 : 0 }] },
+      options: Object.assign(options, extra || {})
     });
   }
   draw('ch-days', 'd-days', 'bar', '#1CA7EC');
   draw('ch-week', 'd-week', 'bar', '#8B5CF6');
+  draw('ch-time', 'd-time', 'bar', '#2FBF71');
   draw('ch-growth', 'd-growth', 'line', '#1CA7EC');
+  draw('ch-tries', 'd-tries', 'line', '#E8743B', { scales: { y: { beginAtZero: true, max: 100 } } }, true);
   var scores = rows('d-scores');
   draw('ch-scores', 'd-scores', 'bar', scores.map(function (s) { return s.value >= 85 ? '#2FBF71' : s.value >= 70 ? '#1CA7EC' : '#E8743B'; }),
        { indexAxis: 'y', scales: { x: { beginAtZero: true, max: 100 } } });

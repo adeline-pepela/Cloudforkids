@@ -16,10 +16,19 @@
     <p>Report prepared {{ r.generated|date:"j M Y, H:i" }}</p>
   </div>
   <div class="d-actions no-print">
+    <a href="?format=pdf"><i class="bi bi-file-earmark-pdf-fill"></i> Download PDF</a>
     <a href="?format=csv"><i class="bi bi-file-earmark-spreadsheet-fill"></i> Download CSV</a>
-    <a class="alt" href="#" onclick="window.print();return false;"><i class="bi bi-printer-fill"></i> Print / save as PDF</a>
+    <a class="alt" href="#" onclick="window.print();return false;"><i class="bi bi-printer-fill"></i> Print</a>
     <a href="{% url 'admin:accounts_user_change' r.user.pk %}"><i class="bi bi-pencil-fill"></i> Edit account</a>
   </div>
+</div>
+
+<div class="no-print" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
+  <form method="post">{% csrf_token %}<input type="hidden" name="action" value="nudge">
+    <button type="submit" class="button"><i class="bi bi-bell-fill"></i> Send a reminder to study</button></form>
+  <form method="post">{% csrf_token %}<input type="hidden" name="action" value="email_report">
+    <button type="submit" class="button"><i class="bi bi-envelope-paper-fill"></i> Email this report to the parents</button></form>
+  <small style="align-self:center;color:var(--body-quiet-color);">Reminders go to the learner and linked parents. The report goes to linked parents and the guardian email on the profile.</small>
 </div>
 
 {% include "admin/_learner_insights.html" %}
@@ -35,7 +44,7 @@
     {% if c.next %}<br>Up next: <strong>{{ c.next.title }}</strong>{% endif %}
   </p>
   <table class="d-table">
-    <thead><tr><th>Lesson</th><th>Status</th><th>Completed</th><th class="num">Score</th><th class="num">Best quiz</th></tr></thead>
+    <thead><tr><th>Lesson</th><th>Status</th><th>Completed</th><th class="num">Score</th><th class="num">Best quiz</th><th class="num">Attempts</th><th class="num">Minutes</th></tr></thead>
     <tbody>
     {% for row in c.rows %}
       <tr>
@@ -44,6 +53,8 @@
         <td>{% if row.done_at %}{{ row.done_at|date:"j M Y" }}{% else %}-{% endif %}</td>
         <td class="num">{% if row.score is not None %}{{ row.score }}%{% else %}-{% endif %}</td>
         <td class="num">{% if row.best is not None %}{{ row.best }}%{% if row.passed %} &#10003;{% endif %}{% else %}-{% endif %}</td>
+        <td class="num">{% if row.attempts %}{{ row.attempts }}{% if row.to_pass %} <small title="Passed on this try">(passed on {{ row.to_pass }})</small>{% endif %}{% else %}-{% endif %}</td>
+        <td class="num">{% if row.minutes is not None %}{{ row.minutes }}{% else %}-{% endif %}</td>
       </tr>
     {% endfor %}
     </tbody>
@@ -54,6 +65,26 @@
 {% endfor %}
 
 <div class="d-grid">
+  <section class="d-panel span-2">
+    <h3><i class="bi bi-journal-text"></i> Staff notes <small>only admins and teachers see these</small></h3>
+    <form method="post" class="no-print" style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;">{% csrf_token %}
+      <input type="hidden" name="action" value="note">
+      <textarea name="body" rows="2" maxlength="2000" required placeholder="e.g. Spoke to parent on the phone, agreed 20 minutes after homework" style="flex:1;min-width:0;"></textarea>
+      <button type="submit" class="button">Add note</button>
+    </form>
+    <ul class="d-list">
+      {% for n in r.notes %}
+      <li><div><strong>{{ n.created_at|date:"j M Y" }}</strong> &middot; {{ n.author.get_full_name|default:n.author.username|default:"Removed account" }}<div style="white-space:pre-line;margin-top:3px;">{{ n.body }}</div></div>
+        <form method="post" class="no-print" style="margin-left:auto;">{% csrf_token %}<input type="hidden" name="action" value="delete_note"><input type="hidden" name="note" value="{{ n.pk }}">
+          <button type="submit" class="button" style="background:transparent;color:var(--body-quiet-color);padding:2px 6px;" title="Remove note" onclick="return confirm('Remove this note?');"><i class="bi bi-trash"></i></button></form></li>
+      {% empty %}<li class="d-empty">No notes yet.</li>{% endfor %}
+    </ul>
+  </section>
+  <section class="d-panel">
+    <h3>Lessons with the most tries</h3>
+    <ul class="d-list">{% for t in r.tries.retried %}<li><div><strong>{{ t.lesson.title }}</strong><small>first {{ t.first }}%, best {{ t.best }}%{% if t.to_pass %}, passed on try {{ t.to_pass }}{% else %}, not passed yet{% endif %}</small></div><em style="margin-left:auto;">{{ t.count }} tries</em></li>{% empty %}<li class="d-empty">No lesson needed more than one try.</li>{% endfor %}</ul>
+  </section>
+
   <section class="d-panel">
     <h3>Practice labs</h3>
     <ul class="d-list">{% for l in r.labs %}<li><div>{{ l.lab.title }}</div><em style="margin-left:auto;">{% if l.done_at %}{{ l.done_at|date:"j M Y" }}{% else %}not yet{% endif %}</em></li>{% empty %}<li class="d-empty">No labs published.</li>{% endfor %}</ul>
@@ -69,9 +100,10 @@
   <section class="d-panel">
     <h3>Classes and family</h3>
     <ul class="d-list">
-      {% for m in r.classes %}<li><div><strong>{{ m.classroom.name }}</strong><small>Teacher: {{ m.classroom.facilitator.get_full_name|default:m.classroom.facilitator.username }}</small></div></li>{% empty %}<li class="d-empty">Not in a class.</li>{% endfor %}
-      {% for p in r.parents %}<li><div>Parent: {{ p.parent.get_full_name|default:p.parent.username }}</div></li>{% endfor %}
-      {% if r.profile.parent_guardian_name %}<li><div>Guardian: {{ r.profile.parent_guardian_name }}<small>{{ r.profile.parent_guardian_email }} {{ r.profile.parent_guardian_phone }}</small></div></li>{% endif %}
+      {% for m in r.classes %}<li><div><strong><a href="{% url 'tools:group_report' %}?classroom={{ m.classroom.pk }}">{{ m.classroom.name }}</a></strong><small>Teacher: {{ m.classroom.facilitator.get_full_name|default:m.classroom.facilitator.username }}</small></div></li>{% empty %}<li class="d-empty">Not in a class.</li>{% endfor %}
+      {% if r.profile.school_name %}<li><div>School: <a href="{% url 'tools:group_report' %}?school={{ r.profile.school_name|urlencode }}">{{ r.profile.school_name }}</a></div></li>{% endif %}
+      {% for p in r.parents %}<li><div>Parent: {{ p.parent.get_full_name|default:p.parent.username }}<small>{{ p.parent.email }}</small></div></li>{% endfor %}
+      {% if r.profile.parent_guardian_name or r.profile.parent_guardian_email %}<li><div>Guardian: {{ r.profile.parent_guardian_name }}<small>{{ r.profile.parent_guardian_email }} {{ r.profile.parent_guardian_phone }}</small></div></li>{% endif %}
       {% if r.consent %}<li><div>Parent consent: {{ r.consent.get_status_display }}</div></li>{% endif %}
     </ul>
   </section>

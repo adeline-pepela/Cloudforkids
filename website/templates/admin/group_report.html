@@ -1,0 +1,96 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% block bodyclass %}dashboard{% endblock %}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Home</a> &rsaquo; <a href="{% url 'tools:learner_list' %}">Learner progress</a> &rsaquo; Class and school reports</div>{% endblock %}
+{% block content_title %}{% endblock %}
+{% block coltype %}colDash{% endblock %}
+
+{% block content %}
+<div class="d-hero">
+  <div>
+    <h1>{% if label %}{{ label }}{% else %}Class and school reports{% endif %}</h1>
+    <p>{% if classroom %}Class taught by {{ classroom.facilitator.get_full_name|default:classroom.facilitator.username }}{% if classroom.school_name %} at {{ classroom.school_name }}{% endif %}.{% elif school %}Every learner whose profile names this school.{% else %}Pick a class or a school to see how the whole group is doing.{% endif %}</p>
+  </div>
+  {% if g %}<div class="d-actions no-print">
+    <a href="?{{ query }}&format=csv"><i class="bi bi-file-earmark-spreadsheet-fill"></i> Download CSV</a>
+    <a class="alt" href="#" onclick="window.print();return false;"><i class="bi bi-printer-fill"></i> Print</a>
+  </div>{% endif %}
+</div>
+
+<form method="get" class="no-print" style="margin-bottom:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+  <label for="g-class" style="font-weight:600;">Class</label>
+  <select id="g-class" name="classroom" onchange="this.form.school.value='';this.form.submit()">
+    <option value="">Choose a class</option>
+    {% for c in classrooms %}<option value="{{ c.pk }}" {% if classroom and classroom.pk == c.pk %}selected{% endif %}>{{ c.name }}{% if c.archived %} (archived){% endif %}</option>{% endfor %}
+  </select>
+  <label for="g-school" style="font-weight:600;">or school</label>
+  <select id="g-school" name="school" onchange="this.form.classroom.value='';this.form.submit()">
+    <option value="">Choose a school</option>
+    {% for s in schools %}<option value="{{ s }}" {% if s|lower == school|lower %}selected{% endif %}>{{ s }}</option>{% endfor %}
+  </select>
+</form>
+
+{% if g %}
+<div class="d-cards">
+  <div class="d-card"><span class="ico t-sky"><i class="bi bi-people-fill"></i></span><span class="txt"><span class="num">{{ g.n }}</span><span class="lbl">Learners</span><span class="sub">{{ g.not_started }} not started yet</span></span></div>
+  <div class="d-card"><span class="ico t-green"><i class="bi bi-journal-check"></i></span><span class="txt"><span class="num">{{ g.avg_percent }}%</span><span class="lbl">Average progress</span><span class="sub">of enrolled lessons</span></span></div>
+  <div class="d-card"><span class="ico t-orange"><i class="bi bi-patch-check-fill"></i></span><span class="txt"><span class="num">{% if g.avg_quiz is not None %}{{ g.avg_quiz }}%{% else %}-{% endif %}</span><span class="lbl">Average quiz score</span><span class="sub">across the group</span></span></div>
+  <div class="d-card"><span class="ico t-purple"><i class="bi bi-lightning-charge-fill"></i></span><span class="txt"><span class="num">{{ g.active }}</span><span class="lbl">Active recently</span><span class="sub">in the last 14 days</span></span></div>
+  <div class="d-card"><span class="ico t-pink"><i class="bi bi-stopwatch-fill"></i></span><span class="txt"><span class="num">{{ g.minutes }}</span><span class="lbl">Minutes learning</span><span class="sub">all learners together</span></span></div>
+</div>
+
+<div class="d-grid">
+  <section class="d-panel span-2">
+    <h3>Group activity <small>things finished each day, last 30 days</small></h3>
+    <div class="chart-box"><canvas id="ch-group" aria-label="Bar chart of the group's activity per day" role="img"></canvas></div>
+  </section>
+  <section class="d-panel">
+    <h3>Hardest lessons <small>lowest quiz average</small></h3>
+    <ul class="d-list">{% for h in g.hardest %}<li><div><strong>{{ h.lesson__title }}</strong><small>{{ h.lesson__course__title }} &middot; {{ h.n }} learner{{ h.n|pluralize }}, {{ h.fails }} not passed</small></div><em style="margin-left:auto;color:#E8743B;">{{ h.avg|floatformat:0 }}%</em></li>{% empty %}<li class="d-empty">No quiz results yet.</li>{% endfor %}</ul>
+  </section>
+
+  <section class="d-panel span-2">
+    <h3>By course</h3>
+    <table class="d-table"><thead><tr><th>Course</th><th class="num">Enrolled</th><th>Average progress</th><th class="num">Finished</th><th class="num">Quiz average</th><th class="num">Not passed</th></tr></thead><tbody>
+      {% for c in g.courses %}<tr><td>{{ c.course.title }}<br><small style="color:var(--body-quiet-color);">{{ c.course.tier.name }}</small></td><td class="num">{{ c.enrolled }}</td>
+        <td><span class="bar"><span style="width:{{ c.avg_percent }}%"></span></span>{{ c.avg_percent }}%</td><td class="num">{{ c.finished }}</td>
+        <td class="num">{% if c.quiz is not None %}{{ c.quiz }}%{% else %}-{% endif %}</td><td class="num">{{ c.fails }}</td></tr>
+      {% empty %}<tr><td colspan="6" class="d-empty">Nobody in this group has enrolled in a course yet.</td></tr>{% endfor %}
+    </tbody></table>
+  </section>
+  <section class="d-panel">
+    <h3>Questions most of them get wrong</h3>
+    <ul class="d-list">{% for m in g.missed %}<li><div><strong>{{ m.text|truncatechars:100 }}</strong><small>{{ m.lesson.title }}</small></div><em style="margin-left:auto;white-space:nowrap;">{{ m.times }}&times;</em></li>{% empty %}<li class="d-empty">None recorded yet.</li>{% endfor %}</ul>
+  </section>
+
+  <section class="d-panel span-3" style="grid-column:1 / -1;">
+    <h3>Ranking <small>by progress, then quiz average</small></h3>
+    <table class="d-table"><thead><tr><th class="num">#</th><th>Learner</th><th>Progress</th><th class="num">Lessons</th><th class="num">Quiz avg</th><th class="num">Days learned</th><th class="num">Minutes</th><th>Last seen</th></tr></thead><tbody>
+      {% for r in g.ranking %}<tr>
+        <td class="num">{{ r.rank }}</td>
+        <td><a href="{% url 'tools:learner_detail' r.user.pk %}"><strong>{{ r.user.get_full_name|default:r.user.username }}</strong></a><br><small style="color:var(--body-quiet-color);">{{ r.user.username }}</small></td>
+        <td><span class="bar"><span style="width:{{ r.percent }}%"></span></span>{{ r.percent }}%</td>
+        <td class="num">{{ r.done }} / {{ r.total }}</td>
+        <td class="num">{% if r.quiz is not None %}{{ r.quiz|floatformat:0 }}%{% else %}-{% endif %}</td>
+        <td class="num">{{ r.active_days }}</td>
+        <td class="num">{{ r.minutes }}</td>
+        <td>{% if r.last_seen %}{{ r.last_seen|timesince }} ago{% else %}Never{% endif %}{% if r.idle %} <i class="bi bi-exclamation-circle-fill" style="color:#E8743B;" title="Idle"></i>{% endif %}</td>
+      </tr>{% empty %}<tr><td colspan="8" class="d-empty">No learners in this group.</td></tr>{% endfor %}
+    </tbody></table>
+  </section>
+</div>
+
+{{ g.chart|json_script:"d-group" }}
+<script src="{% static 'vendor/chartjs/chart.umd.js' %}"></script>
+<script>
+(function () {
+  var d = JSON.parse(document.getElementById('d-group').textContent);
+  new Chart(document.getElementById('ch-group'), {
+    type: 'bar', data: { labels: d.map(function (x) { return x.label; }), datasets: [{ data: d.map(function (x) { return x.value; }), backgroundColor: '#1CA7EC', borderRadius: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+})();
+</script>
+{% endif %}
+<style>@media print { .c4k-side, .c4k-top, .no-print { display: none !important; } }</style>
+{% endblock %}

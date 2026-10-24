@@ -88,4 +88,22 @@
      data-total="{{ quiz_total }}" data-passed="{{ quiz_passed|yesno:'1,0' }}" data-exam="{{ lesson.is_exam|yesno:'1,0' }}"
      data-needed="{{ lesson.pass_score_percent }}" data-score="{{ quiz_score|default_if_none:'' }}"></div>
 {% endif %}
+<script>
+(function () {
+  // Time spent learning: ping while this lesson is open and in front. The server keeps the clock.
+  var url = "{% url 'courses:lesson_time' course.slug lesson.slug %}", every = 30000, timer = null;
+  function token() { var m = document.cookie.match(/(?:^|;\s*)c4k_csrftoken=([^;]+)/); return m ? decodeURIComponent(m[1]) : ''; }
+  function ping(resume) {
+    fetch(url, { method: 'POST', credentials: 'same-origin', keepalive: true,
+                 headers: { 'X-CSRFToken': token(), 'Content-Type': 'application/json' }, body: JSON.stringify({ resume: !!resume }) }).catch(function () {});
+  }
+  function start() { if (!timer) timer = setInterval(function () { ping(false); }, every); }
+  function stop() { if (timer) { clearInterval(timer); timer = null; } }
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { ping(false); stop(); } else { ping(true); start(); }
+  });
+  window.addEventListener('pagehide', function () { ping(false); });
+  start();
+})();
+</script>
 {% endblock %}

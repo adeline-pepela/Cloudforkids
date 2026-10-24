@@ -51,7 +51,9 @@
       {% endfor %}
 
       <div class="c4k-group">Tools</div>
-      <a class="c4k-link{% if '/admin/tools/learners' in request.path %} active{% endif %}" href="{% url 'tools:learner_list' %}"><i class="bi bi-person-lines-fill"></i> Learner progress</a>
+      <a class="c4k-link{% if '/admin/tools/learners' in request.path and '/groups' not in request.path and '/at-risk' not in request.path %} active{% endif %}" href="{% url 'tools:learner_list' %}"><i class="bi bi-person-lines-fill"></i> Learner progress</a>
+      <a class="c4k-link{% if '/admin/tools/learners/groups' in request.path %} active{% endif %}" href="{% url 'tools:group_report' %}"><i class="bi bi-people-fill"></i> Class and school reports</a>
+      <a class="c4k-link{% if '/admin/tools/learners/at-risk' in request.path %} active{% endif %}" href="{% url 'tools:at_risk' %}"><i class="bi bi-exclamation-diamond-fill"></i> Learners at risk</a>
       <a class="c4k-link{% if '/admin/tools/report' in request.path %} active{% endif %}" href="{% url 'tools:monthly_report' %}"><i class="bi bi-bar-chart-line-fill"></i> Monthly report</a>
       <a class="c4k-link{% if '/admin/tools/billing' in request.path %} active{% endif %}" href="{% url 'tools:billing_report' %}"><i class="bi bi-cash-coin"></i> Billing report</a>
       <a class="c4k-link{% if '/admin/tools/import' in request.path %} active{% endif %}" href="{% url 'tools:import_learners' %}"><i class="bi bi-file-earmark-arrow-up-fill"></i> Import learners</a>
