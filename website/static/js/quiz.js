@@ -185,6 +185,8 @@
 
   function setupExam(form) {
     var questions = form.querySelectorAll(".mcq-question");
+    form.parentNode.querySelectorAll(".exam-count").forEach(function (el) { el.textContent = questions.length; });  /* a big exam deals a random set */
+    updateExamProgress(form);
     questions.forEach(function (question) {
       var options = question.querySelectorAll(".mcq-option");
       options.forEach(function (btn) {

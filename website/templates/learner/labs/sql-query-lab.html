@@ -1,0 +1,38 @@
+<div class="lab-goal"><i class="bi bi-bullseye" aria-hidden="true"></i> Goal: build SQL queries that answer questions about the class database. Watch the SQL appear as you choose, then press <strong>Run query</strong>.</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <label class="form-label fw-bold mb-1" for="sq-mode">SELECT</label>
+    <select class="form-select mb-2" id="sq-mode">
+      <option value="cols">these columns</option>
+      <option value="avg">the AVERAGE of these subjects</option>
+    </select>
+    <div class="d-flex flex-wrap gap-2 mb-3" id="sq-cols"></div>
+    <label class="form-label fw-bold mb-1" for="sq-wcol">WHERE <small class="text-secondary fw-normal">(only rows that match)</small></label>
+    <div class="d-flex gap-2 mb-3">
+      <select class="form-select" id="sq-wcol"></select>
+      <select class="form-select" id="sq-op" aria-label="Comparison" style="max-width:80px"><option>=</option><option>&gt;</option><option>&lt;</option></select>
+      <input type="number" class="form-control" id="sq-val" value="9" aria-label="Value" style="max-width:90px">
+    </div>
+    <label class="form-label fw-bold mb-1" for="sq-ocol">ORDER BY</label>
+    <div class="d-flex gap-2 mb-3">
+      <select class="form-select" id="sq-ocol"></select>
+      <select class="form-select" id="sq-dir" aria-label="Direction" style="max-width:150px"><option value="DESC">highest first</option><option value="ASC">lowest first</option></select>
+    </div>
+    <label class="form-label fw-bold mb-1" for="sq-limit">LIMIT</label>
+    <select class="form-select mb-3" id="sq-limit"><option value="">all rows</option><option>3</option><option>5</option></select>
+    <pre class="code-box" id="sq-sql" aria-live="polite"></pre>
+    <button type="button" class="btn btn-cloud btn-big" id="sq-run"><i class="bi bi-play-fill" aria-hidden="true"></i> Run query</button>
+  </div>
+  <div class="col-lg-7">
+    <h6 class="fw-bold">Your missions</h6>
+    <ul class="checklist mb-3" id="sq-checks">
+      <li data-rule="g9"><i class="bi bi-circle" aria-hidden="true"></i> Show the names of all students in Grade 9</li>
+      <li data-rule="avg"><i class="bi bi-circle" aria-hidden="true"></i> Show the average score for each subject (math, english and science)</li>
+      <li data-rule="absent"><i class="bi bi-circle" aria-hidden="true"></i> Show the students absent more than 10 days</li>
+      <li data-rule="top"><i class="bi bi-circle" aria-hidden="true"></i> Show the top 3 students in math, best first</li>
+    </ul>
+    <p class="fw-bold mb-1" id="sq-msg" aria-live="polite">This is the whole <code>students</code> table. Run a query to see just the rows you need.</p>
+    <div class="table-responsive data-table" id="sq-result"></div>
+  </div>
+</div>

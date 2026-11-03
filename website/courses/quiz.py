@@ -75,8 +75,8 @@ def quiz_question_count(lesson):
 
 
 def questions_per_attempt(lesson, pool):
-    """How many questions one attempt asks. A lesson can hold a bigger pool and ask only some of it each time."""
-    size = 0 if lesson.is_exam else lesson.quiz_size
+    """How many questions one attempt asks. A lesson or exam can hold a bigger pool and ask only some of it each time."""
+    size = lesson.quiz_size
     return size if 0 < size < pool else pool
 
 

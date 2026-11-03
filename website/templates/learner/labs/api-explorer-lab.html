@@ -1,0 +1,28 @@
+<div class="lab-goal"><i class="bi bi-bullseye" aria-hidden="true"></i> Goal: talk to a pretend school API, the way an app's frontend does. Choose a method, type a path and press <strong>Send</strong>. All the names are made up.</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="api-bar mb-2">
+      <select class="form-select" id="api-method" aria-label="HTTP method"><option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option></select>
+      <span class="api-host">api.cloudforkids.app</span>
+      <input type="text" class="form-control" id="api-path" value="/hello" spellcheck="false" aria-label="Path">
+      <button type="button" class="btn btn-cloud" id="api-send"><i class="bi bi-send-fill" aria-hidden="true"></i> Send</button>
+    </div>
+    <label class="form-label fw-bold small mb-1" for="api-body">Request body (JSON, used by POST and PUT)</label>
+    <textarea class="wp-code api-body mb-2" id="api-body" spellcheck="false">{ "name": "Zawadi", "grade": 78 }</textarea>
+    <div class="d-flex justify-content-between align-items-center"><h6 class="fw-bold mb-1">Response</h6><span class="api-status" id="api-status"></span></div>
+    <pre class="code-box" id="api-response" aria-live="polite">Press Send to make your first request.</pre>
+  </div>
+  <div class="col-lg-5">
+    <h6 class="fw-bold">Your missions</h6>
+    <ul class="checklist mb-3" id="api-checks">
+      <li data-rule="hello"><i class="bi bi-circle" aria-hidden="true"></i> <span>GET <code>/hello</code></span></li>
+      <li data-rule="list"><i class="bi bi-circle" aria-hidden="true"></i> <span>GET <code>/students</code> to read the whole list</span></li>
+      <li data-rule="create"><i class="bi bi-circle" aria-hidden="true"></i> <span>POST to <code>/students</code> to add a new student</span></li>
+      <li data-rule="update"><i class="bi bi-circle" aria-hidden="true"></i> <span>PUT to <code>/students/2</code> to change a grade, e.g. <code>{ "grade": 95 }</code></span></li>
+      <li data-rule="delete"><i class="bi bi-circle" aria-hidden="true"></i> <span>DELETE <code>/students/3</code></span></li>
+    </ul>
+    <h6 class="fw-bold">The database behind the API</h6>
+    <div class="table-responsive data-table" id="api-db"></div>
+  </div>
+</div>

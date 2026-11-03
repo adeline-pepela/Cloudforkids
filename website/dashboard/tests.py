@@ -64,6 +64,35 @@ class LearnerStatsTests(TestCase):
         self.assertFalse(second["created"])
         self.assertEqual(second["xp"], 15)
 
+    def test_every_lab_has_its_simulation(self):
+        from pathlib import Path
+
+        from django.conf import settings
+
+        from .labs import lab_template_exists
+
+        script = (Path(settings.BASE_DIR) / "static" / "js" / "labs.js").read_text(encoding="utf-8")
+        admin = make("boss", role="admin", is_staff=True, is_superuser=True)
+        self.client.force_login(admin)
+        for lab in Lab.objects.all():
+            self.assertTrue(lab_template_exists(lab.slug), lab.slug)
+            self.assertIn(f"labs['{lab.slug}']", script, lab.slug)
+            page = self.client.get(reverse("dashboard:lab", args=[lab.slug]))
+            self.assertContains(page, f'data-lab="{lab.slug}"')
+            self.assertNotContains(page, "This lab is being built")
+
+    def test_lessons_link_to_real_labs(self):
+        import re
+
+        from courses.models import Lesson
+
+        slugs = set(Lab.objects.values_list("slug", flat=True))
+        linked = set()
+        for lesson in Lesson.objects.all():
+            linked |= set(re.findall(r'href="/dashboard/labs/([a-z0-9-]+)/"', lesson.content))
+        self.assertGreaterEqual(len(linked), 8)
+        self.assertTrue(linked <= slugs, linked - slugs)
+
     def test_unknown_lab_is_404(self):
         self.client.force_login(make("kid"))
         self.assertEqual(self.client.get(reverse("dashboard:lab", args=["nope"])).status_code, 404)

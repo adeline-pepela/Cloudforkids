@@ -123,7 +123,7 @@ class Lesson(models.Model):
     )
     quiz_size = models.PositiveSmallIntegerField(
         "Questions per attempt", default=0,
-        help_text="0 asks every question each time. If the lesson holds more questions than this number, each attempt asks a different random set of this size.",
+        help_text="0 asks every question each time. If the lesson or module exam holds more questions than this number, each attempt asks a different random set of this size.",
     )
     title_sw = models.CharField("Title (Kiswahili)", max_length=150, blank=True)
     summary_sw = models.CharField("Summary (Kiswahili)", max_length=300, blank=True)

@@ -1,0 +1,18 @@
+<div class="lab-goal"><i class="bi bi-bullseye" aria-hidden="true"></i> Goal: put the parts into the computer case in the right order, then switch it on. <span class="fw-normal">If a part can't go in yet, you'll find out why.</span></div>
+
+<div class="row g-4 align-items-start">
+  <div class="col-md-5">
+    <h6 class="fw-bold">Parts box <small class="text-secondary fw-normal">(tap the part that goes in next)</small></h6>
+    <div id="seq-tray"></div>
+  </div>
+  <div class="col-md-7">
+    <h6 class="fw-bold">Inside the computer case</h6>
+    <ol class="seq-slots" id="seq-slots"></ol>
+  </div>
+</div>
+<p class="fw-bold mt-2 mb-3" id="seq-msg" aria-live="polite">Which part goes into the empty case first?</p>
+
+<div class="d-none text-center" id="bc-power-wrap">
+  <button type="button" class="btn btn-cloud btn-big" id="bc-power"><i class="bi bi-power" aria-hidden="true"></i> Switch it on</button>
+  <div class="boot-screen mt-3" id="bc-screen" aria-live="polite"></div>
+</div>

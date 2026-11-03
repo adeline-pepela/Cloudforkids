@@ -1,0 +1,20 @@
+<div class="lab-goal"><i class="bi bi-bullseye" aria-hidden="true"></i> Goal: audit the pretend app <strong>School Notes</strong>. Run each check, and when you find a problem, pick the right fix. Fix all five problems to make the app safe.</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="fake-browser">
+      <div class="fake-bar"><i class="bi bi-unlock-fill" id="sa-lock" aria-hidden="true"></i> <span id="sa-url">http://school-notes.app/login</span></div>
+      <div class="fake-page">
+        <p class="fw-bold mb-2">School Notes - Sign in</p>
+        <input class="form-control form-control-sm mb-2" value="amani" disabled aria-label="Username">
+        <input class="form-control form-control-sm mb-3" type="password" value="sunflower123" disabled aria-label="Password">
+        <p class="small text-secondary mb-1">What someone on the same WiFi sees when you sign in:</p>
+        <pre class="code-box mb-0" id="sa-wire"></pre>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div id="sa-checks"></div>
+    <p class="fw-bold mt-2 mb-0" id="sa-msg" aria-live="polite">Fixed 0 of 5 problems.</p>
+  </div>
+</div>

@@ -22,6 +22,7 @@ class QuizServerSideTests(TestCase):
         cls.course = Course.objects.get(slug="what-is-the-cloud-really")
         cls.lesson = cls.course.lessons.get(slug="data-storage-basics")
         cls.questions = parse_questions(cls.lesson.content)
+        cls.course.lessons.update(quiz_size=0)  # these tests answer every question, so deal them all
 
     def setUp(self):
         self.client.force_login(self.user)
@@ -52,8 +53,10 @@ class QuizServerSideTests(TestCase):
         for _ in range(12):
             html = self.client.get(self.url("lesson_detail")).content.decode()
             first = re.search(r'<div class="mcq-options">(.*?)</div>', html, re.S).group(1)
-            seen.add(tuple(re.findall(r'data-index="(\d)"', first)))
-            self.assertEqual(sorted(re.findall(r'data-index="(\d)"', first)), ["0", "1", "2", "3"])
+            indexes = re.findall(r'data-index="(\d)"', first)
+            seen.add(tuple(indexes))
+            self.assertEqual(sorted(indexes), [str(i) for i in range(len(indexes))])
+            self.assertGreaterEqual(len(indexes), 4)
         self.assertGreater(len(seen), 1)  # not always the same order, so the first button is not always right
 
     def test_check_reports_correct_and_wrong(self):
@@ -143,10 +146,31 @@ class CourseStructureTests(TestCase):
             self.assertEqual(course.lessons.filter(lesson_type="exam").count(), 1, course.title)
 
     def test_exam_is_last_and_passes_at_70(self):
+        from .added_courses import COURSES
+
         for course in Course.objects.all():
             last = course.lessons.order_by("-order").first()
             self.assertTrue(last.is_exam, course.title)
-            self.assertEqual(last.pass_score_percent, 70)
+            self.assertEqual(last.pass_score_percent, COURSES[course.slug]["exam_pass"] if course.slug in COURSES else 70)
+
+    def test_added_courses(self):
+        from .added_courses import COURSES
+
+        for key, spec in COURSES.items():
+            course = Course.objects.get(slug=key)
+            self.assertEqual(course.tier.slug, spec["tier"])
+            ordered = list(course.tier.courses.order_by("order"))
+            self.assertEqual(course, ordered[0] if spec["position"] == "first" else ordered[-1])
+            lessons = list(course.lessons.order_by("order"))
+            self.assertEqual([lesson.slug for lesson in lessons[:-1]], list(spec["lessons"]))
+            pool = sum(len(parse_questions(lesson.content)) for lesson in lessons[:-1])
+            exam = lessons[-1]
+            self.assertEqual(len(parse_questions(exam.content)), pool)
+            self.assertGreater(pool, spec["exam_size"])
+            self.assertEqual((exam.quiz_size, exam.pass_score_percent), (spec["exam_size"], spec["exam_pass"]))
+            self.assertIn(f'data-pass="{spec["exam_pass"]}"', exam.content)
+            exam, _ = ensure_exam(course, refresh=True)  # a rebuild keeps the course's own pass mark
+            self.assertIn(f'You need {spec["exam_pass"]}% to pass', exam.content)
 
     def test_saving_a_lesson_creates_missing_exam(self):
         tier = Course.objects.first().tier
@@ -215,9 +239,23 @@ class QuizAttemptTests(TestCase):
         count = len(parse_questions(self.exam.content))
         orders = [self.qids(self.exam) for _ in range(4)]
         for order in orders:
-            self.assertEqual(sorted(order), list(range(count)))
+            self.assertEqual(len(order), min(count, self.exam.quiz_size or count))
+            self.assertEqual(len(set(order)), len(order))
+            self.assertTrue(set(order) <= set(range(count)))
         for earlier, later in zip(orders, orders[1:]):
             self.assertNotEqual(earlier, later)
+
+    def test_big_exam_deals_a_random_set_and_says_how_many(self):
+        from .exams import EXAM_SIZE
+
+        pool = len(parse_questions(self.exam.content))
+        self.assertGreater(pool, EXAM_SIZE)
+        self.assertEqual(self.exam.quiz_size, EXAM_SIZE)
+        first, second = self.qids(self.exam), self.qids(self.exam)
+        self.assertEqual((len(first), len(second)), (EXAM_SIZE, EXAM_SIZE))
+        self.assertNotEqual(sorted(first), sorted(second))  # the second attempt avoids the first one's questions
+        html = self.client.get(self.exam.get_absolute_url()).content.decode()
+        self.assertIn(f'<span class="exam-count">{EXAM_SIZE}</span>', html)
 
     def test_bigger_pool_draws_a_different_set_each_time(self):
         lesson = self.course.lessons.get(slug="data-storage-basics")

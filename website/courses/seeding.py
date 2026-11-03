@@ -9,6 +9,13 @@ from django.core.management import call_command
 
 CONTENT_DIR = Path(__file__).resolve().parent / "lesson_content"
 
+# Lessons whose page outgrew the seed data's defaults: slug -> (summary, minutes, questions per attempt)
+LESSON_DETAILS = {
+    "where-does-your-data-live": ("Understanding the cloud, data, and where information is stored.", 150, 10),
+    "networks-the-internet": ("Understanding how computers connect and communicate with each other.", 150, 10),
+    "data-storage-basics": ("Understanding different types of data, how it is stored, and different storage solutions.", 150, 10),
+}
+
 
 def seed_if_empty(**kwargs):
     if os.environ.get("SKIP_AUTO_SEED") or "flush" in sys.argv:
@@ -27,10 +34,20 @@ def seed_if_empty(**kwargs):
         if path.exists():
             lesson.content = path.read_text(encoding="utf-8")
             lesson.save(update_fields=["content"])
+    for slug, (summary, minutes, quiz_size) in LESSON_DETAILS.items():
+        Lesson.objects.filter(slug=slug).update(summary=summary, duration_minutes=minutes, quiz_size=quiz_size)
+    from .exams import ensure_exam
     from .models import Course
+
+    for course in Course.objects.filter(lessons__slug__in=LESSON_DETAILS).distinct():
+        ensure_exam(course, refresh=True)  # its exam draws on the full lesson pages
     from .starter import install
 
     install(Tier, Course, Lesson)  # the Explorer tier (Grade 1-3) with Kiswahili
+
+    from .added_courses import install_all
+
+    install_all(Tier, Course, Lesson)  # courses added later (Computer Packages & Basics, Building Real Cloud Applications)
 
     from core.translations_sw_content import COURSES, LESSONS, TIERS
 

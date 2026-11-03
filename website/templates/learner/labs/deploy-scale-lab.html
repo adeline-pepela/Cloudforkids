@@ -1,0 +1,29 @@
+<div class="lab-goal"><i class="bi bi-bullseye" aria-hidden="true"></i> Goal: put the deployment steps in order to launch your app, then keep it fast when thousands of users arrive.</div>
+
+<h5 class="mb-2">Part 1: Launch your app</h5>
+<div class="row g-4 align-items-start mb-2">
+  <div class="col-md-5"><h6 class="fw-bold">Steps <small class="text-secondary fw-normal">(tap the next one)</small></h6><div id="seq-tray"></div></div>
+  <div class="col-md-7"><h6 class="fw-bold">Your deployment pipeline</h6><ol class="seq-slots" id="seq-slots"></ol></div>
+</div>
+<p class="fw-bold mb-3" id="seq-msg" aria-live="polite">What do you do first?</p>
+
+<div class="d-none" id="ds-part2">
+  <h5 class="mb-2">Part 2: Handle the traffic</h5>
+  <p class="mb-2">Your app is live at <span class="wp-url">https://my-app.cloudforkids.app</span> (pretend). Each server can serve about 1,000 users at once.</p>
+  <label class="form-label fw-bold mb-1" for="ds-users">Users visiting right now: <span id="ds-users-text">100</span></label>
+  <input type="range" class="form-range" id="ds-users" min="0" max="10" step="1" value="0">
+  <div class="form-check form-switch mb-3">
+    <input class="form-check-input" type="checkbox" role="switch" id="ds-auto">
+    <label class="form-check-label fw-bold" for="ds-auto">Auto-scaling (the cloud adds servers when traffic grows)</label>
+  </div>
+  <div class="ds-panel">
+    <div><span class="text-secondary small">Servers running</span><div class="ds-servers" id="ds-servers"></div></div>
+    <div class="ds-stat"><span class="text-secondary small">Response time</span><strong id="ds-time">80 ms</strong></div>
+    <div class="ds-stat"><span class="text-secondary small">Status</span><strong id="ds-status">Fast</strong></div>
+  </div>
+  <h6 class="fw-bold mt-3">Your missions</h6>
+  <ul class="checklist" id="ds-checks">
+    <li data-rule="slow"><i class="bi bi-circle" aria-hidden="true"></i> With auto-scaling OFF, raise the traffic until the app slows down or crashes</li>
+    <li data-rule="fast"><i class="bi bi-circle" aria-hidden="true"></i> Turn auto-scaling ON and serve 50,000 users or more while staying fast</li>
+  </ul>
+</div>
