@@ -6,7 +6,7 @@ from accounts.models import User
 from courses.models import Course, Lesson, LessonCompletion, Tier
 from dashboard.models import LabCompletion
 from .forms import ContactForm, NewsletterForm
-from django.http import Http404
+from django.http import Http404, HttpResponse
 
 from .models import ImpactStat, LegalPage, InfoCard, Partner, TeamMember, Testimonial
 
@@ -37,6 +37,11 @@ def grade_span(tiers):
 def public_tiers():
     """Learners are 9 to 17, so the Grade 1-3 Explorer tier is not offered publicly."""
     return Tier.objects.exclude(slug="explorer")
+
+
+def healthz(request):
+    """Render's health check. It answers without touching the database, so the checks every few seconds let Neon sleep."""
+    return HttpResponse("ok", content_type="text/plain")
 
 
 def home(request):

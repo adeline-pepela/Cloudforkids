@@ -367,3 +367,10 @@ class LearnerProgressTests(TestCase):
         self.assertContains(change, "ch-growth")
         self.assertContains(change, "Weak areas")
         self.assertContains(self.client.get(reverse("admin:accounts_learnerprofile_changelist")), "View progress")
+
+
+class HealthCheckTests(TestCase):
+    def test_health_check_does_not_touch_the_database(self):
+        with self.assertNumQueries(0):
+            response = self.client.get("/healthz/")
+        self.assertEqual((response.status_code, response.content), (200, b"ok"))

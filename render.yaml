@@ -70,7 +70,7 @@ services:
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
     preDeployCommand: python manage.py migrate --noinput
     startCommand: gunicorn cloudforkids.wsgi:application --workers 3 --timeout 60 --access-logfile -
-    healthCheckPath: /
+    healthCheckPath: /healthz/      # answers without the database, so Neon can sleep between visits
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
@@ -90,13 +90,14 @@ services:
         value: 3.11.9
       - fromGroup: cloudforkids-shared
 
-  # Live classes: reminder emails shortly before each scheduled live class, and after-class badges and missed-class notes
+  # Live classes: reminder emails shortly before each scheduled live class, and after-class badges and missed-class notes.
+  # Every 30 minutes from 06:00 to 21:30 in Nairobi only: each run wakes the Neon database, so fewer runs keep it in the free plan.
   - type: cron
     name: cloudforkids-live
     runtime: python
     plan: starter
     rootDir: website
-    schedule: "*/15 * * * *"
+    schedule: "*/30 3-18 * * *"    # 03:00-18:30 UTC = 06:00-21:30 in Nairobi
     buildCommand: pip install -r requirements.txt
     startCommand: python manage.py send_notifications --live
     envVars:

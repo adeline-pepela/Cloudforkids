@@ -9,7 +9,10 @@ from core.media import serve_media
 from core.email_views import resend_webhook
 from live import views as live_views
 
+from core.views import healthz
+
 urlpatterns = [
+    path('healthz/', healthz, name='healthz'),
     path('i18n/', include('django.conf.urls.i18n')),
     path('admin/tools/', include((admin_tools.urls(), 'tools'))),
     path('admin/', admin.site.urls),

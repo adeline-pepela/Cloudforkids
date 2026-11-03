@@ -11,7 +11,7 @@ class Command(BaseCommand):
         parser.add_argument("--nudges", action="store_true", help="Send reminders to learners and parents after a few quiet days")
         parser.add_argument("--monthly", action="store_true", help="Send parents a review of last month (run on the 1st)")
         parser.add_argument("--plans", action="store_true", help="Send plan renewal reminders (5 days, 1 day before, and when a plan ends)")
-        parser.add_argument("--live", action="store_true", help="Live classes: reminders 5-35 minutes before, and after-class follow-ups (run every 15 minutes)")
+        parser.add_argument("--live", action="store_true", help="Live classes: reminders 5-35 minutes before, and after-class follow-ups (run every 30 minutes)")
         parser.add_argument("--days", type=int, default=4, help="Days without activity before a reminder (default 4)")
         parser.add_argument("--dry-run", action="store_true", help="Only count who would get an email")
 
