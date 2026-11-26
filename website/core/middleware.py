@@ -1,4 +1,19 @@
+from django.http import HttpResponse
+
 from .translation import load_map, translate_html
+
+
+class HealthCheckMiddleware:
+    """Answer /healthz/ before SecurityMiddleware and CommonMiddleware so AWS ALB/ECS health checks
+    (which send plain HTTP using the container's private IP as Host) receive 200 OK instead of 400 or 301."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.path in ("/healthz/", "/healthz"):
+            return HttpResponse("ok", content_type="text/plain")
+        return self.get_response(request)
 
 
 class UITranslationMiddleware:

@@ -374,3 +374,11 @@ class HealthCheckTests(TestCase):
         with self.assertNumQueries(0):
             response = self.client.get("/healthz/")
         self.assertEqual((response.status_code, response.content), (200, b"ok"))
+
+    def test_health_check_allows_alb_private_ip_and_plain_http(self):
+        from django.test import override_settings
+
+        with override_settings(ALLOWED_HOSTS=["cloudforkids.co.ke"], SECURE_SSL_REDIRECT=True):
+            with self.assertNumQueries(0):
+                response = self.client.get("/healthz/", HTTP_HOST="172.31.32.144:8000")
+        self.assertEqual((response.status_code, response.content), (200, b"ok"))
