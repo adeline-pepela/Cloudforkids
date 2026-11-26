@@ -6,6 +6,8 @@ name: Deploy to AWS
 on:
   push:
     branches: [Pre-production]
+    paths-ignore:
+      - ".github/workflows/power-control.yml"
   workflow_dispatch:
 
 permissions:
