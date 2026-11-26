@@ -1,29 +1,210 @@
-# Deploys the website on Render after every push to Pre-production (the branch the Render service runs).
-# Needs two repository secrets (Settings > Secrets and variables > Actions):
-#   RENDER_API_KEY     a Render API key (Render > Account Settings > API Keys)
-#   RENDER_SERVICE_ID  the web service id, e.g. srv-db13adegekts73c09g70
-# Until both exist the job is skipped, so pushes never fail because of it.
-name: Deploy to Render
+# Builds the Docker image, pushes it to Amazon ECR (eu-west-1), and performs a zero-downtime
+# rolling deploy of the Amazon ECS Express service (cloudforkids-5c61) on every push to Pre-production.
+# Uses AWS IAM OIDC federation (no long-lived AWS keys stored in GitHub).
+name: Deploy to AWS
 
 on:
   push:
     branches: [Pre-production]
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-aws-cloudforkids
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: eu-west-1
+  ECR_REPOSITORY: cloudforkids
+  ECS_CLUSTER: default
+  ECS_SERVICE_NAME: cloudforkids-5c61
+  ECS_SERVICE_ARN: arn:aws:ecs:eu-west-1:056187302207:service/default/cloudforkids-5c61
+  ALB_RULE_ARN: arn:aws:elasticloadbalancing:eu-west-1:056187302207:listener-rule/app/ecs-express-gateway-alb-39e86bd0/0c34e84cec7edce3/8698024147be5796/8ac059b1305540ff
+  AWS_DEPLOY_ROLE_ARN: arn:aws:iam::056187302207:role/github-actions-cloudforkids-deploy
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    env:
-      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-      RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
     steps:
-      - name: Start a Render deploy of this commit
-        if: env.RENDER_API_KEY != '' && env.RENDER_SERVICE_ID != ''
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Ensure AWS CLI supports ECS Express Mode
         run: |
-          curl --fail-with-body -sS -X POST \
-            -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: application/json" \
-            -d "{\"commitId\": \"$GITHUB_SHA\"}" \
-            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys"
-      - name: Secrets missing
-        if: env.RENDER_API_KEY == '' || env.RENDER_SERVICE_ID == ''
-        run: echo "Add the RENDER_API_KEY and RENDER_SERVICE_ID repository secrets to deploy automatically."
+          if ! aws ecs update-express-gateway-service help >/dev/null 2>&1; then
+            echo "Upgrading AWS CLI v2 for ECS Express support..."
+            curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+            unzip -q /tmp/awscliv2.zip -d /tmp
+            sudo /tmp/aws/install --update
+            rm -rf /tmp/aws /tmp/awscliv2.zip
+          fi
+          aws --version
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image to ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${SHORT_SHA}"
+          LATEST_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:latest"
+          docker build --platform linux/amd64 -t "${IMAGE_URI}" -t "${LATEST_URI}" .
+          docker push "${IMAGE_URI}"
+          docker push "${LATEST_URI}"
+          echo "image=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+
+      - name: Update ECS Express service
+        env:
+          NEW_IMAGE: ${{ steps.build-image.outputs.image }}
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess, tempfile
+
+          region = os.environ["AWS_REGION"]
+          service_arn = os.environ["ECS_SERVICE_ARN"]
+          new_image = os.environ["NEW_IMAGE"]
+
+          raw = subprocess.check_output([
+              "aws", "ecs", "describe-express-gateway-service",
+              "--region", region,
+              "--service-arn", service_arn,
+              "--output", "json",
+          ])
+          svc = json.loads(raw)["service"]
+          configs = sorted(svc["activeConfigurations"], key=lambda c: c.get("createdAt", ""), reverse=True)
+          cur = configs[0]
+
+          pc = dict(cur["primaryContainer"])
+          pc["image"] = new_image
+          if not pc.get("command"):
+              pc.pop("command", None)
+
+          payload = {
+              "serviceArn": service_arn,
+              "executionRoleArn": cur["executionRoleArn"],
+              "healthCheckPath": cur["healthCheckPath"],
+              "cpu": cur["cpu"],
+              "memory": cur["memory"],
+              "cpuArchitecture": cur.get("cpuArchitecture", "X86_64"),
+              "networkConfiguration": cur["networkConfiguration"],
+              "scalingTarget": cur["scalingTarget"],
+              "primaryContainer": pc,
+          }
+          if cur.get("taskRoleArn"):
+              payload["taskRoleArn"] = cur["taskRoleArn"]
+
+          fd, path = tempfile.mkstemp(prefix="ecs-update-", suffix=".json")
+          try:
+              with os.fdopen(fd, "w", encoding="utf-8") as f:
+                  json.dump(payload, f)
+              out = subprocess.check_output([
+                  "aws", "ecs", "update-express-gateway-service",
+                  "--region", region,
+                  "--cli-input-json", f"file://{path}",
+                  "--query", "service.{Name:serviceName,Status:status.statusCode}",
+                  "--output", "json",
+              ])
+              print("Triggered ECS Express update:", out.decode().strip())
+          finally:
+              if os.path.exists(path):
+                  os.remove(path)
+          PY
+
+      - name: Wait for new task to become healthy and preserve custom domain
+        env:
+          NEW_IMAGE: ${{ steps.build-image.outputs.image }}
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess, time
+
+          region = os.environ["AWS_REGION"]
+          cluster = os.environ["ECS_CLUSTER"]
+          service = os.environ["ECS_SERVICE_NAME"]
+          rule_arn = os.environ["ALB_RULE_ARN"]
+          new_image = os.environ["NEW_IMAGE"]
+
+          def ensure_custom_domains():
+              raw = subprocess.check_output([
+                  "aws", "elbv2", "describe-rules",
+                  "--region", region,
+                  "--rule-arns", rule_arn,
+                  "--query", "Rules[0].Conditions[0].HostHeaderConfig.Values",
+                  "--output", "json",
+              ])
+              hosts = json.loads(raw) or []
+              if "cloudforkids.co.ke" not in hosts or "www.cloudforkids.co.ke" not in hosts:
+                  print("Restoring custom domain host headers on ALB listener rule...")
+                  cond = json.dumps([{
+                      "Field": "host-header",
+                      "HostHeaderConfig": {
+                          "Values": [
+                              "cl-82a08d90296043b89a2964cccbee8a72.ecs.eu-west-1.on.aws",
+                              "cloudforkids.co.ke",
+                              "www.cloudforkids.co.ke",
+                          ]
+                      },
+                  }])
+                  subprocess.check_call([
+                      "aws", "elbv2", "modify-rule",
+                      "--region", region,
+                      "--rule-arn", rule_arn,
+                      "--conditions", cond,
+                  ], stdout=subprocess.DEVNULL)
+
+          new_task_running = False
+          for attempt in range(1, 37):
+              time.sleep(10)
+              ensure_custom_domains()
+              task_arns = json.loads(subprocess.check_output([
+                  "aws", "ecs", "list-tasks",
+                  "--region", region,
+                  "--cluster", cluster,
+                  "--service-name", service,
+                  "--desired-status", "RUNNING",
+                  "--query", "taskArns",
+                  "--output", "json",
+              ]))
+              if task_arns:
+                  tasks = json.loads(subprocess.check_output([
+                      "aws", "ecs", "describe-tasks",
+                      "--region", region,
+                      "--cluster", cluster,
+                      "--tasks", *task_arns,
+                      "--output", "json",
+                  ]))["tasks"]
+                  matching = [
+                      t for t in tasks
+                      if any(c.get("image") == new_image for c in t.get("containers", []))
+                  ]
+                  statuses = [(t["lastStatus"], t.get("healthStatus")) for t in matching]
+                  print(f"[{attempt*10}s] Running tasks with {new_image}: {statuses}", flush=True)
+                  if any(s[0] == "RUNNING" for s in statuses):
+                      # Give ALB health checks a short beat to mark target healthy
+                      if attempt >= 4 and not new_task_running:
+                          new_task_running = True
+                          time.sleep(25)
+                          ensure_custom_domains()
+                          break
+              else:
+                  print(f"[{attempt*10}s] Waiting for running tasks...", flush=True)
+
+          if not new_task_running:
+              raise SystemExit(f"Timed out waiting for a RUNNING task with image {new_image}")
+          PY
+
+          echo "Verifying https://cloudforkids.co.ke/ ..."
+          curl --fail -sS -o /dev/null -w "GET /healthz/ -> HTTP %{http_code}\n" --max-time 15 "https://cloudforkids.co.ke/healthz/"
+          curl --fail -sS -o /dev/null -w "GET /         -> HTTP %{http_code}\n" --max-time 20 "https://cloudforkids.co.ke/"

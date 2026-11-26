@@ -24,9 +24,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy the website code
 COPY website/ /app/
 
-# Copy entrypoint script
+# Copy entrypoint script (strip any Windows CRLF defensively)
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 # Collect static files with dummy keys for the build step
 RUN SECRET_KEY="build-dummy-key" ALLOWED_HOSTS="localhost" python manage.py collectstatic --noinput
